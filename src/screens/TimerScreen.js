@@ -16,6 +16,7 @@ export default function TimerScreen() {
   const round = getCurrentRoundData();
   const activeMatch = round?.matches?.find((m) => !m.done) ?? round?.matches?.[0];
   const getName = (id) => participants.find((x) => x.id === id)?.name.split(',')[0] ?? '?';
+  const getTeam = (ids) => ids?.map(getName).join(' & ') ?? '';
 
   useEffect(() => {
     if (running) {
@@ -48,7 +49,6 @@ export default function TimerScreen() {
 
   const mins = Math.floor(secondsLeft / 60).toString().padStart(2, '0');
   const secs = (secondsLeft % 60).toString().padStart(2, '0');
-  const progress = secondsLeft / DEFAULT_SECONDS;
   const isWarning = secondsLeft <= WARNING_SECONDS && secondsLeft > 0;
   const timerColor = secondsLeft === 0 ? colors.error : isWarning ? colors.warning : colors.gold;
 
@@ -58,9 +58,9 @@ export default function TimerScreen() {
 
       {activeMatch ? (
         <View style={s.matchInfo}>
-          <Text style={s.matchPlayers}>
-            {getName(activeMatch.playerA)}  vs  {getName(activeMatch.playerB)}
-          </Text>
+          <Text style={s.teamA}>{getTeam(activeMatch.teamA)}</Text>
+          <Text style={s.vs}>vs</Text>
+          <Text style={s.teamB}>{getTeam(activeMatch.teamB)}</Text>
           <Text style={s.matchMeta}>Runde {round?.id}</Text>
         </View>
       ) : (
@@ -103,8 +103,10 @@ const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg, paddingHorizontal: 16, paddingTop: 56, alignItems: 'center' },
   title: { color: colors.white, fontSize: 22, fontWeight: '800', alignSelf: 'flex-start', marginBottom: 16 },
   matchInfo: { backgroundColor: colors.panel, borderRadius: 12, padding: 14, width: '100%', alignItems: 'center', marginBottom: 32 },
-  matchPlayers: { color: colors.white, fontSize: 16, fontWeight: '700' },
-  matchMeta: { color: colors.textMuted, fontSize: 13, marginTop: 4 },
+  teamA: { color: colors.gold, fontSize: 14, fontWeight: '700' },
+  vs: { color: colors.textMuted, fontSize: 12, marginVertical: 2 },
+  teamB: { color: colors.gold, fontSize: 14, fontWeight: '700' },
+  matchMeta: { color: colors.textMuted, fontSize: 12, marginTop: 4 },
   timerRing: { width: 240, height: 240, borderRadius: 120, backgroundColor: colors.panel, alignItems: 'center', justifyContent: 'center', marginBottom: 40 },
   timerInner: { width: 210, height: 210, borderRadius: 105, borderWidth: 4, alignItems: 'center', justifyContent: 'center' },
   timerText: { fontSize: 52, fontWeight: '800', letterSpacing: 2 },

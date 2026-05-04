@@ -6,6 +6,8 @@ import {
 import { colors } from '../theme/colors';
 import { useTournament } from '../store/tournament';
 
+const TYPE_LABEL = { MM: '♂ Herrendoppel', FF: '♀ Damendoppel', MF: '⚤ Mixed' };
+
 export default function ErgebnisseScreen() {
   const { rounds, participants, saveResult } = useTournament();
   const [selectedRound, setSelectedRound] = useState('all');
@@ -14,6 +16,7 @@ export default function ErgebnisseScreen() {
   const [scoreB, setScoreB] = useState('');
 
   const getName = (id) => participants.find((x) => x.id === id)?.name.split(',')[0] ?? '?';
+  const getTeam = (ids) => ids.map(getName).join(' & ');
 
   const allMatches = rounds.flatMap((r) =>
     r.matches.map((m) => ({ ...m, roundId: r.id }))
@@ -53,18 +56,19 @@ export default function ErgebnisseScreen() {
       <ScrollView style={s.list} showsVerticalScrollIndicator={false}>
         {filtered.map((match) => (
           <TouchableOpacity key={match.id} style={s.matchCard} onPress={() => openEdit(match)}>
+            <Text style={s.matchType}>{TYPE_LABEL[match.type]} · Runde {match.roundId}</Text>
             <View style={s.matchRow}>
-              <Text style={[s.playerName, match.done && match.scoreA > match.scoreB && s.winner]}>
-                {getName(match.playerA)}
+              <Text style={[s.teamName, match.done && match.scoreA > match.scoreB && s.winner]}>
+                {getTeam(match.teamA)}
               </Text>
               <Text style={s.scoreText}>
-                {match.done ? `${match.scoreA}  –  ${match.scoreB}` : '?  –  ?'}
+                {match.done ? `${match.scoreA} – ${match.scoreB}` : '? – ?'}
               </Text>
-              <Text style={[s.playerName, s.right, match.done && match.scoreB > match.scoreA && s.winner]}>
-                {getName(match.playerB)}
+              <Text style={[s.teamName, s.right, match.done && match.scoreB > match.scoreA && s.winner]}>
+                {getTeam(match.teamB)}
               </Text>
             </View>
-            <Text style={s.meta}>Runde {match.roundId} · {match.done ? '✅' : '✏️ Tippen zum Eingeben'}</Text>
+            {!match.done && <Text style={s.editHint}>✏️ Tippen zum Eingeben</Text>}
           </TouchableOpacity>
         ))}
         {filtered.length === 0 && <Text style={s.empty}>Keine Spiele vorhanden.</Text>}
@@ -75,7 +79,11 @@ export default function ErgebnisseScreen() {
           <View style={s.sheet}>
             <Text style={s.sheetTitle}>Ergebnis eingeben</Text>
             {editMatch && (
-              <Text style={s.sheetSub}>{getName(editMatch.playerA)} vs {getName(editMatch.playerB)}</Text>
+              <>
+                <Text style={s.sheetTeamA}>{getTeam(editMatch.teamA)}</Text>
+                <Text style={s.sheetVs}>vs</Text>
+                <Text style={s.sheetTeamB}>{getTeam(editMatch.teamB)}</Text>
+              </>
             )}
             <View style={s.scoreRow}>
               <TextInput
@@ -113,17 +121,20 @@ const s = StyleSheet.create({
   filterTextActive: { color: colors.bg, fontWeight: '700' },
   list: { flex: 1 },
   matchCard: { backgroundColor: colors.panel, borderRadius: 12, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: colors.border },
+  matchType: { color: colors.textMuted, fontSize: 11, fontWeight: '600', letterSpacing: 1, marginBottom: 8 },
   matchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  playerName: { color: colors.silver, fontSize: 14, fontWeight: '600', flex: 1 },
+  teamName: { color: colors.silver, fontSize: 13, fontWeight: '600', flex: 1 },
   right: { textAlign: 'right' },
   winner: { color: colors.gold },
   scoreText: { color: colors.white, fontSize: 16, fontWeight: '700', marginHorizontal: 8 },
-  meta: { color: colors.textMuted, fontSize: 12, marginTop: 6 },
+  editHint: { color: colors.textMuted, fontSize: 11, marginTop: 6 },
   empty: { color: colors.textMuted, textAlign: 'center', marginTop: 40 },
   modalBg: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.6)' },
   sheet: { backgroundColor: colors.panel, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24 },
-  sheetTitle: { color: colors.white, fontSize: 18, fontWeight: '800', marginBottom: 4 },
-  sheetSub: { color: colors.textMuted, fontSize: 14, marginBottom: 20 },
+  sheetTitle: { color: colors.white, fontSize: 18, fontWeight: '800', marginBottom: 12 },
+  sheetTeamA: { color: colors.gold, fontSize: 14, fontWeight: '700', textAlign: 'center' },
+  sheetVs: { color: colors.textMuted, fontSize: 12, textAlign: 'center', marginVertical: 2 },
+  sheetTeamB: { color: colors.gold, fontSize: 14, fontWeight: '700', textAlign: 'center', marginBottom: 20 },
   scoreRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 24 },
   scoreInput: { backgroundColor: colors.bg, color: colors.white, fontSize: 32, fontWeight: '700', borderRadius: 12, padding: 16, width: 90, textAlign: 'center' },
   dash: { color: colors.textMuted, fontSize: 24, marginHorizontal: 16 },

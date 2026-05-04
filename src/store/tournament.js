@@ -2,32 +2,35 @@ import { useState, createContext, useContext } from 'react';
 
 const TournamentContext = createContext(null);
 
+const shuffle = (arr) => {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+};
+
 export function TournamentProvider({ children }) {
   const [participants, setParticipants] = useState([
-    { id: '1', name: 'Müller, Max' },
-    { id: '2', name: 'Lang, Lisa' },
-    { id: '3', name: 'Wolf, Tom' },
-    { id: '4', name: 'Bauer, Anna' },
-    { id: '5', name: 'Koch, Ben' },
-    { id: '6', name: 'Berg, Sara' },
+    { id: '1', name: 'Müller, Max',  gender: 'M' },
+    { id: '2', name: 'Lang, Lisa',   gender: 'F' },
+    { id: '3', name: 'Wolf, Tom',    gender: 'M' },
+    { id: '4', name: 'Bauer, Anna',  gender: 'F' },
+    { id: '5', name: 'Koch, Ben',    gender: 'M' },
+    { id: '6', name: 'Berg, Sara',   gender: 'F' },
+    { id: '7', name: 'Huber, Felix', gender: 'M' },
+    { id: '8', name: 'Klein, Mia',   gender: 'F' },
   ]);
 
-  const [rounds, setRounds] = useState([
-    {
-      id: 1,
-      matches: [
-        { id: 'm1', playerA: '1', playerB: '5', scoreA: 21, scoreB: 18, done: true },
-        { id: 'm2', playerA: '4', playerB: '2', scoreA: 15, scoreB: 21, done: true },
-        { id: 'm3', playerA: '3', playerB: '6', scoreA: 21, scoreB: 11, done: true },
-      ],
-    },
-  ]);
+  // Match structure: { id, teamA: [id, id], teamB: [id, id], type: 'MM'|'FF'|'MF', scoreA, scoreB, done }
+  // Round: { id, matches, sittingOut: [id, ...] }
+  const [rounds, setRounds] = useState([]);
+  const [currentRound, setCurrentRound] = useState(0);
 
-  const [currentRound, setCurrentRound] = useState(1);
-
-  const addParticipant = (name) => {
+  const addParticipant = (name, gender) => {
     const id = Date.now().toString();
-    setParticipants((prev) => [...prev, { id, name }]);
+    setParticipants((prev) => [...prev, { id, name, gender }]);
   };
 
   const removeParticipant = (id) => {
@@ -46,43 +49,70 @@ export function TournamentProvider({ children }) {
   };
 
   const startNewRound = () => {
-    const ids = participants.map((p) => p.id);
-    const shuffled = [...ids].sort(() => Math.random() - 0.5);
+    const men   = shuffle(participants.filter((p) => p.gender === 'M').map((p) => p.id));
+    const women = shuffle(participants.filter((p) => p.gender === 'F').map((p) => p.id));
+
     const matches = [];
-    for (let i = 0; i < shuffled.length - 1; i += 2) {
-      matches.push({
-        id: `r${rounds.length + 1}m${i}`,
-        playerA: shuffled[i],
-        playerB: shuffled[i + 1],
-        scoreA: null,
-        scoreB: null,
-        done: false,
-      });
+    const roundId = rounds.length + 1;
+    let idx = 0;
+
+    const makeMatch = (teamA, teamB, type) => ({
+      id: `r${roundId}m${idx++}`,
+      teamA, teamB, type,
+      scoreA: null, scoreB: null, done: false,
+    });
+
+    // Men's doubles: 4 men per match
+    while (men.length >= 4) {
+      matches.push(makeMatch(
+        [men.pop(), men.pop()],
+        [men.pop(), men.pop()],
+        'MM'
+      ));
     }
-    const newRound = { id: rounds.length + 1, matches };
+
+    // Women's doubles: 4 women per match
+    while (women.length >= 4) {
+      matches.push(makeMatch(
+        [women.pop(), women.pop()],
+        [women.pop(), women.pop()],
+        'FF'
+      ));
+    }
+
+    // Mixed doubles: 2 men + 2 women per match (1M+1F vs 1M+1F)
+    while (men.length >= 2 && women.length >= 2) {
+      matches.push(makeMatch(
+        [men.pop(), women.pop()],
+        [men.pop(), women.pop()],
+        'MF'
+      ));
+    }
+
+    const sittingOut = [...men, ...women];
+
+    const newRound = { id: roundId, matches, sittingOut };
     setRounds((prev) => [...prev, newRound]);
-    setCurrentRound(rounds.length + 1);
+    setCurrentRound(roundId);
   };
 
   const getStandings = () => {
     const stats = {};
     participants.forEach((p) => {
-      stats[p.id] = { id: p.id, name: p.name, points: 0, wins: 0, games: 0, diff: 0 };
+      stats[p.id] = { id: p.id, name: p.name, gender: p.gender, points: 0, wins: 0, games: 0, diff: 0 };
     });
     rounds.forEach((r) =>
       r.matches.forEach((m) => {
         if (!m.done) return;
-        stats[m.playerA].games++;
-        stats[m.playerB].games++;
-        stats[m.playerA].diff += (m.scoreA - m.scoreB);
-        stats[m.playerB].diff += (m.scoreB - m.scoreA);
-        if (m.scoreA > m.scoreB) {
-          stats[m.playerA].wins++;
-          stats[m.playerA].points += 2;
-        } else {
-          stats[m.playerB].wins++;
-          stats[m.playerB].points += 2;
-        }
+        [...m.teamA, ...m.teamB].forEach((id) => {
+          if (stats[id]) stats[id].games++;
+        });
+        m.teamA.forEach((id) => { if (stats[id]) stats[id].diff += (m.scoreA - m.scoreB); });
+        m.teamB.forEach((id) => { if (stats[id]) stats[id].diff += (m.scoreB - m.scoreA); });
+        const winners = m.scoreA > m.scoreB ? m.teamA : m.teamB;
+        winners.forEach((id) => {
+          if (stats[id]) { stats[id].wins++; stats[id].points += 2; }
+        });
       })
     );
     return Object.values(stats).sort((a, b) => b.points - a.points || b.diff - a.diff);
@@ -92,7 +122,8 @@ export function TournamentProvider({ children }) {
 
   const allMatchesDone = () => {
     const r = getCurrentRoundData();
-    return r ? r.matches.every((m) => m.done) : true;
+    if (!r) return true;
+    return r.matches.every((m) => m.done);
   };
 
   return (
