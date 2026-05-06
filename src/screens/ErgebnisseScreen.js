@@ -111,8 +111,8 @@ export default function ErgebnisseScreen() {
         ) : (
           filtered.map((match) => {
             const cfg = TYPE_CONFIG[match.type] ?? TYPE_CONFIG.MF;
-            const aWins = match.done && match.scoreA > match.scoreB;
-            const bWins = match.done && match.scoreB > match.scoreA;
+            const aWins = match.done && match.winnerTeam === 'A';
+            const bWins = match.done && match.winnerTeam === 'B';
             return (
               <TouchableOpacity
                 key={match.id}

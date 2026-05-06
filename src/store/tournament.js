@@ -41,6 +41,7 @@ export function TournamentProvider({ children }) {
     setRounds((prev) =>
       prev.map((r) => {
         if (!r.matches.some((m) => m.id === matchId)) return r;
+        const winnerTeam = scoreA > scoreB ? 'A' : scoreB > scoreA ? 'B' : null;
         let effA = scoreA;
         let effB = scoreB;
         if (r.isSchnellrunde && Math.max(scoreA, scoreB) >= 16) {
@@ -50,7 +51,7 @@ export function TournamentProvider({ children }) {
         return {
           ...r,
           matches: r.matches.map((m) =>
-            m.id === matchId ? { ...m, scoreA: effA, scoreB: effB, done: true } : m
+            m.id === matchId ? { ...m, scoreA: effA, scoreB: effB, winnerTeam, done: true } : m
           ),
         };
       })
@@ -118,7 +119,7 @@ export function TournamentProvider({ children }) {
         });
         m.teamA.forEach((id) => { if (stats[id]) stats[id].diff += (m.scoreA - m.scoreB); });
         m.teamB.forEach((id) => { if (stats[id]) stats[id].diff += (m.scoreB - m.scoreA); });
-        const winners = m.scoreA > m.scoreB ? m.teamA : m.teamB;
+        const winners = m.winnerTeam === 'A' ? m.teamA : m.winnerTeam === 'B' ? m.teamB : [];
         winners.forEach((id) => {
           if (stats[id]) { stats[id].wins++; stats[id].points += 2; }
         });
