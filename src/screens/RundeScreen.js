@@ -26,6 +26,7 @@ export default function RundeScreen() {
   const [roundsMenuOpen, setRoundsMenuOpen] = useState(false);
   const [roundToDelete, setRoundToDelete] = useState(null);  // round object
   const [showPrintAsk, setShowPrintAsk] = useState(false);
+  const [printMenuOpen, setPrintMenuOpen] = useState(false);
   const round = getCurrentRoundData();
   const isSchnellrunde = round?.isSchnellrunde ?? false;
   const durchgang = round?.currentDurchgang ?? 1;
@@ -67,9 +68,7 @@ export default function RundeScreen() {
 
   const TYPE_LABELS = { MM: 'Herrendoppel', FF: 'Damendoppel', MF: 'Mixed' };
 
-  const printRound = async () => {
-    setShowPrintAsk(false);
-    const r = getCurrentRoundData();
+  const buildAndPrint = async (r) => {
     if (!r) return;
     const d1 = r.matches.filter((m) => m.durchgang === 1);
     const d2 = r.matches.filter((m) => m.durchgang === 2);
@@ -107,6 +106,16 @@ export default function RundeScreen() {
         ${sitOut}
       </body></html>`;
     try { await Print.printAsync({ html }); } catch (_) {}
+  };
+
+  const printRound = async () => {
+    setShowPrintAsk(false);
+    await buildAndPrint(getCurrentRoundData());
+  };
+
+  const printSelectedRound = async (r) => {
+    setPrintMenuOpen(false);
+    await buildAndPrint(r);
   };
 
   // Edit helpers
@@ -233,6 +242,66 @@ export default function RundeScreen() {
             </View>
           </Modal>
         )}
+      </Modal>
+
+      {/* ── Drucken-Auswahl Modal ── */}
+      <Modal visible={printMenuOpen} transparent animationType="fade">
+        <View style={s.modalOverlay}>
+          <View style={[s.modalCard, { maxHeight: '80%' }]}>
+            <View style={s.roundsMenuHeader}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Ionicons name="print-outline" size={18} color={colors.gold} />
+                <Text style={s.modalTitle}>Runde drucken</Text>
+              </View>
+              <TouchableOpacity onPress={() => setPrintMenuOpen(false)} activeOpacity={0.7}>
+                <Ionicons name="close-circle" size={22} color={colors.textMuted} />
+              </TouchableOpacity>
+            </View>
+            {rounds.length === 0 ? (
+              <Text style={[s.modalBody, { marginBottom: 0 }]}>Noch keine Runden gespielt.</Text>
+            ) : (
+              <ScrollView showsVerticalScrollIndicator={false}>
+                {[...rounds].reverse().map((r) => {
+                  const total = r.matches?.length ?? 0;
+                  const isCurrent = r.id === currentRound;
+                  return (
+                    <TouchableOpacity
+                      key={r.id}
+                      style={[s.roundRow, isCurrent && s.roundRowCurrent]}
+                      onPress={() => printSelectedRound(r)}
+                      activeOpacity={0.75}
+                    >
+                      <View style={{ flex: 1 }}>
+                        <View style={s.roundRowTop}>
+                          <Text style={[s.roundRowTitle, isCurrent && { color: colors.gold }]}>
+                            Runde {r.id}
+                          </Text>
+                          <View style={[r.isSchnellrunde ? s.schnellPill : s.normalPill, { paddingHorizontal: 7, paddingVertical: 2 }]}>
+                            <Ionicons
+                              name={r.isSchnellrunde ? 'flash' : 'shield-checkmark'}
+                              size={9}
+                              color={r.isSchnellrunde ? colors.warning : colors.success}
+                            />
+                            <Text style={[r.isSchnellrunde ? s.schnellPillText : s.normalPillText, { fontSize: 9 }]}>
+                              {r.isSchnellrunde ? 'SCHNELL' : 'NORMAL'}
+                            </Text>
+                          </View>
+                          {isCurrent && (
+                            <View style={s.currentBadge}>
+                              <Text style={s.currentBadgeText}>AKTIV</Text>
+                            </View>
+                          )}
+                        </View>
+                        <Text style={s.roundRowMeta}>{total} Spiele · tippen zum Drucken</Text>
+                      </View>
+                      <Ionicons name="print-outline" size={18} color={colors.gold} />
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            )}
+          </View>
+        </View>
       </Modal>
 
       {/* ── Edit Modal ── */}
@@ -400,6 +469,10 @@ export default function RundeScreen() {
             <TouchableOpacity style={s.editRoundBtn} onPress={() => setEditOpen(true)} activeOpacity={0.75}>
               <Ionicons name="create-outline" size={12} color={colors.silver} />
               <Text style={s.editRoundBtnText}>Bearbeiten</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={s.editRoundBtn} onPress={() => setPrintMenuOpen(true)} activeOpacity={0.75}>
+              <Ionicons name="print-outline" size={12} color={colors.silver} />
+              <Text style={s.editRoundBtnText}>Drucken</Text>
             </TouchableOpacity>
           </View>
         )}
