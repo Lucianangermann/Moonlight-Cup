@@ -27,7 +27,7 @@ export default function ErgebnisseScreen() {
   const getTeam = (ids) => ids.map(getName).join(' & ');
 
   const allMatches = rounds.flatMap((r) =>
-    r.matches.map((m) => ({ ...m, roundId: r.id, isSchnellrunde: r.isSchnellrunde }))
+    r.matches.map((m) => ({ ...m, roundId: r.id, isSchnellrunde: r.isSchnellrunde, durchgang: m.durchgang ?? 1 }))
   );
   const filtered = selectedRound === 'all'
     ? allMatches
@@ -137,8 +137,13 @@ export default function ErgebnisseScreen() {
                       </View>
                     )}
                   </View>
-                  <View style={s.roundTag}>
-                    <Text style={s.roundTagText}>R{match.roundId}</Text>
+                  <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
+                    <View style={[s.durchgangTag, match.durchgang === 2 && s.durchgangTag2]}>
+                      <Text style={[s.durchgangTagText, match.durchgang === 2 && s.durchgangTagText2]}>D{match.durchgang}</Text>
+                    </View>
+                    <View style={s.roundTag}>
+                      <Text style={s.roundTagText}>R{match.roundId}</Text>
+                    </View>
                   </View>
                 </View>
 
@@ -343,6 +348,27 @@ const s = StyleSheet.create({
     fontSize: 10,
     fontWeight: '700',
     letterSpacing: 1,
+  },
+  durchgangTag: {
+    backgroundColor: colors.info + '18',
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: colors.info + '40',
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+  },
+  durchgangTag2: {
+    backgroundColor: colors.goldGlow,
+    borderColor: colors.borderGoldGlow,
+  },
+  durchgangTagText: {
+    color: colors.info,
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  durchgangTagText2: {
+    color: colors.gold,
   },
   roundTag: {
     backgroundColor: colors.bgSurface,

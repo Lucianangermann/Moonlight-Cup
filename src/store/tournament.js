@@ -270,8 +270,25 @@ export function TournamentProvider({ children }) {
       sittingOut = [...pool];
     }
 
-    setRounds((prev) => [...prev, { id: roundId, matches, sittingOut, isSchnellrunde }]);
+    // Erste Hälfte = Durchgang 1, zweite Hälfte = Durchgang 2
+    const half = Math.ceil(matches.length / 2);
+    const matchesWithD = matches.map((m, i) => ({ ...m, durchgang: i < half ? 1 : 2 }));
+
+    setRounds((prev) => [...prev, { id: roundId, matches: matchesWithD, sittingOut, isSchnellrunde, currentDurchgang: 1 }]);
     setCurrentRound(roundId);
+  };
+
+  const advanceDurchgang = () => {
+    setRounds((prev) =>
+      prev.map((r) => r.id === currentRound ? { ...r, currentDurchgang: 2 } : r)
+    );
+  };
+
+  const currentDurchgangDone = () => {
+    const r = getCurrentRoundData();
+    if (!r) return false;
+    const dm = r.matches.filter((m) => m.durchgang === r.currentDurchgang);
+    return dm.length > 0 && dm.every((m) => m.done);
   };
 
   const getStandings = () => {
@@ -310,6 +327,7 @@ export function TournamentProvider({ children }) {
         participants, addParticipant, removeParticipant,
         rounds, currentRound, saveResult, startNewRound,
         getStandings, getCurrentRoundData, allMatchesDone,
+        advanceDurchgang, currentDurchgangDone,
       }}
     >
       {children}

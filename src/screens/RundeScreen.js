@@ -11,16 +11,27 @@ const TYPE_CONFIG = {
 };
 
 export default function RundeScreen() {
-  const { getCurrentRoundData, currentRound, allMatchesDone, startNewRound, participants } = useTournament();
+  const { getCurrentRoundData, currentRound, allMatchesDone, startNewRound, participants, advanceDurchgang, currentDurchgangDone } = useTournament();
   const round = getCurrentRoundData();
   const isSchnellrunde = round?.isSchnellrunde ?? false;
+  const durchgang = round?.currentDurchgang ?? 1;
 
   const getName = (id) => participants.find((x) => x.id === id)?.name.split(',')[0] ?? '?';
   const getTeam = (ids) => ids.map(getName).join(' & ');
 
-  const pendingCount = round?.matches?.filter((m) => !m.done).length ?? 0;
-  const doneCount = round?.matches?.filter((m) => m.done).length ?? 0;
-  const canStart = allMatchesDone();
+  // Nur Matches des aktuellen Durchgangs anzeigen
+  const visibleMatches = round?.matches?.filter((m) => m.durchgang === durchgang) ?? [];
+  const pendingCount = visibleMatches.filter((m) => !m.done).length;
+  const doneCount = visibleMatches.filter((m) => m.done).length;
+
+  const d1Done = currentDurchgangDone();
+  const allDone = allMatchesDone();
+
+  // Primäre Aktion: In D1 → "Durchgang 2 starten"; in D2 → "Neue Runde starten"
+  const inD1 = round && durchgang === 1;
+  const primaryLabel = !round ? 'NEUE RUNDE STARTEN' : inD1 ? 'DURCHGANG 2 STARTEN' : 'NEUE RUNDE STARTEN';
+  const primaryEnabled = !round || (inD1 ? d1Done : allDone);
+  const primaryAction = inD1 ? advanceDurchgang : startNewRound;
 
   return (
     <View style={shared.screen}>
@@ -47,6 +58,12 @@ export default function RundeScreen() {
               <Text style={s.roundPillText}>RUNDE {currentRound}</Text>
             </View>
           )}
+          {currentRound > 0 && (
+            <View style={[s.durchgangPill, durchgang === 2 && s.durchgangPill2]}>
+              <Ionicons name={durchgang === 1 ? 'layers-outline' : 'layers'} size={10} color={durchgang === 1 ? colors.info : colors.gold} />
+              <Text style={[s.durchgangPillText, durchgang === 2 && s.durchgangPillText2]}>D{durchgang}</Text>
+            </View>
+          )}
         </View>
       </View>
 
@@ -55,8 +72,8 @@ export default function RundeScreen() {
           {/* Stats row */}
           <View style={s.statsRow}>
             <View style={s.statBox}>
-              <Text style={s.statNum}>{round.matches.length}</Text>
-              <Text style={s.statLbl}>Spiele</Text>
+              <Text style={s.statNum}>{visibleMatches.length}</Text>
+              <Text style={s.statLbl}>Spiele D{durchgang}</Text>
             </View>
             <View style={[s.statBox, s.statBoxMid]}>
               <Text style={[s.statNum, { color: colors.success }]}>{doneCount}</Text>
@@ -77,10 +94,10 @@ export default function RundeScreen() {
             </View>
           )}
 
-          <Text style={shared.sectionLabel}>PAARUNGEN</Text>
+          <Text style={shared.sectionLabel}>PAARUNGEN — DURCHGANG {durchgang}</Text>
 
           <ScrollView showsVerticalScrollIndicator={false}>
-            {round.matches.map((match, idx) => {
+            {visibleMatches.map((match, idx) => {
               const cfg = TYPE_CONFIG[match.type] ?? TYPE_CONFIG.MF;
               return (
                 <View key={match.id} style={[s.matchCard, match.done && s.matchCardDone]}>
@@ -129,20 +146,20 @@ export default function RundeScreen() {
       )}
 
       <TouchableOpacity
-        style={[shared.goldBtn, !canStart && shared.disabledBtn]}
-        onPress={startNewRound}
-        disabled={!canStart}
+        style={[shared.goldBtn, !primaryEnabled && shared.disabledBtn]}
+        onPress={primaryAction}
+        disabled={!primaryEnabled}
         activeOpacity={0.8}
       >
         <View style={s.btnInner}>
           <Ionicons
-            name="play"
+            name={inD1 ? 'arrow-forward' : 'play'}
             size={14}
-            color={canStart ? colors.bg : colors.textMuted}
+            color={primaryEnabled ? colors.bg : colors.textMuted}
             style={{ marginRight: 8 }}
           />
-          <Text style={[shared.goldBtnText, !canStart && shared.disabledBtnText]}>
-            NEUE RUNDE STARTEN
+          <Text style={[shared.goldBtnText, !primaryEnabled && shared.disabledBtnText]}>
+            {primaryLabel}
           </Text>
         </View>
       </TouchableOpacity>
@@ -216,6 +233,30 @@ const s = StyleSheet.create({
     fontSize: 11,
     fontWeight: '800',
     letterSpacing: 1.5,
+  },
+  durchgangPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: colors.info + '18',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.info + '40',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  durchgangPill2: {
+    backgroundColor: colors.goldGlow,
+    borderColor: colors.borderGoldGlow,
+  },
+  durchgangPillText: {
+    color: colors.info,
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 1.5,
+  },
+  durchgangPillText2: {
+    color: colors.gold,
   },
   statsRow: {
     flexDirection: 'row',
