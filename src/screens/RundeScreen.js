@@ -106,7 +106,10 @@ export default function RundeScreen() {
         ${sectionHtml('Durchgang 2', d2)}
         ${sitOut}
       </body></html>`;
-    try { await Print.printAsync({ html }); } catch (_) {}
+    try {
+      const { uri } = await Print.printToFileAsync({ html });
+      await Print.printAsync({ uri });
+    } catch (_) {}
   };
 
   // Fire print only after all modals have fully unmounted (next render cycle)
