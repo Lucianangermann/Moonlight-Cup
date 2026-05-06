@@ -60,6 +60,7 @@ export default function RundeScreen() {
       setShowConfirm(true);
     } else {
       advanceDurchgang();
+      triggerAutoTimer(2);
     }
   };
 
@@ -145,7 +146,6 @@ export default function RundeScreen() {
         triggerAutoTimer(1);
         setPreviewDg(2);
       } else {
-        triggerAutoTimer(2);
         setPreviewDg(null);
         setPrintPreview(null);
       }
