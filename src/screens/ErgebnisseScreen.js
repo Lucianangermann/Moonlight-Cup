@@ -20,6 +20,8 @@ export default function ErgebnisseScreen() {
   const [editMatch, setEditMatch] = useState(null);
   const [scoreA, setScoreA] = useState('');
   const [scoreB, setScoreB] = useState('');
+  const [errorA, setErrorA] = useState('');
+  const [errorB, setErrorB] = useState('');
 
   const getName = (id) => participants.find((x) => x.id === id)?.name.split(',')[0] ?? '?';
   const getTeam = (ids) => ids.map(getName).join(' & ');
@@ -32,15 +34,34 @@ export default function ErgebnisseScreen() {
     : allMatches.filter((m) => m.roundId === Number(selectedRound));
 
   const isEditSchnellrunde = editMatch?.isSchnellrunde ?? false;
+  const maxScore = isEditSchnellrunde ? 21 : 40;
+
+  const validate = (value, setError) => {
+    if (value === '') { setError(''); return true; }
+    if (!/^\d+$/.test(value)) { setError('Nur Zahlen erlaubt'); return false; }
+    if (Number(value) > maxScore) { setError(`Maximal ${maxScore} Punkte`); return false; }
+    setError('');
+    return true;
+  };
+
+  const handleChangeA = (v) => { setScoreA(v); validate(v, setErrorA); };
+  const handleChangeB = (v) => { setScoreB(v); validate(v, setErrorB); };
+
+  const isFormValid =
+    scoreA !== '' && scoreB !== '' &&
+    /^\d+$/.test(scoreA) && /^\d+$/.test(scoreB) &&
+    Number(scoreA) <= maxScore && Number(scoreB) <= maxScore;
 
   const openEdit = (match) => {
     setEditMatch(match);
     setScoreA(match.scoreA?.toString() ?? '');
     setScoreB(match.scoreB?.toString() ?? '');
+    setErrorA('');
+    setErrorB('');
   };
 
   const handleSave = () => {
-    if (!editMatch) return;
+    if (!editMatch || !isFormValid) return;
     saveResult(editMatch.id, Number(scoreA), Number(scoreB));
     setEditMatch(null);
   };
@@ -181,28 +202,52 @@ export default function ErgebnisseScreen() {
               </View>
             )}
             <View style={s.scoreRow}>
-              <TextInput
-                style={s.scoreInput}
-                keyboardType="numeric"
-                placeholder="0"
-                placeholderTextColor={colors.textDim}
-                value={scoreA}
-                onChangeText={setScoreA}
-              />
+              <View style={s.scoreCol}>
+                <TextInput
+                  style={[s.scoreInput, errorA ? s.scoreInputError : null]}
+                  keyboardType="numeric"
+                  placeholder="0"
+                  placeholderTextColor={colors.textDim}
+                  value={scoreA}
+                  onChangeText={handleChangeA}
+                  maxLength={2}
+                />
+                {errorA ? (
+                  <View style={s.errorBox}>
+                    <Ionicons name="alert-circle" size={11} color={colors.error} />
+                    <Text style={s.errorText}>{errorA}</Text>
+                  </View>
+                ) : null}
+              </View>
               <View style={s.dashBox}>
                 <Text style={s.dashText}>–</Text>
               </View>
-              <TextInput
-                style={s.scoreInput}
-                keyboardType="numeric"
-                placeholder="0"
-                placeholderTextColor={colors.textDim}
-                value={scoreB}
-                onChangeText={setScoreB}
-              />
+              <View style={s.scoreCol}>
+                <TextInput
+                  style={[s.scoreInput, errorB ? s.scoreInputError : null]}
+                  keyboardType="numeric"
+                  placeholder="0"
+                  placeholderTextColor={colors.textDim}
+                  value={scoreB}
+                  onChangeText={handleChangeB}
+                  maxLength={2}
+                />
+                {errorB ? (
+                  <View style={s.errorBox}>
+                    <Ionicons name="alert-circle" size={11} color={colors.error} />
+                    <Text style={s.errorText}>{errorB}</Text>
+                  </View>
+                ) : null}
+              </View>
             </View>
-            <TouchableOpacity style={shared.saveBtn} onPress={handleSave} activeOpacity={0.8}>
-              <Text style={shared.saveBtnText}>SPEICHERN</Text>
+            <TouchableOpacity
+              style={[shared.saveBtn, !isFormValid && s.saveBtnDisabled]}
+              onPress={handleSave}
+              activeOpacity={isFormValid ? 0.8 : 1}
+            >
+              <Text style={[shared.saveBtnText, !isFormValid && s.saveBtnTextDisabled]}>
+                SPEICHERN
+              </Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={() => setEditMatch(null)} activeOpacity={0.7}>
               <Text style={shared.cancelText}>Abbrechen</Text>
@@ -376,10 +421,14 @@ const s = StyleSheet.create({
   },
   scoreRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'center',
     marginBottom: 24,
     gap: 8,
+  },
+  scoreCol: {
+    alignItems: 'center',
+    width: 96,
   },
   scoreInput: {
     backgroundColor: colors.bg,
@@ -393,14 +442,38 @@ const s = StyleSheet.create({
     width: 96,
     textAlign: 'center',
   },
+  scoreInputError: {
+    borderColor: colors.error,
+    color: colors.error,
+  },
+  errorBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    marginTop: 6,
+  },
+  errorText: {
+    color: colors.error,
+    fontSize: 10,
+    fontWeight: '600',
+  },
   dashBox: {
     width: 28,
     alignItems: 'center',
+    paddingTop: 20,
   },
   dashText: {
     color: colors.textMuted,
     fontSize: 24,
     fontWeight: '300',
+  },
+  saveBtnDisabled: {
+    backgroundColor: colors.panel,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  saveBtnTextDisabled: {
+    color: colors.textMuted,
   },
   schnellBadge: {
     flexDirection: 'row',
