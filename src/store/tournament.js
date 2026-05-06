@@ -330,6 +330,31 @@ export function TournamentProvider({ children }) {
 
   const getCurrentRoundData = () => rounds.find((r) => r.id === currentRound);
 
+  const deleteCurrentRound = () => {
+    setRounds((prev) => prev.filter((r) => r.id !== currentRound));
+    setCurrentRound((prev) => Math.max(0, prev - 1));
+  };
+
+  const swapMatchPlayers = (m1id, team1, idx1, m2id, team2, idx2) => {
+    setRounds((prev) =>
+      prev.map((r) => {
+        if (r.id !== currentRound) return r;
+        const matches = r.matches.map((m) => ({
+          ...m,
+          teamA: [...m.teamA],
+          teamB: [...m.teamB],
+        }));
+        const match1 = matches.find((m) => m.id === m1id);
+        const match2 = matches.find((m) => m.id === m2id);
+        const pid1 = (team1 === 'A' ? match1.teamA : match1.teamB)[idx1];
+        const pid2 = (team2 === 'A' ? match2.teamA : match2.teamB)[idx2];
+        if (team1 === 'A') match1.teamA[idx1] = pid2; else match1.teamB[idx1] = pid2;
+        if (team2 === 'A') match2.teamA[idx2] = pid1; else match2.teamB[idx2] = pid1;
+        return { ...r, matches };
+      })
+    );
+  };
+
   const allMatchesDone = () => {
     const r = getCurrentRoundData();
     if (!r) return true;
@@ -343,6 +368,7 @@ export function TournamentProvider({ children }) {
         rounds, currentRound, saveResult, startNewRound,
         getStandings, getCurrentRoundData, allMatchesDone,
         advanceDurchgang, currentDurchgangDone,
+        deleteCurrentRound, swapMatchPlayers,
       }}
     >
       {children}

@@ -1,4 +1,5 @@
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Modal } from 'react-native';
+import { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 import { shared, cardShadow } from '../theme/styles';
@@ -10,11 +11,17 @@ const TYPE_CONFIG = {
   MF: { label: 'MIXED',        icon: 'swap-horizontal', color: colors.gold },
 };
 
-import { useState } from 'react';
-
 export default function RundeScreen() {
-  const { getCurrentRoundData, currentRound, allMatchesDone, startNewRound, participants, advanceDurchgang, currentDurchgangDone } = useTournament();
+  const {
+    getCurrentRoundData, currentRound, allMatchesDone, startNewRound,
+    participants, advanceDurchgang, currentDurchgangDone,
+    deleteCurrentRound, swapMatchPlayers,
+  } = useTournament();
   const [showConfirm, setShowConfirm] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [selectedSlot, setSelectedSlot] = useState(null);   // { matchId, team, idx, pid }
+  const [pendingSwap, setPendingSwap] = useState(null);      // { slot1, slot2 }
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const round = getCurrentRoundData();
   const isSchnellrunde = round?.isSchnellrunde ?? false;
   const durchgang = round?.currentDurchgang ?? 1;
@@ -53,15 +60,204 @@ export default function RundeScreen() {
     startNewRound();
   };
 
+  // Edit helpers
+  const allEditMatches = round?.matches ?? [];
+  const getPlayerName = (pid) => {
+    const p = participants.find((x) => x.id === pid);
+    if (!p) return '?';
+    const first = p.name.split(',')[0].trim();
+    return p.league ? `${first} [${p.league}]` : first;
+  };
+
+  const handleSlotPress = (matchId, team, idx, pid) => {
+    if (!selectedSlot) {
+      setSelectedSlot({ matchId, team, idx, pid });
+      return;
+    }
+    const isSame = selectedSlot.matchId === matchId && selectedSlot.team === team && selectedSlot.idx === idx;
+    if (isSame) { setSelectedSlot(null); return; }
+    setPendingSwap({ slot1: selectedSlot, slot2: { matchId, team, idx, pid } });
+    setSelectedSlot(null);
+  };
+
+  const confirmSwap = () => {
+    const { slot1, slot2 } = pendingSwap;
+    swapMatchPlayers(slot1.matchId, slot1.team, slot1.idx, slot2.matchId, slot2.team, slot2.idx);
+    setPendingSwap(null);
+  };
+
+  const confirmDeleteRound = () => {
+    setConfirmDelete(false);
+    setEditOpen(false);
+    deleteCurrentRound();
+  };
+
   return (
     <View style={shared.screen}>
+
+      {/* ── Edit Modal ── */}
+      <Modal visible={editOpen} animationType="slide" transparent={false}>
+        <View style={s.editScreen}>
+          {/* Edit Header */}
+          <View style={s.editHeader}>
+            <Text style={s.editTitle}>Runde {currentRound} bearbeiten</Text>
+            <TouchableOpacity onPress={() => { setEditOpen(false); setSelectedSlot(null); }} activeOpacity={0.7}>
+              <Ionicons name="close-circle" size={26} color={colors.textMuted} />
+            </TouchableOpacity>
+          </View>
+
+          {selectedSlot && (
+            <View style={s.editHint}>
+              <Ionicons name="swap-horizontal" size={13} color={colors.gold} />
+              <Text style={s.editHintText}>
+                <Text style={{ color: colors.gold }}>{getPlayerName(selectedSlot.pid)}</Text>
+                {' '}ausgewählt — tippe einen anderen Spieler zum Tauschen
+              </Text>
+              <TouchableOpacity onPress={() => setSelectedSlot(null)}>
+                <Ionicons name="close" size={14} color={colors.textMuted} />
+              </TouchableOpacity>
+            </View>
+          )}
+
+          <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }}>
+            {allEditMatches.map((match) => {
+              const cfg = TYPE_CONFIG[match.type] ?? TYPE_CONFIG.MF;
+              const teams = [
+                { key: 'A', ids: match.teamA },
+                { key: 'B', ids: match.teamB },
+              ];
+              return (
+                <View key={match.id} style={s.editMatchCard}>
+                  <View style={s.editMatchTop}>
+                    <View style={[s.typePill, { borderColor: cfg.color + '60' }]}>
+                      <Ionicons name={cfg.icon} size={10} color={cfg.color} />
+                      <Text style={[s.typeLabel, { color: cfg.color }]}>{cfg.label}</Text>
+                    </View>
+                    <View style={[s.editDgBadge, match.durchgang === 2 && s.editDgBadge2]}>
+                      <Text style={[s.editDgText, match.durchgang === 2 && s.editDgText2]}>D{match.durchgang}</Text>
+                    </View>
+                  </View>
+                  <View style={s.editTeamsRow}>
+                    {teams.map(({ key, ids }) => (
+                      <View key={key} style={s.editTeamCol}>
+                        {ids.map((pid, idx) => {
+                          const isSelected = selectedSlot?.matchId === match.id && selectedSlot?.team === key && selectedSlot?.idx === idx;
+                          return (
+                            <TouchableOpacity
+                              key={pid}
+                              style={[s.editPlayerBtn, isSelected && s.editPlayerBtnSelected]}
+                              onPress={() => handleSlotPress(match.id, key, idx, pid)}
+                              activeOpacity={0.75}
+                            >
+                              <Text style={[s.editPlayerName, isSelected && { color: colors.gold }]} numberOfLines={1}>
+                                {getPlayerName(pid)}
+                              </Text>
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </View>
+                    ))}
+                    <View style={s.editVsBox}>
+                      <Text style={s.editVsText}>VS</Text>
+                    </View>
+                  </View>
+                </View>
+              );
+            })}
+            <View style={{ height: 16 }} />
+          </ScrollView>
+
+          {/* Delete round */}
+          <TouchableOpacity style={s.deleteRoundBtn} onPress={() => setConfirmDelete(true)} activeOpacity={0.8}>
+            <Ionicons name="trash-outline" size={15} color={colors.error} />
+            <Text style={s.deleteRoundText}>Runde {currentRound} löschen</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Swap confirmation */}
+        {pendingSwap && (
+          <Modal visible transparent animationType="fade">
+            <View style={s.modalOverlay}>
+              <View style={s.modalCard}>
+                <Text style={s.modalTitle}>Spieler tauschen?</Text>
+                <Text style={s.modalBody}>
+                  <Text style={{ color: colors.gold }}>{getPlayerName(pendingSwap.slot1.pid)}</Text>
+                  {' '}und{' '}
+                  <Text style={{ color: colors.gold }}>{getPlayerName(pendingSwap.slot2.pid)}</Text>
+                  {'\n'}werden in der Auslosung getauscht.
+                </Text>
+                <View style={s.modalButtons}>
+                  <TouchableOpacity style={s.modalBtnCancel} onPress={() => setPendingSwap(null)} activeOpacity={0.8}>
+                    <Text style={s.modalBtnCancelText}>Abbrechen</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={s.modalBtnRed} onPress={confirmSwap} activeOpacity={0.8}>
+                    <Ionicons name="swap-horizontal" size={13} color={colors.white} style={{ marginRight: 5 }} />
+                    <Text style={s.modalBtnRedText}>Tauschen</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          </Modal>
+        )}
+
+        {/* Delete confirmation */}
+        {confirmDelete && (
+          <Modal visible transparent animationType="fade">
+            <View style={s.modalOverlay}>
+              <View style={s.modalCard}>
+                <Text style={s.modalTitle}>Runde löschen?</Text>
+                <Text style={s.modalBody}>
+                  Runde {currentRound} wird unwiderruflich gelöscht.{'\n'}Alle Paarungen und Ergebnisse gehen verloren.
+                </Text>
+                <View style={s.modalButtons}>
+                  <TouchableOpacity style={s.modalBtnCancel} onPress={() => setConfirmDelete(false)} activeOpacity={0.8}>
+                    <Text style={s.modalBtnCancelText}>Abbrechen</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={s.modalBtnRed} onPress={confirmDeleteRound} activeOpacity={0.8}>
+                    <Ionicons name="trash" size={13} color={colors.white} style={{ marginRight: 5 }} />
+                    <Text style={s.modalBtnRedText}>Löschen</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          </Modal>
+        )}
+      </Modal>
+
+      {/* ── Start/Confirm Modal ── */}
+      <Modal visible={showConfirm} transparent animationType="fade">
+        <View style={s.modalOverlay}>
+          <View style={s.modalCard}>
+            <Text style={s.modalTitle}>Neue Runde starten?</Text>
+            <Text style={s.modalBody}>
+              Runde {currentRound + 1} wird jetzt ausgelost.{'\n'}Diese Aktion kann nicht rückgängig gemacht werden.
+            </Text>
+            <View style={s.modalButtons}>
+              <TouchableOpacity style={s.modalBtnCancel} onPress={() => setShowConfirm(false)} activeOpacity={0.8}>
+                <Text style={s.modalBtnCancelText}>Abbrechen</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={s.modalBtnConfirm} onPress={handleConfirmStart} activeOpacity={0.8}>
+                <Ionicons name="play" size={13} color={colors.bg} style={{ marginRight: 5 }} />
+                <Text style={s.modalBtnConfirmText}>Starten</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       {/* Header */}
       <View style={s.header}>
-        <View>
+        <View style={{ flex: 1 }}>
           <Text style={s.logoText}>☽ MOONLIGHT CUP</Text>
           <Text style={s.logoSub}>Badminton Turniermanager</Text>
         </View>
-        <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+        {currentRound > 0 && (
+          <TouchableOpacity style={s.editRoundBtn} onPress={() => setEditOpen(true)} activeOpacity={0.75}>
+            <Ionicons name="create-outline" size={12} color={colors.silver} />
+            <Text style={s.editRoundBtnText}>Bearbeiten</Text>
+          </TouchableOpacity>
+        )}
+        <View style={{ flex: 1, flexDirection: 'row', gap: 8, alignItems: 'center', justifyContent: 'flex-end' }}>
           {currentRound > 0 && (isSchnellrunde ? (
             <View style={s.schnellPill}>
               <Ionicons name="flash" size={10} color={colors.warning} />
@@ -524,5 +720,168 @@ const s = StyleSheet.create({
     color: colors.bg,
     fontSize: 13,
     fontWeight: '800',
+  },
+  modalBtnRed: {
+    flex: 1,
+    backgroundColor: colors.error,
+    borderRadius: 12,
+    paddingVertical: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalBtnRedText: {
+    color: colors.white,
+    fontSize: 13,
+    fontWeight: '800',
+  },
+
+  // Edit round button
+  editRoundBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: colors.panel,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  editRoundBtnText: {
+    color: colors.silver,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+  },
+
+  // Edit modal screen
+  editScreen: {
+    flex: 1,
+    backgroundColor: colors.bg,
+    paddingTop: 56,
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+  },
+  editHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  editTitle: {
+    color: colors.white,
+    fontSize: 18,
+    fontWeight: '800',
+    letterSpacing: -0.3,
+  },
+  editHint: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: colors.goldGlow,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.borderGoldGlow,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginBottom: 10,
+    flex: 0,
+  },
+  editHintText: {
+    color: colors.textMuted,
+    fontSize: 12,
+    flex: 1,
+    lineHeight: 17,
+  },
+  editMatchCard: {
+    backgroundColor: colors.panel,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 12,
+    marginBottom: 8,
+    ...cardShadow,
+  },
+  editMatchTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  editDgBadge: {
+    backgroundColor: colors.info + '18',
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: colors.info + '40',
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+  },
+  editDgBadge2: {
+    backgroundColor: colors.goldGlow,
+    borderColor: colors.borderGoldGlow,
+  },
+  editDgText: {
+    color: colors.info,
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 1,
+  },
+  editDgText2: {
+    color: colors.gold,
+  },
+  editTeamsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  editTeamCol: {
+    flex: 1,
+    gap: 4,
+  },
+  editVsBox: {
+    width: 28,
+    alignItems: 'center',
+  },
+  editVsText: {
+    color: colors.textDim,
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 1,
+  },
+  editPlayerBtn: {
+    backgroundColor: colors.panelLight,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: 8,
+    paddingVertical: 7,
+  },
+  editPlayerBtnSelected: {
+    backgroundColor: colors.goldGlow,
+    borderColor: colors.borderGoldGlow,
+  },
+  editPlayerName: {
+    color: colors.silver,
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  deleteRoundBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: colors.error + '12',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.error + '40',
+    paddingVertical: 14,
+    marginTop: 8,
+  },
+  deleteRoundText: {
+    color: colors.error,
+    fontSize: 13,
+    fontWeight: '700',
+    letterSpacing: 0.3,
   },
 });
