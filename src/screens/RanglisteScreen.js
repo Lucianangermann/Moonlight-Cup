@@ -119,38 +119,45 @@ const buildPrintHtml = (groups, groupSize) => {
 </html>`;
 };
 
+const CHUNK = 16; // max players per print page
+
 export default function RanglisteScreen() {
   const { getStandings } = useTournament();
   const [selected, setSelected] = useState(null);
   const [printPreview, setPrintPreview] = useState(false);
-  const [previewGroupIdx, setPreviewGroupIdx] = useState(null); // null=Auswahl, 0/1/2=Gruppe
+  const [pageIdx, setPageIdx] = useState(0); // index into printPages array
   const standings = getStandings();
 
   const groupSize = Math.ceil(standings.length / 3);
   const groups = GROUPS.map((g, i) => standings.slice(i * groupSize, (i + 1) * groupSize));
 
+  // Build flat list of print pages: each group split into chunks of CHUNK players
+  const printPages = [];
+  groups.forEach((players, gIdx) => {
+    for (let start = 0; start < players.length; start += CHUNK) {
+      const chunk = players.slice(start, start + CHUNK);
+      printPages.push({ group: GROUPS[gIdx], players: chunk, startRank: gIdx * groupSize + start + 1 });
+    }
+  });
+
   const openPrintPreview = () => {
     if (standings.length === 0) return;
-    setPreviewGroupIdx(0);
+    setPageIdx(0);
     setPrintPreview(true);
   };
 
-  const doPrintGroup = async () => {
+  const doPrintPage = async () => {
     try {
       await Print.printAsync({ html: buildPrintHtml(groups, groupSize) });
-      if (previewGroupIdx < 2) {
-        setPreviewGroupIdx(previewGroupIdx + 1);
+      if (pageIdx < printPages.length - 1) {
+        setPageIdx(pageIdx + 1);
       } else {
         setPrintPreview(false);
-        setPreviewGroupIdx(null);
       }
     } catch (_) {}
   };
 
-  const closePrintPreview = () => {
-    setPrintPreview(false);
-    setPreviewGroupIdx(null);
-  };
+  const closePrintPreview = () => setPrintPreview(false);
 
   const selectedPlayer = selected ? standings.find((p) => p.id === selected) : null;
   const selectedOverallIdx = selectedPlayer ? standings.indexOf(selectedPlayer) : -1;
@@ -319,40 +326,40 @@ export default function RanglisteScreen() {
       )}
       {/* ── Druckvorschau Modal ── */}
       <Modal visible={printPreview} animationType="slide" transparent={false}>
-        <View style={s.previewScreen}>
-          {/* Header */}
-          <View style={s.previewHeader}>
-            <View style={{ flex: 1 }}>
-              <Text style={s.previewTitle}>☽ Rangliste drucken</Text>
-              <Text style={s.previewSub}>
-                {previewGroupIdx !== null
-                  ? `Schritt ${previewGroupIdx + 1}/3 — ${GROUPS[previewGroupIdx]?.fullLabel}`
-                  : ''}
-              </Text>
-            </View>
-            <TouchableOpacity onPress={closePrintPreview} activeOpacity={0.7}>
-              <Ionicons name="close-circle" size={26} color="#999" />
-            </TouchableOpacity>
-          </View>
-
-          {/* Aktuelle Gruppe anzeigen */}
-          {previewGroupIdx !== null && (() => {
-            const grp = GROUPS[previewGroupIdx];
-            const gc = GROUP_COLORS[grp.key];
-            const players = groups[previewGroupIdx];
-            const overallStart = previewGroupIdx * groupSize + 1;
-            return (
-              <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
-                <View style={[s.previewGrpHeader, { backgroundColor: gc.header }]}>
-                  <Text style={s.previewGrpLabel}>{grp.fullLabel.toUpperCase()}</Text>
-                  <Text style={s.previewGrpSub}>Platz {overallStart}–{overallStart + players.length - 1}</Text>
+        {printPreview && pageIdx < printPages.length && (() => {
+          const page = printPages[pageIdx];
+          const gc = GROUP_COLORS[page.group.key];
+          const isLast = pageIdx === printPages.length - 1;
+          return (
+            <View style={s.previewScreen}>
+              <View style={s.previewHeader}>
+                <View style={{ flex: 1 }}>
+                  <Text style={s.previewTitle}>☽ Rangliste drucken</Text>
+                  <Text style={s.previewSub}>
+                    Seite {pageIdx + 1}/{printPages.length} — {page.group.fullLabel}
+                    {' '}(Platz {page.startRank}–{page.startRank + page.players.length - 1})
+                  </Text>
                 </View>
-                {players.map((p, i) => {
+                <TouchableOpacity onPress={closePrintPreview} activeOpacity={0.7}>
+                  <Ionicons name="close-circle" size={26} color="#999" />
+                </TouchableOpacity>
+              </View>
+
+              <View style={[s.previewGrpHeader, { backgroundColor: gc.header }]}>
+                <Text style={s.previewGrpLabel}>{page.group.fullLabel.toUpperCase()}</Text>
+                <Text style={s.previewGrpSub}>
+                  Platz {page.startRank}–{page.startRank + page.players.length - 1}
+                </Text>
+              </View>
+
+              {/* Spieler — kein ScrollView, alles sichtbar für Screen-Capture */}
+              <View style={{ flex: 1 }}>
+                {page.players.map((p, i) => {
                   const parts = p.name.split(',');
                   const name = parts.length > 1 ? `${parts[1].trim()} ${parts[0].trim()}` : p.name.trim();
                   return (
                     <View key={p.id} style={[s.previewRow, i % 2 === 0 && s.previewRowAlt]}>
-                      <Text style={s.previewRank}>{overallStart + i}</Text>
+                      <Text style={s.previewRank}>{page.startRank + i}</Text>
                       <Text style={s.previewName} numberOfLines={1}>{name}</Text>
                       {p.league ? <Text style={s.previewLeague}>{p.league}</Text> : null}
                       <Text style={s.previewStats}>{p.wins}S · {p.games}Sp</Text>
@@ -362,28 +369,25 @@ export default function RanglisteScreen() {
                     </View>
                   );
                 })}
-                <View style={{ height: 20 }} />
-              </ScrollView>
-            );
-          })()}
+              </View>
 
-          {/* Buttons */}
-          <View style={s.previewActions}>
-            {previewGroupIdx > 0 && (
-              <TouchableOpacity style={s.previewBtnBack} onPress={() => setPreviewGroupIdx(previewGroupIdx - 1)} activeOpacity={0.8}>
-                <Ionicons name="arrow-back" size={15} color="#555" />
-                <Text style={s.previewBtnBackText}>Zurück</Text>
-              </TouchableOpacity>
-            )}
-            <TouchableOpacity style={[s.previewBtnPrint, { flex: 2 }]} onPress={doPrintGroup} activeOpacity={0.8}>
-              <Ionicons name="print-outline" size={15} color="#fff" />
-              <Text style={s.previewBtnPrintText}>
-                {GROUPS[previewGroupIdx]?.label} drucken
-                {previewGroupIdx < 2 ? ' →' : ''}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+              <View style={s.previewActions}>
+                {pageIdx > 0 && (
+                  <TouchableOpacity style={s.previewBtnBack} onPress={() => setPageIdx(pageIdx - 1)} activeOpacity={0.8}>
+                    <Ionicons name="arrow-back" size={15} color="#555" />
+                    <Text style={s.previewBtnBackText}>Zurück</Text>
+                  </TouchableOpacity>
+                )}
+                <TouchableOpacity style={[s.previewBtnPrint, { flex: 2 }]} onPress={doPrintPage} activeOpacity={0.8}>
+                  <Ionicons name="print-outline" size={15} color="#fff" />
+                  <Text style={s.previewBtnPrintText}>
+                    Drucken{isLast ? '' : ' →'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          );
+        })()}
       </Modal>
     </View>
   );
