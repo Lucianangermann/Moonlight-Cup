@@ -23,7 +23,12 @@ export default function ErgebnisseScreen() {
   const [errorA, setErrorA] = useState('');
   const [errorB, setErrorB] = useState('');
 
-  const getName = (id) => participants.find((x) => x.id === id)?.name.split(',')[0] ?? '?';
+  const getName = (id) => {
+    const p = participants.find((x) => x.id === id);
+    if (!p) return '?';
+    const first = p.name.split(',')[0].trim();
+    return p.league ? `${first} [${p.league}]` : first;
+  };
   const getTeam = (ids) => ids.map(getName).join(' & ');
 
   const allMatches = rounds.flatMap((r) =>

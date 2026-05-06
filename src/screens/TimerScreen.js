@@ -17,7 +17,12 @@ export default function TimerScreen() {
 
   const round = getCurrentRoundData();
   const activeMatch = round?.matches?.find((m) => !m.done) ?? round?.matches?.[0];
-  const getName = (id) => participants.find((x) => x.id === id)?.name.split(',')[0] ?? '?';
+  const getName = (id) => {
+    const p = participants.find((x) => x.id === id);
+    if (!p) return '?';
+    const first = p.name.split(',')[0].trim();
+    return p.league ? `${first} [${p.league}]` : first;
+  };
   const getTeam = (ids) => ids?.map(getName).join(' & ') ?? '';
 
   useEffect(() => {
