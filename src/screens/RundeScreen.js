@@ -2,6 +2,7 @@ import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Modal } from 'rea
 import { useState, useEffect } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
 import { colors } from '../theme/colors';
 import { shared, cardShadow } from '../theme/styles';
 import { useTournament } from '../store/tournament';
@@ -108,7 +109,7 @@ export default function RundeScreen() {
       </body></html>`;
     try {
       const { uri } = await Print.printToFileAsync({ html });
-      await Print.printAsync({ uri });
+      await Sharing.shareAsync(uri, { UTI: '.pdf', mimeType: 'application/pdf' });
     } catch (_) {}
   };
 

@@ -2,6 +2,7 @@ import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert } from 'rea
 import { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
 import { colors } from '../theme/colors';
 import { shared, cardShadow } from '../theme/styles';
 import { useTournament } from '../store/tournament';
@@ -134,7 +135,8 @@ export default function RanglisteScreen() {
     }
     try {
       const html = buildPrintHtml(groups, groupSize);
-      await Print.printAsync({ html });
+      const { uri } = await Print.printToFileAsync({ html });
+      await Sharing.shareAsync(uri, { UTI: '.pdf', mimeType: 'application/pdf' });
     } catch (e) {
       if (!e.message?.includes('cancel')) {
         Alert.alert('Fehler', 'Drucken fehlgeschlagen: ' + e.message);
