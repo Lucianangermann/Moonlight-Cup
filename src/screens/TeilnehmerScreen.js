@@ -80,21 +80,27 @@ export default function TeilnehmerScreen() {
 
   const handleSaveEdit = () => {
     if (!editName.trim() || !editTarget) return;
+    const games = parseInt(editGames, 10) || 0;
+    const wins  = parseInt(editWins,  10) || 0;
+    const diff  = parseInt(editDiff,  10) || 0;
+    if (wins > games) {
+      Alert.alert('Ungültige Eingabe', 'Die Anzahl der Siege kann nicht größer als die Anzahl der Spiele sein.');
+      return;
+    }
     updateParticipant(editTarget.id, {
       name: editName.trim(),
       gender: editGender,
       league: editLeague,
     });
-    // Compute base stats (without current adjustment) so we store the correct delta
     const standing = standings.find((s) => s.id === editTarget.id);
     const prevAdj = statAdjustments[editTarget.id] ?? { games: 0, wins: 0, diff: 0 };
     const baseGames = (standing?.games ?? 0) - (prevAdj.games ?? 0);
     const baseWins  = (standing?.wins  ?? 0) - (prevAdj.wins  ?? 0);
     const baseDiff  = (standing?.diff  ?? 0) - (prevAdj.diff  ?? 0);
     setStatAdjustment(editTarget.id, {
-      games: (parseInt(editGames, 10) || 0) - baseGames,
-      wins:  (parseInt(editWins,  10) || 0) - baseWins,
-      diff:  (parseInt(editDiff,  10) || 0) - baseDiff,
+      games: games - baseGames,
+      wins:  wins  - baseWins,
+      diff:  diff  - baseDiff,
     });
     closeEdit();
   };
