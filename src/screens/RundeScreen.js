@@ -17,6 +17,7 @@ export default function RundeScreen() {
     getCurrentRoundData, currentRound, rounds, allMatchesDone, startNewRound,
     participants, advanceDurchgang, currentDurchgangDone,
     deleteCurrentRound, deleteRound, swapMatchPlayers,
+    triggerAutoTimer,
   } = useTournament();
   const [showConfirm, setShowConfirm] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
@@ -141,8 +142,10 @@ export default function RundeScreen() {
     try {
       await Print.printAsync({ html: buildPageHtml(printPreview, previewDg) });
       if (previewDg === 1) {
-        setPreviewDg(2); // automatically switch to D2 after D1 is done
+        triggerAutoTimer(1);
+        setPreviewDg(2);
       } else {
+        triggerAutoTimer(2);
         setPreviewDg(null);
         setPrintPreview(null);
       }

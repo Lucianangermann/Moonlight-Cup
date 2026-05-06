@@ -5,25 +5,59 @@ import { colors } from '../theme/colors';
 import { shared, cardShadow, goldGlowShadow } from '../theme/styles';
 import { useTournament } from '../store/tournament';
 
+const WARMUP_SECONDS = 3 * 60;
 const DEFAULT_SECONDS = 20 * 60;
 const WARNING_SECONDS = 5 * 60;
 
 export default function TimerScreen() {
-  const { getCurrentRoundData, participants } = useTournament();
+  const { getCurrentRoundData, participants, autoTimerTrigger } = useTournament();
+  const [phase, setPhaseState] = useState('idle'); // 'idle' | 'warmup' | 'game'
+  const [timerDurchgang, setTimerDurchgang] = useState(null);
   const [secondsLeft, setSecondsLeft] = useState(DEFAULT_SECONDS);
   const [running, setRunning] = useState(false);
   const [warned, setWarned] = useState(false);
+  const [phaseComplete, setPhaseComplete] = useState(null);
   const intervalRef = useRef(null);
+  const phaseRef = useRef('idle');
+
+  const setPhase = (p) => { phaseRef.current = p; setPhaseState(p); };
 
   const round = getCurrentRoundData();
   const activeMatch = round?.matches?.find((m) => !m.done) ?? round?.matches?.[0];
   const getName = (id) => {
     const p = participants.find((x) => x.id === id);
     if (!p) return '?';
-    const parts = p.name.split(','); const first = parts.length > 1 ? `${parts[1].trim()} ${parts[0].trim()}` : p.name.trim();
+    const parts = p.name.split(',');
+    const first = parts.length > 1 ? `${parts[1].trim()} ${parts[0].trim()}` : p.name.trim();
     return p.league ? `${first} [${p.league}]` : first;
   };
   const getTeam = (ids) => ids?.map(getName).join(' & ') ?? '';
+
+  // Auto-start from RundeScreen print trigger
+  useEffect(() => {
+    if (!autoTimerTrigger) return;
+    setRunning(false);
+    clearInterval(intervalRef.current);
+    setPhase('warmup');
+    setTimerDurchgang(autoTimerTrigger.durchgang);
+    setSecondsLeft(WARMUP_SECONDS);
+    setWarned(false);
+    setPhaseComplete(null);
+    setRunning(true);
+  }, [autoTimerTrigger]);
+
+  // Auto-advance warmup → game
+  useEffect(() => {
+    if (phaseComplete === 'warmup') {
+      setPhase('game');
+      setSecondsLeft(DEFAULT_SECONDS);
+      setWarned(false);
+      setPhaseComplete(null);
+      setRunning(true);
+    } else if (phaseComplete === 'game') {
+      setPhaseComplete(null);
+    }
+  }, [phaseComplete]);
 
   useEffect(() => {
     if (running) {
@@ -32,10 +66,17 @@ export default function TimerScreen() {
           if (s <= 1) {
             clearInterval(intervalRef.current);
             setRunning(false);
-            Vibration.vibrate([0, 400, 100, 400]);
+            const currentPhase = phaseRef.current;
+            if (currentPhase === 'warmup') {
+              Vibration.vibrate([0, 300, 100, 300, 100, 300]);
+              setPhaseComplete('warmup');
+            } else {
+              Vibration.vibrate([0, 400, 100, 400]);
+              setPhaseComplete('game');
+            }
             return 0;
           }
-          if (s === WARNING_SECONDS + 1 && !warned) {
+          if (phaseRef.current === 'game' && s === WARNING_SECONDS + 1 && !warned) {
             setWarned(true);
             Vibration.vibrate(200);
           }
@@ -50,24 +91,63 @@ export default function TimerScreen() {
 
   const reset = () => {
     setRunning(false);
+    setPhase('idle');
+    setTimerDurchgang(null);
     setSecondsLeft(DEFAULT_SECONDS);
     setWarned(false);
+    setPhaseComplete(null);
   };
 
   const mins = Math.floor(secondsLeft / 60).toString().padStart(2, '0');
   const secs = (secondsLeft % 60).toString().padStart(2, '0');
-  const isWarning = secondsLeft <= WARNING_SECONDS && secondsLeft > 0;
-  const isFinished = secondsLeft === 0;
+  const isWarning = phase === 'game' && secondsLeft <= WARNING_SECONDS && secondsLeft > 0;
+  const isFinished = secondsLeft === 0 && phase !== 'idle';
 
-  const timerColor = isFinished ? colors.error : isWarning ? colors.warning : colors.gold;
-  const ringColor = isFinished ? colors.error + '60' : isWarning ? colors.warning + '60' : colors.borderGoldGlow;
+  const phaseColor = phase === 'warmup' ? colors.success
+    : isFinished ? colors.error
+    : isWarning ? colors.warning
+    : phase === 'game' ? colors.gold
+    : colors.gold;
 
-  const progress = secondsLeft / DEFAULT_SECONDS;
+  const ringColor = phase === 'warmup' ? colors.success + '60'
+    : isFinished ? colors.error + '60'
+    : isWarning ? colors.warning + '60'
+    : colors.borderGoldGlow;
+
+  const totalSeconds = phase === 'warmup' ? WARMUP_SECONDS : DEFAULT_SECONDS;
+  const progress = phase === 'idle' ? 1 : secondsLeft / totalSeconds;
   const progressPct = Math.round(progress * 100);
+
+  const phaseLabel = phase === 'warmup' ? 'EINSPIELEN'
+    : phase === 'game' ? 'SPIELZEIT'
+    : 'BEREIT';
+
+  const phaseHint = phase === 'warmup' ? '3 Min. Einspielen'
+    : phase === 'game' ? '20 Min. Spielzeit'
+    : 'Warte auf Rundenstart';
 
   return (
     <View style={[shared.screen, s.screen]}>
       <Text style={s.title}>Timer</Text>
+
+      {/* Phase banner */}
+      {phase !== 'idle' && (
+        <View style={[s.phaseBanner, { borderColor: phaseColor + '50', backgroundColor: phaseColor + '15' }]}>
+          <Ionicons
+            name={phase === 'warmup' ? 'fitness-outline' : 'tennisball-outline'}
+            size={14}
+            color={phaseColor}
+          />
+          <Text style={[s.phaseBannerText, { color: phaseColor }]}>
+            {phaseLabel}{timerDurchgang ? ` — Durchgang ${timerDurchgang}` : ''}
+          </Text>
+          {isFinished && (
+            <View style={s.finishedBadge}>
+              <Text style={s.finishedBadgeText}>FERTIG</Text>
+            </View>
+          )}
+        </View>
+      )}
 
       {/* Match Info Card */}
       <View style={s.matchCard}>
@@ -94,23 +174,26 @@ export default function TimerScreen() {
       {/* Timer Ring */}
       <View style={[s.ringOuter, { borderColor: ringColor }, isFinished && s.ringFinished]}>
         <View style={s.ringInner}>
-          <Text style={[s.timerText, { color: timerColor }]}>
+          <Text style={[s.timerText, { color: phaseColor }]}>
             {mins}:{secs}
           </Text>
-          <Text style={[s.statusText, { color: running ? colors.success : isFinished ? colors.error : colors.textMuted }]}>
-            {isFinished ? 'ZEIT!' : running ? 'LÄUFT' : 'PAUSE'}
+          <Text style={[s.statusText, { color: running ? phaseColor : isFinished ? colors.error : colors.textMuted }]}>
+            {isFinished ? 'ZEIT!' : running ? phaseLabel : phase === 'idle' ? 'BEREIT' : 'PAUSE'}
           </Text>
           {isWarning && !isFinished && (
             <Text style={s.warningText}>5 Min. Rest</Text>
+          )}
+          {phase === 'warmup' && !isFinished && (
+            <Text style={[s.phaseHintText, { color: colors.success + 'AA' }]}>→ danach 20 Min.</Text>
           )}
         </View>
       </View>
 
       {/* Progress Bar */}
       <View style={s.progressBar}>
-        <View style={[s.progressFill, { width: `${progressPct}%`, backgroundColor: timerColor }]} />
+        <View style={[s.progressFill, { width: `${progressPct}%`, backgroundColor: phaseColor }]} />
       </View>
-      <Text style={s.progressLabel}>{progressPct}%</Text>
+      <Text style={s.progressLabel}>{phaseHint}  ·  {progressPct}%</Text>
 
       {/* Controls */}
       <View style={s.controls}>
@@ -144,7 +227,11 @@ export default function TimerScreen() {
         </TouchableOpacity>
       </View>
 
-      <Text style={s.hint}>Standard: 20 Min.  ·  Vibration bei 5 Min. Rest & Ende</Text>
+      <Text style={s.hint}>
+        {phase === 'idle'
+          ? 'Startet automatisch nach dem Drucken der Durchgänge'
+          : 'Vibration bei Phasenwechsel, 5 Min. Rest & Ende'}
+      </Text>
     </View>
   );
 }
@@ -159,7 +246,36 @@ const s = StyleSheet.create({
     fontWeight: '800',
     letterSpacing: -0.3,
     alignSelf: 'flex-start',
-    marginBottom: 20,
+    marginBottom: 12,
+  },
+  phaseBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    width: '100%',
+    borderRadius: 10,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    marginBottom: 12,
+  },
+  phaseBannerText: {
+    fontSize: 13,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+    flex: 1,
+  },
+  finishedBadge: {
+    backgroundColor: colors.error,
+    borderRadius: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  finishedBadgeText: {
+    color: colors.white,
+    fontSize: 9,
+    fontWeight: '800',
+    letterSpacing: 1,
   },
   matchCard: {
     width: '100%',
@@ -168,7 +284,7 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     padding: 16,
-    marginBottom: 32,
+    marginBottom: 24,
     alignItems: 'center',
     ...cardShadow,
   },
@@ -255,6 +371,12 @@ const s = StyleSheet.create({
     marginTop: 6,
     letterSpacing: 0.5,
   },
+  phaseHintText: {
+    fontSize: 11,
+    fontWeight: '500',
+    marginTop: 6,
+    letterSpacing: 0.3,
+  },
   progressBar: {
     width: '80%',
     height: 3,
@@ -272,12 +394,12 @@ const s = StyleSheet.create({
     fontSize: 10,
     fontWeight: '600',
     letterSpacing: 0.5,
-    marginBottom: 32,
+    marginBottom: 28,
   },
   controls: {
     flexDirection: 'row',
     gap: 12,
-    marginBottom: 24,
+    marginBottom: 20,
   },
   ctrlBtn: {
     backgroundColor: colors.panel,
@@ -313,5 +435,6 @@ const s = StyleSheet.create({
     fontSize: 11,
     textAlign: 'center',
     lineHeight: 18,
+    paddingHorizontal: 16,
   },
 });
