@@ -43,7 +43,7 @@ export function TournamentProvider({ children }) {
         if (!r.matches.some((m) => m.id === matchId)) return r;
         let effA = scoreA;
         let effB = scoreB;
-        if (r.isSchnellrunde) {
+        if (r.isSchnellrunde && Math.max(scoreA, scoreB) >= 16) {
           if (scoreA > scoreB) effB = Math.max(16, scoreB);
           else if (scoreB > scoreA) effA = Math.max(16, scoreA);
         }
