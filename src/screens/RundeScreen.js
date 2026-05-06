@@ -1,6 +1,7 @@
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Modal } from 'react-native';
 import { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
+import * as Print from 'expo-print';
 import { colors } from '../theme/colors';
 import { shared, cardShadow } from '../theme/styles';
 import { useTournament } from '../store/tournament';
@@ -24,6 +25,7 @@ export default function RundeScreen() {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [roundsMenuOpen, setRoundsMenuOpen] = useState(false);
   const [roundToDelete, setRoundToDelete] = useState(null);  // round object
+  const [showPrintAsk, setShowPrintAsk] = useState(false);
   const round = getCurrentRoundData();
   const isSchnellrunde = round?.isSchnellrunde ?? false;
   const durchgang = round?.currentDurchgang ?? 1;
@@ -60,6 +62,51 @@ export default function RundeScreen() {
   const handleConfirmStart = () => {
     setShowConfirm(false);
     startNewRound();
+    setShowPrintAsk(true);
+  };
+
+  const TYPE_LABELS = { MM: 'Herrendoppel', FF: 'Damendoppel', MF: 'Mixed' };
+
+  const printRound = async () => {
+    setShowPrintAsk(false);
+    const r = getCurrentRoundData();
+    if (!r) return;
+    const d1 = r.matches.filter((m) => m.durchgang === 1);
+    const d2 = r.matches.filter((m) => m.durchgang === 2);
+    const matchRows = (list) =>
+      list.map((m, i) => `
+        <tr style="background:${i % 2 === 0 ? '#f9f9f9' : '#fff'}">
+          <td style="padding:7px 10px;font-size:11px;color:#555;font-weight:600;white-space:nowrap">${TYPE_LABELS[m.type] ?? m.type}</td>
+          <td style="padding:7px 10px;font-weight:700">${m.teamA.map(getName).join(' &amp; ')}</td>
+          <td style="padding:7px 6px;text-align:center;color:#888;font-size:11px;font-weight:700">VS</td>
+          <td style="padding:7px 10px;font-weight:700">${m.teamB.map(getName).join(' &amp; ')}</td>
+        </tr>`).join('');
+    const sectionHtml = (label, list) => list.length === 0 ? '' : `
+      <h3 style="margin:18px 0 6px;font-size:13px;color:#555;letter-spacing:1px;text-transform:uppercase">${label}</h3>
+      <table style="width:100%;border-collapse:collapse;font-size:13px;font-family:Arial,sans-serif">
+        <thead>
+          <tr style="background:#1a1a2e;color:#fff">
+            <th style="padding:8px 10px;text-align:left;font-size:10px;letter-spacing:1px">TYP</th>
+            <th style="padding:8px 10px;text-align:left">TEAM A</th>
+            <th style="padding:8px 6px;width:36px"></th>
+            <th style="padding:8px 10px;text-align:left">TEAM B</th>
+          </tr>
+        </thead>
+        <tbody>${matchRows(list)}</tbody>
+      </table>`;
+    const sitOut = r.sittingOut?.length > 0
+      ? `<p style="margin-top:16px;font-size:12px;color:#888"><b>Pausiert:</b> ${r.sittingOut.map(getName).join(', ')}</p>`
+      : '';
+    const html = `
+      <html><body style="font-family:Arial,sans-serif;padding:20px;color:#222;max-width:700px;margin:0 auto">
+        <h1 style="margin:0 0 2px;font-size:20px">☽ Moonlight Cup</h1>
+        <p style="margin:0 0 4px;font-size:12px;color:#555">Runde ${r.id} &mdash; ${r.isSchnellrunde ? 'Schnellrunde' : 'Normale Runde'}</p>
+        <hr style="border:none;border-top:1px solid #ddd;margin:12px 0"/>
+        ${sectionHtml('Durchgang 1', d1)}
+        ${sectionHtml('Durchgang 2', d2)}
+        ${sitOut}
+      </body></html>`;
+    try { await Print.printAsync({ html }); } catch (_) {}
   };
 
   // Edit helpers
@@ -474,6 +521,31 @@ export default function RundeScreen() {
               <TouchableOpacity style={s.modalBtnConfirm} onPress={handleConfirmStart} activeOpacity={0.8}>
                 <Ionicons name="play" size={13} color={colors.bg} style={{ marginRight: 5 }} />
                 <Text style={s.modalBtnConfirmText}>Starten</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ── Drucken-Frage nach Rundenstart ── */}
+      <Modal visible={showPrintAsk} transparent animationType="fade">
+        <View style={s.modalOverlay}>
+          <View style={s.modalCard}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+              <Ionicons name="print-outline" size={20} color={colors.gold} />
+              <Text style={s.modalTitle}>Runde drucken?</Text>
+            </View>
+            <Text style={s.modalBody}>
+              Sollen die Spielpaarungen von Runde {currentRound} jetzt ausgedruckt werden?{'\n'}
+              Die Liste ist nach Durchgang 1 und 2 sortiert.
+            </Text>
+            <View style={s.modalButtons}>
+              <TouchableOpacity style={s.modalBtnCancel} onPress={() => setShowPrintAsk(false)} activeOpacity={0.8}>
+                <Text style={s.modalBtnCancelText}>Nein</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={s.modalBtnConfirm} onPress={printRound} activeOpacity={0.8}>
+                <Ionicons name="print" size={13} color={colors.bg} style={{ marginRight: 5 }} />
+                <Text style={s.modalBtnConfirmText}>Drucken</Text>
               </TouchableOpacity>
             </View>
           </View>
