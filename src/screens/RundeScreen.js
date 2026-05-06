@@ -67,12 +67,15 @@ export default function RundeScreen() {
     startNewRound();
   };
 
-  // Auto-open print preview when a new round starts
+  // Auto-open print preview with D1 pre-selected when a new round starts
   useEffect(() => {
     if (currentRound > prevRoundRef.current) {
       prevRoundRef.current = currentRound;
       const newRound = rounds.find((r) => r.id === currentRound);
-      if (newRound) setPrintPreview(newRound);
+      if (newRound) {
+        setPrintPreview(newRound);
+        setPreviewDg(1); // start directly on D1
+      }
     }
   }, [currentRound, rounds]);
 
@@ -113,10 +116,18 @@ export default function RundeScreen() {
     </body></html>`;
   };
 
-  // expo-print captures the current screen — so we filter the preview to the
-  // selected Durchgang first, then call print so it captures the right content.
+  // expo-print captures the current screen — preview shows only one Durchgang,
+  // then print captures it. After D1 print auto-advances to D2.
   const doPrint = async () => {
-    try { await Print.printAsync({ html: buildPageHtml(printPreview, previewDg) }); } catch (_) {}
+    try {
+      await Print.printAsync({ html: buildPageHtml(printPreview, previewDg) });
+      if (previewDg === 1) {
+        setPreviewDg(2); // automatically switch to D2 after D1 is done
+      } else {
+        setPreviewDg(null);
+        setPrintPreview(null);
+      }
+    } catch (_) {}
   };
 
   const doShare = async (r) => {
@@ -628,7 +639,7 @@ export default function RundeScreen() {
               <View style={{ flex: 1 }}>
                 <Text style={s.previewTitle}>☽ Moonlight Cup — Runde {printPreview.id}</Text>
                 <Text style={s.previewSub}>
-                  {previewDg ? `Durchgang ${previewDg} — tippe Drucken` : 'Wähle einen Durchgang zum Drucken'}
+                  {previewDg === 1 ? 'Schritt 1/2 — Durchgang 1 drucken' : previewDg === 2 ? 'Schritt 2/2 — Durchgang 2 drucken' : 'Wähle einen Durchgang'}
                 </Text>
               </View>
               <TouchableOpacity onPress={() => { setPrintPreview(null); setPreviewDg(null); }} activeOpacity={0.7}>
