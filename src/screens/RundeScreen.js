@@ -27,6 +27,7 @@ export default function RundeScreen() {
   const [roundToDelete, setRoundToDelete] = useState(null);  // round object
   const [printMenuOpen, setPrintMenuOpen] = useState(false);
   const [printPreview, setPrintPreview] = useState(null); // round object to preview
+  const [previewDg, setPreviewDg] = useState(null);      // null = beide, 1 = nur D1, 2 = nur D2
   const prevRoundRef = useRef(0);
   const round = getCurrentRoundData();
   const isSchnellrunde = round?.isSchnellrunde ?? false;
@@ -112,8 +113,10 @@ export default function RundeScreen() {
     </body></html>`;
   };
 
-  const doPrint = async (r, dg) => {
-    try { await Print.printAsync({ html: buildPageHtml(r, dg) }); } catch (_) {}
+  // expo-print captures the current screen — so we filter the preview to the
+  // selected Durchgang first, then call print so it captures the right content.
+  const doPrint = async () => {
+    try { await Print.printAsync({ html: buildPageHtml(printPreview, previewDg) }); } catch (_) {}
   };
 
   const doShare = async (r) => {
@@ -622,22 +625,25 @@ export default function RundeScreen() {
         {printPreview && (
           <View style={s.previewScreen}>
             <View style={s.previewHeader}>
-              <View>
-                <Text style={s.previewTitle}>☽ Moonlight Cup</Text>
-                <Text style={s.previewSub}>Runde {printPreview.id} · {printPreview.isSchnellrunde ? 'Schnellrunde' : 'Normale Runde'}</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={s.previewTitle}>☽ Moonlight Cup — Runde {printPreview.id}</Text>
+                <Text style={s.previewSub}>
+                  {previewDg ? `Durchgang ${previewDg} — tippe Drucken` : 'Wähle einen Durchgang zum Drucken'}
+                </Text>
               </View>
-              <TouchableOpacity onPress={() => setPrintPreview(null)} activeOpacity={0.7}>
+              <TouchableOpacity onPress={() => { setPrintPreview(null); setPreviewDg(null); }} activeOpacity={0.7}>
                 <Ionicons name="close-circle" size={26} color="#999" />
               </TouchableOpacity>
             </View>
 
             <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
               {[1, 2].map((dg) => {
+                if (previewDg && previewDg !== dg) return null; // zeige nur gewählten DG
                 const dgMatches = printPreview.matches.filter((m) => m.durchgang === dg);
                 if (!dgMatches.length) return null;
                 return (
                   <View key={dg}>
-                    <View style={s.previewDgHeader}>
+                    <View style={[s.previewDgHeader, previewDg === dg && { backgroundColor: '#2a5298' }]}>
                       <Text style={s.previewDgLabel}>DURCHGANG {dg}</Text>
                     </View>
                     {dgMatches.map((m, i) => {
@@ -654,25 +660,41 @@ export default function RundeScreen() {
                   </View>
                 );
               })}
-              {printPreview.sittingOut?.length > 0 && (
+              {previewDg === 2 && printPreview.sittingOut?.length > 0 && (
                 <Text style={s.previewSitOut}>Pausiert: {printPreview.sittingOut.map(getName).join(', ')}</Text>
               )}
               <View style={{ height: 20 }} />
             </ScrollView>
 
+            {/* Buttons: ohne Auswahl → D1/D2 wählen; mit Auswahl → Drucken/Zurück */}
             <View style={s.previewActions}>
-              <TouchableOpacity style={s.previewBtnPrint} onPress={() => doPrint(printPreview, 1)} activeOpacity={0.8}>
-                <Ionicons name="print-outline" size={15} color="#fff" />
-                <Text style={s.previewBtnPrintText}>D1 drucken</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={s.previewBtnPrint} onPress={() => doPrint(printPreview, 2)} activeOpacity={0.8}>
-                <Ionicons name="print-outline" size={15} color="#fff" />
-                <Text style={s.previewBtnPrintText}>D2 drucken</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={s.previewBtnShare} onPress={() => doShare(printPreview)} activeOpacity={0.8}>
-                <Ionicons name="share-outline" size={15} color="#555" />
-                <Text style={s.previewBtnShareText}>Teilen</Text>
-              </TouchableOpacity>
+              {!previewDg ? (
+                <>
+                  <TouchableOpacity style={s.previewBtnPrint} onPress={() => setPreviewDg(1)} activeOpacity={0.8}>
+                    <Ionicons name="print-outline" size={15} color="#fff" />
+                    <Text style={s.previewBtnPrintText}>D1 drucken</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={s.previewBtnPrint} onPress={() => setPreviewDg(2)} activeOpacity={0.8}>
+                    <Ionicons name="print-outline" size={15} color="#fff" />
+                    <Text style={s.previewBtnPrintText}>D2 drucken</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={s.previewBtnShare} onPress={() => doShare(printPreview)} activeOpacity={0.8}>
+                    <Ionicons name="share-outline" size={15} color="#555" />
+                    <Text style={s.previewBtnShareText}>Teilen</Text>
+                  </TouchableOpacity>
+                </>
+              ) : (
+                <>
+                  <TouchableOpacity style={s.previewBtnShare} onPress={() => setPreviewDg(null)} activeOpacity={0.8}>
+                    <Ionicons name="arrow-back" size={15} color="#555" />
+                    <Text style={s.previewBtnShareText}>Zurück</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[s.previewBtnPrint, { flex: 2 }]} onPress={doPrint} activeOpacity={0.8}>
+                    <Ionicons name="print-outline" size={15} color="#fff" />
+                    <Text style={s.previewBtnPrintText}>Durchgang {previewDg} drucken</Text>
+                  </TouchableOpacity>
+                </>
+              )}
             </View>
           </View>
         )}
