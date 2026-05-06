@@ -1,6 +1,7 @@
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Modal, Share } from 'react-native';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Ionicons } from '@expo/vector-icons';
+import * as Print from 'expo-print';
 import { colors } from '../theme/colors';
 import { shared, cardShadow } from '../theme/styles';
 import { useTournament } from '../store/tournament';
@@ -24,9 +25,9 @@ export default function RundeScreen() {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [roundsMenuOpen, setRoundsMenuOpen] = useState(false);
   const [roundToDelete, setRoundToDelete] = useState(null);  // round object
-  const [showPrintAsk, setShowPrintAsk] = useState(false);
   const [printMenuOpen, setPrintMenuOpen] = useState(false);
-  const [pendingPrintRound, setPendingPrintRound] = useState(null);
+  const [printPreview, setPrintPreview] = useState(null); // round object to preview
+  const prevRoundRef = useRef(0);
   const round = getCurrentRoundData();
   const isSchnellrunde = round?.isSchnellrunde ?? false;
   const durchgang = round?.currentDurchgang ?? 1;
@@ -63,53 +64,65 @@ export default function RundeScreen() {
   const handleConfirmStart = () => {
     setShowConfirm(false);
     startNewRound();
-    setShowPrintAsk(true);
   };
+
+  // Auto-open print preview when a new round starts
+  useEffect(() => {
+    if (currentRound > prevRoundRef.current) {
+      prevRoundRef.current = currentRound;
+      const newRound = rounds.find((r) => r.id === currentRound);
+      if (newRound) setPrintPreview(newRound);
+    }
+  }, [currentRound, rounds]);
 
   const TYPE_LABELS = { MM: 'Herrendoppel', FF: 'Damendoppel', MF: 'Mixed' };
 
-  const buildAndShare = async (r) => {
-    if (!r) return;
-    const fmt = (list, label) => {
-      if (!list.length) return '';
-      const rows = list.map((m, i) =>
-        `${i + 1}. [${TYPE_LABELS[m.type] ?? m.type}]  ${m.teamA.map(getName).join(' & ')}  vs  ${m.teamB.map(getName).join(' & ')}`
-      ).join('\n');
-      return `\n── ${label} ──\n${rows}`;
-    };
+  const buildHtml = (r) => {
     const d1 = r.matches.filter((m) => m.durchgang === 1);
     const d2 = r.matches.filter((m) => m.durchgang === 2);
-    const sitOut = r.sittingOut?.length > 0 ? `\nPausiert: ${r.sittingOut.map(getName).join(', ')}` : '';
-    const text =
-      `☽ MOONLIGHT CUP\n` +
-      `Runde ${r.id}  ·  ${r.isSchnellrunde ? 'Schnellrunde' : 'Normale Runde'}\n` +
-      `${'─'.repeat(40)}` +
-      fmt(d1, 'DURCHGANG 1') +
-      fmt(d2, 'DURCHGANG 2') +
-      sitOut;
-    try {
-      await Share.share({ message: text, title: `Moonlight Cup – Runde ${r.id}` });
-    } catch (_) {}
+    const rows = (list) => list.map((m, i) => `
+      <tr style="background:${i % 2 === 0 ? '#f9f9f9' : '#fff'}">
+        <td style="padding:7px 10px;font-size:11px;color:#555;font-weight:600">${TYPE_LABELS[m.type] ?? m.type}</td>
+        <td style="padding:7px 10px;font-weight:700">${m.teamA.map(getName).join(' &amp; ')}</td>
+        <td style="padding:7px 6px;text-align:center;color:#aaa;font-size:11px">VS</td>
+        <td style="padding:7px 10px;font-weight:700">${m.teamB.map(getName).join(' &amp; ')}</td>
+      </tr>`).join('');
+    const section = (label, list) => list.length === 0 ? '' : `
+      <h3 style="margin:16px 0 6px;font-size:12px;color:#666;letter-spacing:1px;text-transform:uppercase">${label}</h3>
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <tbody>${rows(list)}</tbody>
+      </table>`;
+    const sitOut = r.sittingOut?.length > 0
+      ? `<p style="margin-top:14px;font-size:12px;color:#888"><b>Pausiert:</b> ${r.sittingOut.map(getName).join(', ')}</p>` : '';
+    return `<html><body style="font-family:Arial,sans-serif;padding:20px;color:#222;max-width:700px;margin:0 auto">
+      <h2 style="margin:0 0 2px">☽ Moonlight Cup — Runde ${r.id}</h2>
+      <p style="margin:0 0 10px;color:#666;font-size:12px">${r.isSchnellrunde ? 'Schnellrunde' : 'Normale Runde'}</p>
+      <hr style="border:none;border-top:1px solid #ddd;margin:10px 0"/>
+      ${section('Durchgang 1', d1)}${section('Durchgang 2', d2)}${sitOut}
+    </body></html>`;
   };
 
-  // Fire print only after all modals have fully unmounted (next render cycle)
-  useEffect(() => {
-    if (!pendingPrintRound) return;
-    const t = setTimeout(() => {
-      buildAndShare(pendingPrintRound);
-      setPendingPrintRound(null);
-    }, 350);
-    return () => clearTimeout(t);
-  }, [pendingPrintRound]);
+  const doPrint = async (r) => {
+    try { await Print.printAsync({ html: buildHtml(r) }); } catch (_) {}
+  };
 
-  const printRound = () => {
-    setShowPrintAsk(false);
-    setPendingPrintRound(getCurrentRoundData() ?? round);
+  const doShare = async (r) => {
+    const fmt = (list, lbl) => list.length === 0 ? '' :
+      `\n── ${lbl} ──\n` + list.map((m, i) =>
+        `${i + 1}. [${TYPE_LABELS[m.type]}]  ${m.teamA.map(getName).join(' & ')}  vs  ${m.teamB.map(getName).join(' & ')}`
+      ).join('\n');
+    const text = `☽ MOONLIGHT CUP — Runde ${r.id}\n` +
+      (r.isSchnellrunde ? 'Schnellrunde' : 'Normale Runde') + '\n' +
+      '─'.repeat(38) +
+      fmt(r.matches.filter(m => m.durchgang === 1), 'DURCHGANG 1') +
+      fmt(r.matches.filter(m => m.durchgang === 2), 'DURCHGANG 2') +
+      (r.sittingOut?.length > 0 ? `\n\nPausiert: ${r.sittingOut.map(getName).join(', ')}` : '');
+    try { await Share.share({ message: text }); } catch (_) {}
   };
 
   const printSelectedRound = (r) => {
     setPrintMenuOpen(false);
-    setPendingPrintRound(r);
+    setPrintPreview(r);
   };
 
   // Edit helpers
@@ -594,29 +607,61 @@ export default function RundeScreen() {
         </View>
       </Modal>
 
-      {/* ── Drucken-Frage nach Rundenstart ── */}
-      <Modal visible={showPrintAsk} transparent animationType="fade">
-        <View style={s.modalOverlay}>
-          <View style={s.modalCard}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-              <Ionicons name="print-outline" size={20} color={colors.gold} />
-              <Text style={s.modalTitle}>Runde drucken?</Text>
-            </View>
-            <Text style={s.modalBody}>
-              Sollen die Spielpaarungen von Runde {currentRound} jetzt ausgedruckt werden?{'\n'}
-              Die Liste ist nach Durchgang 1 und 2 sortiert.
-            </Text>
-            <View style={s.modalButtons}>
-              <TouchableOpacity style={s.modalBtnCancel} onPress={() => setShowPrintAsk(false)} activeOpacity={0.8}>
-                <Text style={s.modalBtnCancelText}>Nein</Text>
+      {/* ── Druckvorschau Modal ── */}
+      <Modal visible={!!printPreview} animationType="slide" transparent={false}>
+        {printPreview && (
+          <View style={s.previewScreen}>
+            <View style={s.previewHeader}>
+              <View>
+                <Text style={s.previewTitle}>☽ Moonlight Cup</Text>
+                <Text style={s.previewSub}>Runde {printPreview.id} · {printPreview.isSchnellrunde ? 'Schnellrunde' : 'Normale Runde'}</Text>
+              </View>
+              <TouchableOpacity onPress={() => setPrintPreview(null)} activeOpacity={0.7}>
+                <Ionicons name="close-circle" size={26} color="#999" />
               </TouchableOpacity>
-              <TouchableOpacity style={s.modalBtnConfirm} onPress={printRound} activeOpacity={0.8}>
-                <Ionicons name="print" size={13} color={colors.bg} style={{ marginRight: 5 }} />
-                <Text style={s.modalBtnConfirmText}>Drucken</Text>
+            </View>
+
+            <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
+              {[1, 2].map((dg) => {
+                const dgMatches = printPreview.matches.filter((m) => m.durchgang === dg);
+                if (!dgMatches.length) return null;
+                return (
+                  <View key={dg}>
+                    <View style={s.previewDgHeader}>
+                      <Text style={s.previewDgLabel}>DURCHGANG {dg}</Text>
+                    </View>
+                    {dgMatches.map((m, i) => {
+                      const cfg = TYPE_CONFIG[m.type] ?? TYPE_CONFIG.MF;
+                      return (
+                        <View key={m.id} style={[s.previewRow, i % 2 === 0 && s.previewRowAlt]}>
+                          <Text style={[s.previewType, { color: cfg.color }]}>{cfg.label}</Text>
+                          <Text style={s.previewTeam} numberOfLines={1}>{getTeam(m.teamA)}</Text>
+                          <Text style={s.previewVs}>vs</Text>
+                          <Text style={[s.previewTeam, { textAlign: 'right' }]} numberOfLines={1}>{getTeam(m.teamB)}</Text>
+                        </View>
+                      );
+                    })}
+                  </View>
+                );
+              })}
+              {printPreview.sittingOut?.length > 0 && (
+                <Text style={s.previewSitOut}>Pausiert: {printPreview.sittingOut.map(getName).join(', ')}</Text>
+              )}
+              <View style={{ height: 20 }} />
+            </ScrollView>
+
+            <View style={s.previewActions}>
+              <TouchableOpacity style={s.previewBtnPrint} onPress={() => doPrint(printPreview)} activeOpacity={0.8}>
+                <Ionicons name="print-outline" size={16} color="#fff" />
+                <Text style={s.previewBtnPrintText}>Drucken</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={s.previewBtnShare} onPress={() => doShare(printPreview)} activeOpacity={0.8}>
+                <Ionicons name="share-outline" size={16} color="#555" />
+                <Text style={s.previewBtnShareText}>Teilen</Text>
               </TouchableOpacity>
             </View>
           </View>
-        </View>
+        )}
       </Modal>
 
       <TouchableOpacity
@@ -1183,5 +1228,113 @@ const s = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     letterSpacing: 0.3,
+  },
+
+  // Print preview
+  previewScreen: {
+    flex: 1,
+    backgroundColor: '#fff',
+    paddingTop: 56,
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+  },
+  previewHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  previewTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#111',
+  },
+  previewSub: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 2,
+  },
+  previewDgHeader: {
+    backgroundColor: '#1a1a2e',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    marginTop: 10,
+    marginBottom: 2,
+    borderRadius: 6,
+  },
+  previewDgLabel: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 1.5,
+  },
+  previewRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+    gap: 6,
+  },
+  previewRowAlt: {
+    backgroundColor: '#f9f9f9',
+  },
+  previewType: {
+    fontSize: 10,
+    fontWeight: '700',
+    width: 72,
+  },
+  previewTeam: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#111',
+  },
+  previewVs: {
+    fontSize: 11,
+    color: '#aaa',
+    fontWeight: '600',
+    width: 22,
+    textAlign: 'center',
+  },
+  previewSitOut: {
+    marginTop: 14,
+    fontSize: 12,
+    color: '#888',
+    paddingHorizontal: 8,
+  },
+  previewActions: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 12,
+  },
+  previewBtnPrint: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#1a1a2e',
+    borderRadius: 12,
+    paddingVertical: 14,
+  },
+  previewBtnPrintText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  previewBtnShare: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#f0f0f0',
+    borderRadius: 12,
+    paddingVertical: 14,
+  },
+  previewBtnShareText: {
+    color: '#333',
+    fontSize: 14,
+    fontWeight: '700',
   },
 });
