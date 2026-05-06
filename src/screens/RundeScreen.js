@@ -1,8 +1,6 @@
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Modal } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Modal, Share } from 'react-native';
 import { useState, useEffect } from 'react';
 import { Ionicons } from '@expo/vector-icons';
-import * as FileSystem from 'expo-file-system';
-import * as Sharing from 'expo-sharing';
 import { colors } from '../theme/colors';
 import { shared, cardShadow } from '../theme/styles';
 import { useTournament } from '../store/tournament';
@@ -70,47 +68,27 @@ export default function RundeScreen() {
 
   const TYPE_LABELS = { MM: 'Herrendoppel', FF: 'Damendoppel', MF: 'Mixed' };
 
-  const buildAndPrint = async (r) => {
+  const buildAndShare = async (r) => {
     if (!r) return;
+    const fmt = (list, label) => {
+      if (!list.length) return '';
+      const rows = list.map((m, i) =>
+        `${i + 1}. [${TYPE_LABELS[m.type] ?? m.type}]  ${m.teamA.map(getName).join(' & ')}  vs  ${m.teamB.map(getName).join(' & ')}`
+      ).join('\n');
+      return `\n── ${label} ──\n${rows}`;
+    };
     const d1 = r.matches.filter((m) => m.durchgang === 1);
     const d2 = r.matches.filter((m) => m.durchgang === 2);
-    const matchRows = (list) =>
-      list.map((m, i) => `
-        <tr style="background:${i % 2 === 0 ? '#f9f9f9' : '#fff'}">
-          <td style="padding:7px 10px;font-size:11px;color:#555;font-weight:600;white-space:nowrap">${TYPE_LABELS[m.type] ?? m.type}</td>
-          <td style="padding:7px 10px;font-weight:700">${m.teamA.map(getName).join(' &amp; ')}</td>
-          <td style="padding:7px 6px;text-align:center;color:#888;font-size:11px;font-weight:700">VS</td>
-          <td style="padding:7px 10px;font-weight:700">${m.teamB.map(getName).join(' &amp; ')}</td>
-        </tr>`).join('');
-    const sectionHtml = (label, list) => list.length === 0 ? '' : `
-      <h3 style="margin:18px 0 6px;font-size:13px;color:#555;letter-spacing:1px;text-transform:uppercase">${label}</h3>
-      <table style="width:100%;border-collapse:collapse;font-size:13px;font-family:Arial,sans-serif">
-        <thead>
-          <tr style="background:#1a1a2e;color:#fff">
-            <th style="padding:8px 10px;text-align:left;font-size:10px;letter-spacing:1px">TYP</th>
-            <th style="padding:8px 10px;text-align:left">TEAM A</th>
-            <th style="padding:8px 6px;width:36px"></th>
-            <th style="padding:8px 10px;text-align:left">TEAM B</th>
-          </tr>
-        </thead>
-        <tbody>${matchRows(list)}</tbody>
-      </table>`;
-    const sitOut = r.sittingOut?.length > 0
-      ? `<p style="margin-top:16px;font-size:12px;color:#888"><b>Pausiert:</b> ${r.sittingOut.map(getName).join(', ')}</p>`
-      : '';
-    const html = `
-      <html><body style="font-family:Arial,sans-serif;padding:20px;color:#222;max-width:700px;margin:0 auto">
-        <h1 style="margin:0 0 2px;font-size:20px">☽ Moonlight Cup</h1>
-        <p style="margin:0 0 4px;font-size:12px;color:#555">Runde ${r.id} &mdash; ${r.isSchnellrunde ? 'Schnellrunde' : 'Normale Runde'}</p>
-        <hr style="border:none;border-top:1px solid #ddd;margin:12px 0"/>
-        ${sectionHtml('Durchgang 1', d1)}
-        ${sectionHtml('Durchgang 2', d2)}
-        ${sitOut}
-      </body></html>`;
+    const sitOut = r.sittingOut?.length > 0 ? `\nPausiert: ${r.sittingOut.map(getName).join(', ')}` : '';
+    const text =
+      `☽ MOONLIGHT CUP\n` +
+      `Runde ${r.id}  ·  ${r.isSchnellrunde ? 'Schnellrunde' : 'Normale Runde'}\n` +
+      `${'─'.repeat(40)}` +
+      fmt(d1, 'DURCHGANG 1') +
+      fmt(d2, 'DURCHGANG 2') +
+      sitOut;
     try {
-      const path = FileSystem.cacheDirectory + `runde_${r.id}.html`;
-      await FileSystem.writeAsStringAsync(path, html, { encoding: FileSystem.EncodingType.UTF8 });
-      await Sharing.shareAsync(path, { mimeType: 'text/html', UTI: 'public.html', dialogTitle: `Runde ${r.id} drucken` });
+      await Share.share({ message: text, title: `Moonlight Cup – Runde ${r.id}` });
     } catch (_) {}
   };
 
@@ -118,7 +96,7 @@ export default function RundeScreen() {
   useEffect(() => {
     if (!pendingPrintRound) return;
     const t = setTimeout(() => {
-      buildAndPrint(pendingPrintRound);
+      buildAndShare(pendingPrintRound);
       setPendingPrintRound(null);
     }, 350);
     return () => clearTimeout(t);
@@ -126,7 +104,7 @@ export default function RundeScreen() {
 
   const printRound = () => {
     setShowPrintAsk(false);
-    setPendingPrintRound(getCurrentRoundData());
+    setPendingPrintRound(getCurrentRoundData() ?? round);
   };
 
   const printSelectedRound = (r) => {
