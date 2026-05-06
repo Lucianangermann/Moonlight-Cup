@@ -1,5 +1,5 @@
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Modal } from 'react-native';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import * as Print from 'expo-print';
 import { colors } from '../theme/colors';
@@ -27,6 +27,7 @@ export default function RundeScreen() {
   const [roundToDelete, setRoundToDelete] = useState(null);  // round object
   const [showPrintAsk, setShowPrintAsk] = useState(false);
   const [printMenuOpen, setPrintMenuOpen] = useState(false);
+  const [pendingPrintRound, setPendingPrintRound] = useState(null);
   const round = getCurrentRoundData();
   const isSchnellrunde = round?.isSchnellrunde ?? false;
   const durchgang = round?.currentDurchgang ?? 1;
@@ -108,18 +109,24 @@ export default function RundeScreen() {
     try { await Print.printAsync({ html }); } catch (_) {}
   };
 
-  const wait = (ms) => new Promise((res) => setTimeout(res, ms));
+  // Fire print only after all modals have fully unmounted (next render cycle)
+  useEffect(() => {
+    if (!pendingPrintRound) return;
+    const t = setTimeout(() => {
+      buildAndPrint(pendingPrintRound);
+      setPendingPrintRound(null);
+    }, 350);
+    return () => clearTimeout(t);
+  }, [pendingPrintRound]);
 
-  const printRound = async () => {
+  const printRound = () => {
     setShowPrintAsk(false);
-    await wait(400);
-    await buildAndPrint(getCurrentRoundData());
+    setPendingPrintRound(getCurrentRoundData());
   };
 
-  const printSelectedRound = async (r) => {
+  const printSelectedRound = (r) => {
     setPrintMenuOpen(false);
-    await wait(400);
-    await buildAndPrint(r);
+    setPendingPrintRound(r);
   };
 
   // Edit helpers
@@ -249,7 +256,7 @@ export default function RundeScreen() {
       </Modal>
 
       {/* ── Drucken-Auswahl Modal ── */}
-      <Modal visible={printMenuOpen} transparent animationType="fade">
+      <Modal visible={printMenuOpen} transparent animationType="none">
         <View style={s.modalOverlay}>
           <View style={[s.modalCard, { maxHeight: '80%' }]}>
             <View style={s.roundsMenuHeader}>
