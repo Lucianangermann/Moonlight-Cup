@@ -1,8 +1,7 @@
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Modal } from 'react-native';
 import { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
-import * as FileSystem from 'expo-file-system';
-import * as Sharing from 'expo-sharing';
+import * as Print from 'expo-print';
 import { colors } from '../theme/colors';
 import { shared, cardShadow } from '../theme/styles';
 import { useTournament } from '../store/tournament';
@@ -123,26 +122,34 @@ const buildPrintHtml = (groups, groupSize) => {
 export default function RanglisteScreen() {
   const { getStandings } = useTournament();
   const [selected, setSelected] = useState(null);
+  const [printPreview, setPrintPreview] = useState(false);
+  const [previewGroupIdx, setPreviewGroupIdx] = useState(null); // null=Auswahl, 0/1/2=Gruppe
   const standings = getStandings();
 
   const groupSize = Math.ceil(standings.length / 3);
   const groups = GROUPS.map((g, i) => standings.slice(i * groupSize, (i + 1) * groupSize));
 
-  const printRangliste = async () => {
-    if (standings.length === 0) {
-      Alert.alert('Keine Daten', 'Es gibt noch keine Rangliste zum Drucken.');
-      return;
-    }
+  const openPrintPreview = () => {
+    if (standings.length === 0) return;
+    setPreviewGroupIdx(0);
+    setPrintPreview(true);
+  };
+
+  const doPrintGroup = async () => {
     try {
-      const html = buildPrintHtml(groups, groupSize);
-      const path = FileSystem.cacheDirectory + 'rangliste.html';
-      await FileSystem.writeAsStringAsync(path, html, { encoding: FileSystem.EncodingType.UTF8 });
-      await Sharing.shareAsync(path, { mimeType: 'text/html', UTI: 'public.html', dialogTitle: 'Rangliste drucken' });
-    } catch (e) {
-      if (!e.message?.includes('cancel')) {
-        Alert.alert('Fehler', 'Drucken fehlgeschlagen: ' + e.message);
+      await Print.printAsync({ html: buildPrintHtml(groups, groupSize) });
+      if (previewGroupIdx < 2) {
+        setPreviewGroupIdx(previewGroupIdx + 1);
+      } else {
+        setPrintPreview(false);
+        setPreviewGroupIdx(null);
       }
-    }
+    } catch (_) {}
+  };
+
+  const closePrintPreview = () => {
+    setPrintPreview(false);
+    setPreviewGroupIdx(null);
   };
 
   const selectedPlayer = selected ? standings.find((p) => p.id === selected) : null;
@@ -157,7 +164,7 @@ export default function RanglisteScreen() {
       <View style={s.header}>
         <Text style={shared.screenTitle}>Rangliste</Text>
         <View style={s.headerRight}>
-          <TouchableOpacity style={s.printBtn} onPress={printRangliste} activeOpacity={0.75}>
+          <TouchableOpacity style={s.printBtn} onPress={openPrintPreview} activeOpacity={0.75}>
             <Ionicons name="print-outline" size={15} color={colors.silver} />
             <Text style={s.printBtnText}>Drucken</Text>
           </TouchableOpacity>
@@ -310,6 +317,74 @@ export default function RanglisteScreen() {
           )}
         </>
       )}
+      {/* ── Druckvorschau Modal ── */}
+      <Modal visible={printPreview} animationType="slide" transparent={false}>
+        <View style={s.previewScreen}>
+          {/* Header */}
+          <View style={s.previewHeader}>
+            <View style={{ flex: 1 }}>
+              <Text style={s.previewTitle}>☽ Rangliste drucken</Text>
+              <Text style={s.previewSub}>
+                {previewGroupIdx !== null
+                  ? `Schritt ${previewGroupIdx + 1}/3 — ${GROUPS[previewGroupIdx]?.fullLabel}`
+                  : ''}
+              </Text>
+            </View>
+            <TouchableOpacity onPress={closePrintPreview} activeOpacity={0.7}>
+              <Ionicons name="close-circle" size={26} color="#999" />
+            </TouchableOpacity>
+          </View>
+
+          {/* Aktuelle Gruppe anzeigen */}
+          {previewGroupIdx !== null && (() => {
+            const grp = GROUPS[previewGroupIdx];
+            const gc = GROUP_COLORS[grp.key];
+            const players = groups[previewGroupIdx];
+            const overallStart = previewGroupIdx * groupSize + 1;
+            return (
+              <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
+                <View style={[s.previewGrpHeader, { backgroundColor: gc.header }]}>
+                  <Text style={s.previewGrpLabel}>{grp.fullLabel.toUpperCase()}</Text>
+                  <Text style={s.previewGrpSub}>Platz {overallStart}–{overallStart + players.length - 1}</Text>
+                </View>
+                {players.map((p, i) => {
+                  const parts = p.name.split(',');
+                  const name = parts.length > 1 ? `${parts[1].trim()} ${parts[0].trim()}` : p.name.trim();
+                  return (
+                    <View key={p.id} style={[s.previewRow, i % 2 === 0 && s.previewRowAlt]}>
+                      <Text style={s.previewRank}>{overallStart + i}</Text>
+                      <Text style={s.previewName} numberOfLines={1}>{name}</Text>
+                      {p.league ? <Text style={s.previewLeague}>{p.league}</Text> : null}
+                      <Text style={s.previewStats}>{p.wins}S · {p.games}Sp</Text>
+                      <Text style={[s.previewDiff, { color: p.diff >= 0 ? '#2e7d32' : '#c62828' }]}>
+                        {p.diff > 0 ? '+' : ''}{p.diff}
+                      </Text>
+                    </View>
+                  );
+                })}
+                <View style={{ height: 20 }} />
+              </ScrollView>
+            );
+          })()}
+
+          {/* Buttons */}
+          <View style={s.previewActions}>
+            {previewGroupIdx > 0 && (
+              <TouchableOpacity style={s.previewBtnBack} onPress={() => setPreviewGroupIdx(previewGroupIdx - 1)} activeOpacity={0.8}>
+                <Ionicons name="arrow-back" size={15} color="#555" />
+                <Text style={s.previewBtnBackText}>Zurück</Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity style={[s.previewBtnPrint, { flex: 2 }]} onPress={doPrintGroup} activeOpacity={0.8}>
+              <Ionicons name="print-outline" size={15} color="#fff" />
+              <Text style={s.previewBtnPrintText}>
+                {GROUPS[previewGroupIdx]?.label} drucken
+                {previewGroupIdx < 2 ? ' →' : ''}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -549,4 +624,25 @@ const s = StyleSheet.create({
     marginTop: 2,
     letterSpacing: 0.5,
   },
+
+  // Print preview
+  previewScreen: { flex: 1, backgroundColor: '#fff', paddingTop: 56, paddingHorizontal: 16, paddingBottom: 16 },
+  previewHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 14 },
+  previewTitle: { fontSize: 18, fontWeight: '800', color: '#111' },
+  previewSub: { fontSize: 12, color: '#666', marginTop: 2 },
+  previewGrpHeader: { padding: 12, borderRadius: 8, marginBottom: 8 },
+  previewGrpLabel: { color: '#fff', fontSize: 14, fontWeight: '800', letterSpacing: 1 },
+  previewGrpSub: { color: '#ffffffaa', fontSize: 11, marginTop: 2 },
+  previewRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, paddingHorizontal: 6, gap: 6 },
+  previewRowAlt: { backgroundColor: '#f5f5f5' },
+  previewRank: { width: 26, fontSize: 12, fontWeight: '700', color: '#555', textAlign: 'center' },
+  previewName: { flex: 1, fontSize: 13, fontWeight: '700', color: '#111' },
+  previewLeague: { fontSize: 10, fontWeight: '700', color: '#888' },
+  previewStats: { fontSize: 11, color: '#555', fontWeight: '600' },
+  previewDiff: { fontSize: 11, fontWeight: '700', width: 36, textAlign: 'right' },
+  previewActions: { flexDirection: 'row', gap: 10, marginTop: 12 },
+  previewBtnPrint: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#1a1a2e', borderRadius: 12, paddingVertical: 14 },
+  previewBtnPrintText: { color: '#fff', fontSize: 14, fontWeight: '800' },
+  previewBtnBack: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#f0f0f0', borderRadius: 12, paddingVertical: 14, paddingHorizontal: 16 },
+  previewBtnBackText: { color: '#333', fontSize: 13, fontWeight: '700' },
 });
