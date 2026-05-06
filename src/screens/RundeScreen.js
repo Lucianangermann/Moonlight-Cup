@@ -31,12 +31,17 @@ export default function RundeScreen() {
           <Text style={s.logoSub}>Badminton Turniermanager</Text>
         </View>
         <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
-          {isSchnellrunde && (
+          {currentRound > 0 && (isSchnellrunde ? (
             <View style={s.schnellPill}>
               <Ionicons name="flash" size={10} color={colors.warning} />
               <Text style={s.schnellPillText}>SCHNELL</Text>
             </View>
-          )}
+          ) : (
+            <View style={s.normalPill}>
+              <Ionicons name="shield-checkmark" size={10} color={colors.success} />
+              <Text style={s.normalPillText}>NORMAL</Text>
+            </View>
+          ))}
           {currentRound > 0 && (
             <View style={s.roundPill}>
               <Text style={s.roundPillText}>RUNDE {currentRound}</Text>
@@ -191,6 +196,23 @@ const s = StyleSheet.create({
   },
   schnellPillText: {
     color: colors.warning,
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 1.5,
+  },
+  normalPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: colors.success + '18',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.success + '40',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  normalPillText: {
+    color: colors.success,
     fontSize: 11,
     fontWeight: '800',
     letterSpacing: 1.5,

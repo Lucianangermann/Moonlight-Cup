@@ -104,10 +104,15 @@ export default function ErgebnisseScreen() {
                     <View style={[s.typePill, { borderColor: cfg.color + '50' }]}>
                       <Text style={[s.typeText, { color: cfg.color }]}>{cfg.label}</Text>
                     </View>
-                    {match.isSchnellrunde && (
+                    {match.isSchnellrunde ? (
                       <View style={s.schnellBadge}>
                         <Ionicons name="flash" size={9} color={colors.warning} />
                         <Text style={s.schnellBadgeText}>SCHNELL</Text>
+                      </View>
+                    ) : (
+                      <View style={s.normalBadge}>
+                        <Ionicons name="shield-checkmark" size={9} color={colors.success} />
+                        <Text style={s.normalBadgeText}>NORMAL</Text>
                       </View>
                     )}
                   </View>
@@ -160,11 +165,18 @@ export default function ErgebnisseScreen() {
                 <Text style={s.previewTeam} numberOfLines={1}>{getTeam(editMatch.teamB)}</Text>
               </View>
             )}
-            {isEditSchnellrunde && (
+            {isEditSchnellrunde ? (
               <View style={s.schnellHint}>
                 <Ionicons name="flash" size={13} color={colors.warning} />
                 <Text style={s.schnellHintText}>
                   Schnellrunde · Max 21 Pkt · Verlierer mind. 16 Pkt
+                </Text>
+              </View>
+            ) : (
+              <View style={s.normalHint}>
+                <Ionicons name="shield-checkmark" size={13} color={colors.success} />
+                <Text style={s.normalHintText}>
+                  Normale Runde · Max 40 Pkt · Verlierer erhält eigene Punkte
                 </Text>
               </View>
             )}
@@ -421,6 +433,41 @@ const s = StyleSheet.create({
   },
   schnellHintText: {
     color: colors.warning,
+    fontSize: 12,
+    fontWeight: '500',
+    flex: 1,
+  },
+  normalBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: colors.success + '18',
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: colors.success + '40',
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+  },
+  normalBadgeText: {
+    color: colors.success,
+    fontSize: 9,
+    fontWeight: '800',
+    letterSpacing: 1,
+  },
+  normalHint: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    backgroundColor: colors.success + '12',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.success + '35',
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    marginBottom: 16,
+  },
+  normalHintText: {
+    color: colors.success,
     fontSize: 12,
     fontWeight: '500',
     flex: 1,
