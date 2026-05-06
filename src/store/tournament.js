@@ -176,7 +176,7 @@ export function TournamentProvider({ children }) {
     });
 
     if (isSchnellrunde) {
-      // ── Schnellrunden: vollständig zufällig, dann ligabasiert ausbalancieren ──
+      // ── Schnellrunden: komplett zufällig, Spieltyp wird pro Spiel zufällig gewählt ──
       const pMap = Object.fromEntries(participants.map((p) => [p.id, p]));
       const str = (id) => LEAGUE_RANK[pMap[id]?.league ?? 'FZ'] ?? 0;
 
@@ -197,17 +197,32 @@ export function TournamentProvider({ children }) {
         return { ...match, teamA: best.a, teamB: best.b };
       };
 
+      // Herren und Damen getrennt mischen, dann Spieltyp pro Spiel zufällig wählen
       const men   = shuffle(participants.filter((p) => p.gender === 'M').map((p) => p.id));
       const women = shuffle(participants.filter((p) => p.gender === 'F').map((p) => p.id));
 
-      while (men.length >= 4) {
-        matches.push(balanceMatch(makeMatch([men.pop(), men.pop()], [men.pop(), men.pop()], 'MM')));
-      }
-      while (women.length >= 4) {
-        matches.push(balanceMatch(makeMatch([women.pop(), women.pop()], [women.pop(), women.pop()], 'FF')));
-      }
-      while (men.length >= 2 && women.length >= 2) {
-        matches.push(balanceMatch(makeMatch([men.pop(), women.pop()], [men.pop(), women.pop()], 'MF')));
+      const canMM = () => men.length >= 4;
+      const canFF = () => women.length >= 4;
+      const canMF = () => men.length >= 2 && women.length >= 2;
+
+      while (canMM() || canFF() || canMF()) {
+        // Welche Spieltypen sind gerade möglich?
+        const options = [];
+        if (canMM()) options.push('MM');
+        if (canFF()) options.push('FF');
+        if (canMF()) options.push('MF');
+        if (options.length === 0) break;
+
+        // Zufällig einen Spieltyp wählen
+        const type = options[Math.floor(Math.random() * options.length)];
+
+        if (type === 'MM') {
+          matches.push(balanceMatch(makeMatch([men.pop(), men.pop()], [men.pop(), men.pop()], 'MM')));
+        } else if (type === 'FF') {
+          matches.push(balanceMatch(makeMatch([women.pop(), women.pop()], [women.pop(), women.pop()], 'FF')));
+        } else {
+          matches.push(balanceMatch(makeMatch([men.pop(), women.pop()], [men.pop(), women.pop()], 'MF')));
+        }
       }
       sittingOut = [...men, ...women];
 
