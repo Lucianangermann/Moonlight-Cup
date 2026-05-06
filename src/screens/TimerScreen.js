@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Vibration } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
-import { shared, cardShadow, goldGlowShadow } from '../theme/styles';
+import { shared, goldGlowShadow } from '../theme/styles';
 import { useTournament } from '../store/tournament';
 
 const WARMUP_SECONDS = 3 * 60;
@@ -10,7 +10,7 @@ const DEFAULT_SECONDS = 20 * 60;
 const WARNING_SECONDS = 5 * 60;
 
 export default function TimerScreen() {
-  const { getCurrentRoundData, participants, autoTimerTrigger } = useTournament();
+  const { autoTimerTrigger } = useTournament();
   const [phase, setPhaseState] = useState('idle'); // 'idle' | 'warmup' | 'game'
   const [timerDurchgang, setTimerDurchgang] = useState(null);
   const [secondsLeft, setSecondsLeft] = useState(DEFAULT_SECONDS);
@@ -22,16 +22,6 @@ export default function TimerScreen() {
 
   const setPhase = (p) => { phaseRef.current = p; setPhaseState(p); };
 
-  const round = getCurrentRoundData();
-  const activeMatch = round?.matches?.find((m) => !m.done) ?? round?.matches?.[0];
-  const getName = (id) => {
-    const p = participants.find((x) => x.id === id);
-    if (!p) return '?';
-    const parts = p.name.split(',');
-    const first = parts.length > 1 ? `${parts[1].trim()} ${parts[0].trim()}` : p.name.trim();
-    return p.league ? `${first} [${p.league}]` : first;
-  };
-  const getTeam = (ids) => ids?.map(getName).join(' & ') ?? '';
 
   // Auto-start from RundeScreen print trigger
   useEffect(() => {
@@ -162,28 +152,6 @@ export default function TimerScreen() {
         </View>
       )}
 
-      {/* Match Info Card */}
-      <View style={s.matchCard}>
-        {activeMatch ? (
-          <>
-            <Text style={s.matchLabel}>AKTIVES SPIEL</Text>
-            <Text style={s.teamText} numberOfLines={1}>{getTeam(activeMatch.teamA)}</Text>
-            <View style={s.vsRow}>
-              <View style={s.vsLine} />
-              <Text style={s.vsText}>VS</Text>
-              <View style={s.vsLine} />
-            </View>
-            <Text style={s.teamText} numberOfLines={1}>{getTeam(activeMatch.teamB)}</Text>
-            <Text style={s.roundMeta}>Runde {round?.id}</Text>
-          </>
-        ) : (
-          <View style={s.noMatch}>
-            <Ionicons name="tennisball-outline" size={20} color={colors.textMuted} />
-            <Text style={s.noMatchText}>Kein aktives Spiel</Text>
-          </View>
-        )}
-      </View>
-
       {/* Timer Ring */}
       <View style={[s.ringOuter, { borderColor: ringColor }, isFinished && s.ringFinished]}>
         <View style={s.ringInner}>
@@ -302,64 +270,6 @@ const s = StyleSheet.create({
     fontSize: 9,
     fontWeight: '800',
     letterSpacing: 1,
-  },
-  matchCard: {
-    width: '100%',
-    backgroundColor: colors.panel,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: 16,
-    marginBottom: 24,
-    alignItems: 'center',
-    ...cardShadow,
-  },
-  matchLabel: {
-    color: colors.textMuted,
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 1.5,
-    marginBottom: 10,
-  },
-  teamText: {
-    color: colors.gold,
-    fontSize: 14,
-    fontWeight: '700',
-    textAlign: 'center',
-  },
-  vsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    marginVertical: 6,
-    width: '80%',
-  },
-  vsLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: colors.border,
-  },
-  vsText: {
-    color: colors.textDim,
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 1,
-  },
-  roundMeta: {
-    color: colors.textMuted,
-    fontSize: 11,
-    marginTop: 8,
-    letterSpacing: 0.5,
-  },
-  noMatch: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingVertical: 4,
-  },
-  noMatchText: {
-    color: colors.textMuted,
-    fontSize: 13,
   },
   ringOuter: {
     width: 220,
