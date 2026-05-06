@@ -15,7 +15,7 @@ const TYPE_CONFIG = {
 };
 
 export default function ErgebnisseScreen() {
-  const { rounds, participants, saveResult } = useTournament();
+  const { rounds, participants, saveResult, getCurrentRoundData } = useTournament();
   const [selectedRound, setSelectedRound] = useState('all');
   const [editMatch, setEditMatch] = useState(null);
   const [scoreA, setScoreA] = useState('');
@@ -73,16 +73,46 @@ export default function ErgebnisseScreen() {
 
   const doneCount = filtered.filter((m) => m.done).length;
 
+  const simulateAll = () => {
+    const round = getCurrentRoundData();
+    if (!round) return;
+    const pending = round.matches.filter(
+      (m) => !m.done && m.durchgang === round.currentDurchgang
+    );
+    pending.forEach((m) => {
+      const schnell = round.isSchnellrunde;
+      const maxWin = schnell ? 21 : 40;
+      const minWin = schnell ? 16 : 21;
+      const winScore = Math.floor(Math.random() * (maxWin - minWin + 1)) + minWin;
+      const loseScore = Math.floor(Math.random() * winScore);
+      const aWins = Math.random() < 0.5;
+      saveResult(m.id, aWins ? winScore : loseScore, aWins ? loseScore : winScore);
+    });
+  };
+
+  const currentRound = getCurrentRoundData();
+  const hasPending = currentRound?.matches?.some(
+    (m) => !m.done && m.durchgang === currentRound.currentDurchgang
+  ) ?? false;
+
   return (
     <View style={shared.screen}>
       {/* Header */}
       <View style={s.header}>
         <Text style={shared.screenTitle}>Ergebnisse</Text>
-        {filtered.length > 0 && (
-          <View style={s.progressPill}>
-            <Text style={s.progressText}>{doneCount}/{filtered.length}</Text>
-          </View>
-        )}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          {filtered.length > 0 && (
+            <View style={s.progressPill}>
+              <Text style={s.progressText}>{doneCount}/{filtered.length}</Text>
+            </View>
+          )}
+          {hasPending && (
+            <TouchableOpacity style={s.simulateBtn} onPress={simulateAll} activeOpacity={0.75}>
+              <Ionicons name="dice-outline" size={14} color={colors.warning} />
+              <Text style={s.simulateBtnText}>Simulieren</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
 
       {/* Round Filter */}
@@ -275,6 +305,23 @@ const s = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 16,
+  },
+  simulateBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: colors.warning + '18',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.warning + '40',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  simulateBtnText: {
+    color: colors.warning,
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.3,
   },
   progressPill: {
     backgroundColor: colors.goldGlow,
