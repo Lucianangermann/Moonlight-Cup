@@ -13,15 +13,17 @@ const TYPE_CONFIG = {
 
 export default function RundeScreen() {
   const {
-    getCurrentRoundData, currentRound, allMatchesDone, startNewRound,
+    getCurrentRoundData, currentRound, rounds, allMatchesDone, startNewRound,
     participants, advanceDurchgang, currentDurchgangDone,
-    deleteCurrentRound, swapMatchPlayers,
+    deleteCurrentRound, deleteRound, swapMatchPlayers,
   } = useTournament();
   const [showConfirm, setShowConfirm] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
-  const [selectedSlot, setSelectedSlot] = useState(null);   // { matchId, team, idx, pid }
-  const [pendingSwap, setPendingSwap] = useState(null);      // { slot1, slot2 }
+  const [selectedSlot, setSelectedSlot] = useState(null);
+  const [pendingSwap, setPendingSwap] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [roundsMenuOpen, setRoundsMenuOpen] = useState(false);
+  const [roundToDelete, setRoundToDelete] = useState(null);  // round object
   const round = getCurrentRoundData();
   const isSchnellrunde = round?.isSchnellrunde ?? false;
   const durchgang = round?.currentDurchgang ?? 1;
@@ -94,6 +96,97 @@ export default function RundeScreen() {
 
   return (
     <View style={shared.screen}>
+
+      {/* ── Runden-Übersicht Modal ── */}
+      <Modal visible={roundsMenuOpen} transparent animationType="fade">
+        <View style={s.modalOverlay}>
+          <View style={[s.modalCard, { maxHeight: '80%' }]}>
+            <View style={s.roundsMenuHeader}>
+              <Text style={s.modalTitle}>Alle Runden</Text>
+              <TouchableOpacity onPress={() => setRoundsMenuOpen(false)} activeOpacity={0.7}>
+                <Ionicons name="close-circle" size={22} color={colors.textMuted} />
+              </TouchableOpacity>
+            </View>
+            {rounds.length === 0 ? (
+              <Text style={[s.modalBody, { marginBottom: 0 }]}>Noch keine Runden gespielt.</Text>
+            ) : (
+              <ScrollView showsVerticalScrollIndicator={false}>
+                {[...rounds].reverse().map((r) => {
+                  const total = r.matches?.length ?? 0;
+                  const done = r.matches?.filter((m) => m.done).length ?? 0;
+                  const isCurrent = r.id === currentRound;
+                  return (
+                    <View key={r.id} style={[s.roundRow, isCurrent && s.roundRowCurrent]}>
+                      <View style={{ flex: 1 }}>
+                        <View style={s.roundRowTop}>
+                          <Text style={[s.roundRowTitle, isCurrent && { color: colors.gold }]}>
+                            Runde {r.id}
+                          </Text>
+                          <View style={[r.isSchnellrunde ? s.schnellPill : s.normalPill, { paddingHorizontal: 7, paddingVertical: 2 }]}>
+                            <Ionicons
+                              name={r.isSchnellrunde ? 'flash' : 'shield-checkmark'}
+                              size={9}
+                              color={r.isSchnellrunde ? colors.warning : colors.success}
+                            />
+                            <Text style={[r.isSchnellrunde ? s.schnellPillText : s.normalPillText, { fontSize: 9 }]}>
+                              {r.isSchnellrunde ? 'SCHNELL' : 'NORMAL'}
+                            </Text>
+                          </View>
+                          {isCurrent && (
+                            <View style={s.currentBadge}>
+                              <Text style={s.currentBadgeText}>AKTIV</Text>
+                            </View>
+                          )}
+                        </View>
+                        <Text style={s.roundRowMeta}>{total} Spiele · {done} fertig · {total - done} offen</Text>
+                      </View>
+                      <TouchableOpacity
+                        style={s.roundDeleteBtn}
+                        onPress={() => setRoundToDelete(r)}
+                        activeOpacity={0.75}
+                      >
+                        <Ionicons name="trash-outline" size={16} color={colors.error} />
+                      </TouchableOpacity>
+                    </View>
+                  );
+                })}
+              </ScrollView>
+            )}
+          </View>
+        </View>
+
+        {/* Bestätigung Runde löschen */}
+        {roundToDelete && (
+          <Modal visible transparent animationType="fade">
+            <View style={s.modalOverlay}>
+              <View style={s.modalCard}>
+                <Text style={s.modalTitle}>Runde {roundToDelete.id} löschen?</Text>
+                <Text style={s.modalBody}>
+                  Alle Paarungen und Ergebnisse dieser Runde werden unwiderruflich gelöscht.{'\n'}
+                  Die Rangliste wird entsprechend aktualisiert.
+                </Text>
+                <View style={s.modalButtons}>
+                  <TouchableOpacity style={s.modalBtnCancel} onPress={() => setRoundToDelete(null)} activeOpacity={0.8}>
+                    <Text style={s.modalBtnCancelText}>Abbrechen</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={s.modalBtnRed}
+                    onPress={() => {
+                      deleteRound(roundToDelete.id);
+                      setRoundToDelete(null);
+                      setRoundsMenuOpen(false);
+                    }}
+                    activeOpacity={0.8}
+                  >
+                    <Ionicons name="trash" size={13} color={colors.white} style={{ marginRight: 5 }} />
+                    <Text style={s.modalBtnRedText}>Löschen</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          </Modal>
+        )}
+      </Modal>
 
       {/* ── Edit Modal ── */}
       <Modal visible={editOpen} animationType="slide" transparent={false}>
@@ -252,10 +345,16 @@ export default function RundeScreen() {
           <Text style={s.logoSub}>Badminton Turniermanager</Text>
         </View>
         {currentRound > 0 && (
-          <TouchableOpacity style={s.editRoundBtn} onPress={() => setEditOpen(true)} activeOpacity={0.75}>
-            <Ionicons name="create-outline" size={12} color={colors.silver} />
-            <Text style={s.editRoundBtnText}>Bearbeiten</Text>
-          </TouchableOpacity>
+          <View style={s.headerBtnGroup}>
+            <TouchableOpacity style={s.editRoundBtn} onPress={() => setRoundsMenuOpen(true)} activeOpacity={0.75}>
+              <Ionicons name="layers-outline" size={12} color={colors.silver} />
+              <Text style={s.editRoundBtnText}>Runden</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={s.editRoundBtn} onPress={() => setEditOpen(true)} activeOpacity={0.75}>
+              <Ionicons name="create-outline" size={12} color={colors.silver} />
+              <Text style={s.editRoundBtnText}>Bearbeiten</Text>
+            </TouchableOpacity>
+          </View>
         )}
         <View style={{ flex: 1, flexDirection: 'row', gap: 8, alignItems: 'center', justifyContent: 'flex-end' }}>
           {currentRound > 0 && (isSchnellrunde ? (
@@ -734,6 +833,68 @@ const s = StyleSheet.create({
     color: colors.white,
     fontSize: 13,
     fontWeight: '800',
+  },
+
+  headerBtnGroup: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+
+  // Runden menu
+  roundsMenuHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 14,
+  },
+  roundRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.panel,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 12,
+    marginBottom: 8,
+    gap: 10,
+  },
+  roundRowCurrent: {
+    borderColor: colors.borderGoldGlow,
+    backgroundColor: colors.goldGlow,
+  },
+  roundRowTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 3,
+  },
+  roundRowTitle: {
+    color: colors.white,
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  currentBadge: {
+    backgroundColor: colors.gold,
+    borderRadius: 4,
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+  },
+  currentBadgeText: {
+    color: colors.bg,
+    fontSize: 8,
+    fontWeight: '800',
+    letterSpacing: 1,
+  },
+  roundRowMeta: {
+    color: colors.textMuted,
+    fontSize: 11,
+  },
+  roundDeleteBtn: {
+    padding: 6,
+    borderRadius: 8,
+    backgroundColor: colors.error + '12',
+    borderWidth: 1,
+    borderColor: colors.error + '30',
   },
 
   // Edit round button

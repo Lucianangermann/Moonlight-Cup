@@ -335,6 +335,11 @@ export function TournamentProvider({ children }) {
     setCurrentRound((prev) => Math.max(0, prev - 1));
   };
 
+  const deleteRound = (roundId) => {
+    setRounds((prev) => prev.filter((r) => r.id !== roundId));
+    setCurrentRound((prev) => (roundId === prev ? Math.max(0, prev - 1) : prev));
+  };
+
   const swapMatchPlayers = (m1id, team1, idx1, m2id, team2, idx2) => {
     setRounds((prev) =>
       prev.map((r) => {
@@ -368,7 +373,7 @@ export function TournamentProvider({ children }) {
         rounds, currentRound, saveResult, startNewRound,
         getStandings, getCurrentRoundData, allMatchesDone,
         advanceDurchgang, currentDurchgangDone,
-        deleteCurrentRound, swapMatchPlayers,
+        deleteCurrentRound, deleteRound, swapMatchPlayers,
       }}
     >
       {children}
