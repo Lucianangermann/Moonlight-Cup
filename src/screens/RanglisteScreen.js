@@ -63,7 +63,7 @@ const buildPrintHtml = (groups, groupSize) => {
     const end = start + players.length - 1;
     const rows = players.map((p, i) => {
       const medal = i < 3 ? `<span style="font-size:14px">${medalSymbols[i]}</span>` : `<span style="color:#666">${i + 1}</span>`;
-      const name = p.name.split(',')[0].trim();
+      const name = p.name.trim();
       const league = p.league ? ` <span style="font-size:9px;color:#888;font-weight:700">[${p.league}]</span>` : '';
       const bg = i === 0 ? `background:${gc.light};font-weight:700;` : i % 2 === 0 ? 'background:#fafafa;' : '';
       return `<tr style="${bg}">
@@ -209,7 +209,7 @@ export default function RanglisteScreen() {
                       const medalColor = group.medalColors[i] ?? colors.textMuted;
                       const medalBg    = group.medalBgs[i];
                       const isSelected = selected === p.id;
-                      const firstName = p.name.split(',')[0].trim();
+                      const firstName = p.name.trim();
 
                       return (
                         <TouchableOpacity

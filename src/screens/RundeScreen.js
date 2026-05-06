@@ -31,7 +31,7 @@ export default function RundeScreen() {
   const getName = (id) => {
     const p = participants.find((x) => x.id === id);
     if (!p) return '?';
-    const first = p.name.split(',')[0].trim();
+    const first = p.name.trim();
     return p.league ? `${first} [${p.league}]` : first;
   };
   const getTeam = (ids) => ids.map(getName).join(' & ');
@@ -67,7 +67,7 @@ export default function RundeScreen() {
   const getPlayerName = (pid) => {
     const p = participants.find((x) => x.id === pid);
     if (!p) return '?';
-    const first = p.name.split(',')[0].trim();
+    const first = p.name.trim();
     return p.league ? `${first} [${p.league}]` : first;
   };
 
