@@ -112,12 +112,20 @@ export default function RundeScreen() {
         </table>
         ${extraBottom}
       </div>`;
+    const p1 = pageHtml('DURCHGANG 1', d1, '');
+    const p2 = pageHtml('DURCHGANG 2', d2, sitOut);
     return `<html>
-      <head><style>@page { margin: 0; } body { margin: 0; }</style></head>
+      <head>
+        <style>
+          @page { size: A4; margin: 0; }
+          body { margin: 0; }
+          .page { page-break-after: always; break-after: page; page-break-inside: avoid; }
+          .page-last { page-break-after: auto; break-after: auto; }
+        </style>
+      </head>
       <body>
-        ${pageHtml('DURCHGANG 1', d1, '')}
-        <div style="page-break-after: always"></div>
-        ${pageHtml('DURCHGANG 2', d2, sitOut)}
+        <div class="page">${p1}</div>
+        <div class="page-last">${p2}</div>
       </body>
     </html>`;
   };
