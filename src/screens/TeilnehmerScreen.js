@@ -13,6 +13,7 @@ export default function TeilnehmerScreen() {
     participants, pausedParticipants,
     addParticipant, removeParticipant,
     updateParticipant, pauseParticipant, resumeParticipant,
+    statAdjustments, setStatAdjustment,
     getStandings,
   } = useTournament();
 
@@ -26,6 +27,9 @@ export default function TeilnehmerScreen() {
   const [editName, setEditName] = useState('');
   const [editGender, setEditGender] = useState('M');
   const [editLeague, setEditLeague] = useState('FZ');
+  const [editGames, setEditGames] = useState('');
+  const [editWins, setEditWins] = useState('');
+  const [editDiff, setEditDiff] = useState('');
 
   const standings = getStandings();
 
@@ -54,10 +58,14 @@ export default function TeilnehmerScreen() {
   };
 
   const openEdit = (p) => {
+    const standing = standings.find((s) => s.id === p.id);
     setEditTarget(p);
     setEditName(p.name);
     setEditGender(p.gender);
     setEditLeague(p.league ?? 'FZ');
+    setEditGames(String(standing?.games ?? 0));
+    setEditWins(String(standing?.wins ?? 0));
+    setEditDiff(String(standing?.diff ?? 0));
   };
 
   const closeEdit = () => {
@@ -65,6 +73,9 @@ export default function TeilnehmerScreen() {
     setEditName('');
     setEditGender('M');
     setEditLeague('FZ');
+    setEditGames('');
+    setEditWins('');
+    setEditDiff('');
   };
 
   const handleSaveEdit = () => {
@@ -73,6 +84,17 @@ export default function TeilnehmerScreen() {
       name: editName.trim(),
       gender: editGender,
       league: editLeague,
+    });
+    // Compute base stats (without current adjustment) so we store the correct delta
+    const standing = standings.find((s) => s.id === editTarget.id);
+    const prevAdj = statAdjustments[editTarget.id] ?? { games: 0, wins: 0, diff: 0 };
+    const baseGames = (standing?.games ?? 0) - (prevAdj.games ?? 0);
+    const baseWins  = (standing?.wins  ?? 0) - (prevAdj.wins  ?? 0);
+    const baseDiff  = (standing?.diff  ?? 0) - (prevAdj.diff  ?? 0);
+    setStatAdjustment(editTarget.id, {
+      games: (parseInt(editGames, 10) || 0) - baseGames,
+      wins:  (parseInt(editWins,  10) || 0) - baseWins,
+      diff:  (parseInt(editDiff,  10) || 0) - baseDiff,
     });
     closeEdit();
   };
@@ -379,6 +401,40 @@ export default function TeilnehmerScreen() {
               ))}
             </ScrollView>
 
+            <Text style={s.genderLabel}>STATISTIKEN</Text>
+            <View style={s.statsEditRow}>
+              <View style={s.statsEditField}>
+                <Text style={s.statsEditLabel}>Spiele</Text>
+                <TextInput
+                  style={s.statsEditInput}
+                  keyboardType="numeric"
+                  value={editGames}
+                  onChangeText={setEditGames}
+                  placeholderTextColor={colors.textMuted}
+                />
+              </View>
+              <View style={s.statsEditField}>
+                <Text style={s.statsEditLabel}>Siege</Text>
+                <TextInput
+                  style={s.statsEditInput}
+                  keyboardType="numeric"
+                  value={editWins}
+                  onChangeText={setEditWins}
+                  placeholderTextColor={colors.textMuted}
+                />
+              </View>
+              <View style={s.statsEditField}>
+                <Text style={s.statsEditLabel}>Diff.</Text>
+                <TextInput
+                  style={s.statsEditInput}
+                  keyboardType="numbers-and-punctuation"
+                  value={editDiff}
+                  onChangeText={setEditDiff}
+                  placeholderTextColor={colors.textMuted}
+                />
+              </View>
+            </View>
+
             <TouchableOpacity style={shared.saveBtn} onPress={handleSaveEdit} activeOpacity={0.8}>
               <Text style={shared.saveBtnText}>SPEICHERN</Text>
             </TouchableOpacity>
@@ -684,6 +740,34 @@ const s = StyleSheet.create({
   },
   leagueBtnLabelActive: {
     color: colors.goldDim,
+  },
+  statsEditRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 20,
+  },
+  statsEditField: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  statsEditLabel: {
+    color: colors.textDim,
+    fontSize: 10,
+    fontWeight: '600',
+    letterSpacing: 1,
+    marginBottom: 6,
+  },
+  statsEditInput: {
+    width: '100%',
+    backgroundColor: colors.bg,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    color: colors.white,
+    fontSize: 16,
+    fontWeight: '700',
+    textAlign: 'center',
+    paddingVertical: 10,
   },
   pauseBtn: {
     flexDirection: 'row',

@@ -24,6 +24,8 @@ const shuffle = (arr) => {
 
 export function TournamentProvider({ children }) {
   const [pausedParticipants, setPausedParticipants] = useState([]);
+  // { [id]: { games: number, wins: number, diff: number } } — additive adjustments on top of computed stats
+  const [statAdjustments, setStatAdjustments] = useState({});
 
   const [participants, setParticipants] = useState([
     { id: '1',  name: 'Müller, Max',          gender: 'M', league: 'FZ'  },
@@ -153,6 +155,10 @@ export function TournamentProvider({ children }) {
       if (p) setPausedParticipants((pp) => [...pp, p]);
       return prev.filter((x) => x.id !== id);
     });
+  };
+
+  const setStatAdjustment = (id, adj) => {
+    setStatAdjustments((prev) => ({ ...prev, [id]: adj }));
   };
 
   const resumeParticipant = (id) => {
@@ -349,6 +355,13 @@ export function TournamentProvider({ children }) {
         });
       })
     );
+    Object.entries(statAdjustments).forEach(([id, adj]) => {
+      if (!stats[id]) return;
+      stats[id].games += adj.games ?? 0;
+      stats[id].wins  += adj.wins  ?? 0;
+      stats[id].diff  += adj.diff  ?? 0;
+      stats[id].points += (adj.wins ?? 0) * 2;
+    });
     return Object.values(stats).sort((a, b) => b.wins - a.wins || b.diff - a.diff);
   };
 
@@ -396,6 +409,7 @@ export function TournamentProvider({ children }) {
         participants, pausedParticipants,
         addParticipant, removeParticipant, updateParticipant,
         pauseParticipant, resumeParticipant,
+        statAdjustments, setStatAdjustment,
         rounds, currentRound, saveResult, startNewRound,
         getStandings, getCurrentRoundData, allMatchesDone,
         advanceDurchgang, currentDurchgangDone,
