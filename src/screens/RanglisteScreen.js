@@ -1,6 +1,7 @@
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
+import * as Print from 'expo-print';
 import { colors } from '../theme/colors';
 import { shared, cardShadow } from '../theme/styles';
 import { useTournament } from '../store/tournament';
@@ -46,6 +47,78 @@ const GROUPS = [
   },
 ];
 
+const GROUP_COLORS = {
+  vollmond: { header: '#B8860B', light: '#FFF8E1', border: '#F0C040' },
+  halbmond: { header: '#607D8B', light: '#ECEFF1', border: '#B0BEC5' },
+  neumond:  { header: '#1565C0', light: '#E3F2FD', border: '#90CAF9' },
+};
+
+const buildPrintHtml = (groups, groupSize) => {
+  const medalSymbols = ['🥇', '🥈', '🥉'];
+  const cols = GROUPS.map((grp, gIdx) => {
+    const players = groups[gIdx];
+    if (!players.length) return '';
+    const gc = GROUP_COLORS[grp.key];
+    const start = gIdx * groupSize + 1;
+    const end = start + players.length - 1;
+    const rows = players.map((p, i) => {
+      const medal = i < 3 ? `<span style="font-size:14px">${medalSymbols[i]}</span>` : `<span style="color:#666">${i + 1}</span>`;
+      const name = p.name.split(',')[0].trim();
+      const league = p.league ? ` <span style="font-size:9px;color:#888;font-weight:700">[${p.league}]</span>` : '';
+      const bg = i === 0 ? `background:${gc.light};font-weight:700;` : i % 2 === 0 ? 'background:#fafafa;' : '';
+      return `<tr style="${bg}">
+        <td style="text-align:center;padding:4px 6px;width:32px">${medal}</td>
+        <td style="padding:4px 6px">${name}${league}</td>
+        <td style="text-align:right;padding:4px 6px;width:36px;font-weight:700">${p.points}</td>
+        <td style="text-align:right;padding:4px 6px;width:36px;color:#555">${p.wins}</td>
+        <td style="text-align:right;padding:4px 6px;width:36px;color:#555">${p.games}</td>
+      </tr>`;
+    }).join('');
+
+    return `<div style="flex:1;min-width:0">
+      <div style="background:${gc.header};color:#fff;padding:8px 10px;border-radius:8px 8px 0 0;font-weight:800;font-size:13px;letter-spacing:1px">
+        ${grp.fullLabel.toUpperCase()}
+      </div>
+      <div style="font-size:10px;color:#888;text-align:center;padding:3px 0;border:1px solid ${gc.border};border-top:none;border-bottom:none">
+        Platz ${start}–${end} · ${grp.sublabel}
+      </div>
+      <table style="width:100%;border-collapse:collapse;border:1px solid ${gc.border};border-top:none;border-radius:0 0 8px 8px;overflow:hidden;font-size:12px;font-family:sans-serif">
+        <thead>
+          <tr style="background:${gc.light};color:#444;font-size:9px;letter-spacing:1px">
+            <th style="padding:4px 6px;text-align:center">#</th>
+            <th style="padding:4px 6px;text-align:left">NAME</th>
+            <th style="padding:4px 6px;text-align:right">PKT</th>
+            <th style="padding:4px 6px;text-align:right">S</th>
+            <th style="padding:4px 6px;text-align:right">SP</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+  }).join('');
+
+  const date = new Date().toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    @page { margin: 15mm; }
+    body { font-family: sans-serif; color: #1a1a2e; }
+    h1 { font-size: 22px; letter-spacing: 3px; margin: 0 0 4px; }
+    .subtitle { font-size: 11px; color: #888; margin-bottom: 16px; letter-spacing: 1px; }
+    .cols { display: flex; gap: 12px; align-items: flex-start; }
+  </style>
+</head>
+<body>
+  <h1>☽ MOONLIGHT CUP</h1>
+  <div class="subtitle">RANGLISTE · Badminton Turniermanager · ${date}</div>
+  <div class="cols">${cols}</div>
+</body>
+</html>`;
+};
+
 export default function RanglisteScreen() {
   const { getStandings } = useTournament();
   const [selected, setSelected] = useState(null);
@@ -53,6 +126,21 @@ export default function RanglisteScreen() {
 
   const groupSize = Math.ceil(standings.length / 3);
   const groups = GROUPS.map((g, i) => standings.slice(i * groupSize, (i + 1) * groupSize));
+
+  const printRangliste = async () => {
+    if (standings.length === 0) {
+      Alert.alert('Keine Daten', 'Es gibt noch keine Rangliste zum Drucken.');
+      return;
+    }
+    try {
+      const html = buildPrintHtml(groups, groupSize);
+      await Print.printAsync({ html });
+    } catch (e) {
+      if (!e.message?.includes('cancel')) {
+        Alert.alert('Fehler', 'Drucken fehlgeschlagen: ' + e.message);
+      }
+    }
+  };
 
   const selectedPlayer = selected ? standings.find((p) => p.id === selected) : null;
   const selectedOverallIdx = selectedPlayer ? standings.indexOf(selectedPlayer) : -1;
@@ -65,9 +153,15 @@ export default function RanglisteScreen() {
       {/* Header */}
       <View style={s.header}>
         <Text style={shared.screenTitle}>Rangliste</Text>
-        <View style={s.liveBadge}>
-          <View style={s.liveDot} />
-          <Text style={s.liveText}>LIVE</Text>
+        <View style={s.headerRight}>
+          <TouchableOpacity style={s.printBtn} onPress={printRangliste} activeOpacity={0.75}>
+            <Ionicons name="print-outline" size={15} color={colors.silver} />
+            <Text style={s.printBtnText}>Drucken</Text>
+          </TouchableOpacity>
+          <View style={s.liveBadge}>
+            <View style={s.liveDot} />
+            <Text style={s.liveText}>LIVE</Text>
+          </View>
         </View>
       </View>
 
@@ -218,6 +312,28 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: 16,
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  printBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: colors.panel,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  printBtnText: {
+    color: colors.silver,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.5,
   },
   liveBadge: {
     flexDirection: 'row',
