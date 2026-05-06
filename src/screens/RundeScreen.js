@@ -1,7 +1,7 @@
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Modal } from 'react-native';
 import { useState, useEffect } from 'react';
 import { Ionicons } from '@expo/vector-icons';
-import * as Print from 'expo-print';
+import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import { colors } from '../theme/colors';
 import { shared, cardShadow } from '../theme/styles';
@@ -108,8 +108,9 @@ export default function RundeScreen() {
         ${sitOut}
       </body></html>`;
     try {
-      const { uri } = await Print.printToFileAsync({ html });
-      await Sharing.shareAsync(uri, { UTI: '.pdf', mimeType: 'application/pdf' });
+      const path = FileSystem.cacheDirectory + `runde_${r.id}.html`;
+      await FileSystem.writeAsStringAsync(path, html, { encoding: FileSystem.EncodingType.UTF8 });
+      await Sharing.shareAsync(path, { mimeType: 'text/html', UTI: 'public.html', dialogTitle: `Runde ${r.id} drucken` });
     } catch (_) {}
   };
 
