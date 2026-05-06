@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 import { shared, cardShadow } from '../theme/styles';
@@ -36,7 +36,23 @@ export default function RundeScreen() {
   const inD1 = round && durchgang === 1;
   const primaryLabel = !round ? 'NEUE RUNDE STARTEN' : inD1 ? 'DURCHGANG 2 STARTEN' : 'NEUE RUNDE STARTEN';
   const primaryEnabled = !round || (inD1 ? d1Done : allDone);
-  const primaryAction = inD1 ? advanceDurchgang : startNewRound;
+
+  const confirmAndStart = () => {
+    const isNewRound = !round || !inD1;
+    if (isNewRound) {
+      const nextRound = currentRound + 1;
+      Alert.alert(
+        'Neue Runde starten?',
+        `Runde ${nextRound} wird ausgelost und kann nicht rückgängig gemacht werden.`,
+        [
+          { text: 'Abbrechen', style: 'cancel' },
+          { text: 'Starten', style: 'default', onPress: startNewRound },
+        ]
+      );
+    } else {
+      advanceDurchgang();
+    }
+  };
 
   return (
     <View style={shared.screen}>
@@ -152,7 +168,7 @@ export default function RundeScreen() {
 
       <TouchableOpacity
         style={[shared.goldBtn, !primaryEnabled && shared.disabledBtn]}
-        onPress={primaryAction}
+        onPress={confirmAndStart}
         disabled={!primaryEnabled}
         activeOpacity={0.8}
       >
