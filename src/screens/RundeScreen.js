@@ -77,61 +77,43 @@ export default function RundeScreen() {
 
   const TYPE_LABELS = { MM: 'Herrendoppel', FF: 'Damendoppel', MF: 'Mixed' };
 
-  const buildHtml = (r) => {
-    const d1 = r.matches.filter((m) => m.durchgang === 1);
-    const d2 = r.matches.filter((m) => m.durchgang === 2);
-    const sitOut = r.sittingOut?.length > 0
+  const buildPageHtml = (r, dg) => {
+    const matches = r.matches.filter((m) => m.durchgang === dg);
+    const sitOut = dg === 2 && r.sittingOut?.length > 0
       ? `<p style="margin-top:14px;font-size:12px;color:#888"><b>Pausiert:</b> ${r.sittingOut.map(getName).join(', ')}</p>` : '';
-    const rows = (list) => list.map((m, i) => `
+    const rows = matches.map((m, i) => `
       <tr style="background:${i % 2 === 0 ? '#f5f5f5' : '#fff'}">
         <td style="padding:9px 12px;font-size:11px;color:#555;font-weight:700;white-space:nowrap">${TYPE_LABELS[m.type] ?? m.type}</td>
         <td style="padding:9px 12px;font-size:14px;font-weight:700">${m.teamA.map(getName).join(' &amp; ')}</td>
         <td style="padding:9px 8px;text-align:center;color:#bbb;font-size:12px;font-weight:700">VS</td>
         <td style="padding:9px 12px;font-size:14px;font-weight:700">${m.teamB.map(getName).join(' &amp; ')}</td>
       </tr>`).join('');
-    const pageHtml = (dgLabel, list, extraBottom) => `
-      <div style="font-family:Arial,sans-serif;padding:28px 32px;color:#222;max-width:720px;margin:0 auto">
-        <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:6px">
-          <div>
-            <div style="font-size:20px;font-weight:800">☽ Moonlight Cup — Runde ${r.id}</div>
-            <div style="font-size:12px;color:#666;margin-top:2px">${r.isSchnellrunde ? 'Schnellrunde' : 'Normale Runde'}</div>
-          </div>
-          <div style="background:#1a1a2e;color:#fff;padding:6px 14px;border-radius:6px;font-size:13px;font-weight:800;letter-spacing:1px">${dgLabel}</div>
+    return `<html><body style="font-family:Arial,sans-serif;padding:28px 32px;color:#222;margin:0">
+      <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:6px">
+        <div>
+          <div style="font-size:20px;font-weight:800">☽ Moonlight Cup — Runde ${r.id}</div>
+          <div style="font-size:12px;color:#666;margin-top:2px">${r.isSchnellrunde ? 'Schnellrunde' : 'Normale Runde'}</div>
         </div>
-        <hr style="border:none;border-top:2px solid #1a1a2e;margin:10px 0 16px"/>
-        <table style="width:100%;border-collapse:collapse;font-size:14px">
-          <thead>
-            <tr style="background:#1a1a2e;color:#fff">
-              <th style="padding:8px 12px;text-align:left;font-size:10px;letter-spacing:1px;font-weight:700">TYP</th>
-              <th style="padding:8px 12px;text-align:left;font-weight:700">TEAM A</th>
-              <th style="padding:8px 8px;width:36px"></th>
-              <th style="padding:8px 12px;text-align:left;font-weight:700">TEAM B</th>
-            </tr>
-          </thead>
-          <tbody>${rows(list)}</tbody>
-        </table>
-        ${extraBottom}
-      </div>`;
-    const p1 = pageHtml('DURCHGANG 1', d1, '');
-    const p2 = pageHtml('DURCHGANG 2', d2, sitOut);
-    return `<html>
-      <head>
-        <style>
-          @page { size: A4; margin: 0; }
-          body { margin: 0; }
-          .page { page-break-after: always; break-after: page; page-break-inside: avoid; }
-          .page-last { page-break-after: auto; break-after: auto; }
-        </style>
-      </head>
-      <body>
-        <div class="page">${p1}</div>
-        <div class="page-last">${p2}</div>
-      </body>
-    </html>`;
+        <div style="background:#1a1a2e;color:#fff;padding:6px 14px;border-radius:6px;font-size:13px;font-weight:800;letter-spacing:1px">DURCHGANG ${dg}</div>
+      </div>
+      <hr style="border:none;border-top:2px solid #1a1a2e;margin:10px 0 16px"/>
+      <table style="width:100%;border-collapse:collapse;font-size:14px">
+        <thead>
+          <tr style="background:#1a1a2e;color:#fff">
+            <th style="padding:8px 12px;text-align:left;font-size:10px;letter-spacing:1px">TYP</th>
+            <th style="padding:8px 12px;text-align:left">TEAM A</th>
+            <th style="padding:8px 8px;width:36px"></th>
+            <th style="padding:8px 12px;text-align:left">TEAM B</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+      ${sitOut}
+    </body></html>`;
   };
 
-  const doPrint = async (r) => {
-    try { await Print.printAsync({ html: buildHtml(r) }); } catch (_) {}
+  const doPrint = async (r, dg) => {
+    try { await Print.printAsync({ html: buildPageHtml(r, dg) }); } catch (_) {}
   };
 
   const doShare = async (r) => {
@@ -679,12 +661,16 @@ export default function RundeScreen() {
             </ScrollView>
 
             <View style={s.previewActions}>
-              <TouchableOpacity style={s.previewBtnPrint} onPress={() => doPrint(printPreview)} activeOpacity={0.8}>
-                <Ionicons name="print-outline" size={16} color="#fff" />
-                <Text style={s.previewBtnPrintText}>Drucken</Text>
+              <TouchableOpacity style={s.previewBtnPrint} onPress={() => doPrint(printPreview, 1)} activeOpacity={0.8}>
+                <Ionicons name="print-outline" size={15} color="#fff" />
+                <Text style={s.previewBtnPrintText}>D1 drucken</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={s.previewBtnPrint} onPress={() => doPrint(printPreview, 2)} activeOpacity={0.8}>
+                <Ionicons name="print-outline" size={15} color="#fff" />
+                <Text style={s.previewBtnPrintText}>D2 drucken</Text>
               </TouchableOpacity>
               <TouchableOpacity style={s.previewBtnShare} onPress={() => doShare(printPreview)} activeOpacity={0.8}>
-                <Ionicons name="share-outline" size={16} color="#555" />
+                <Ionicons name="share-outline" size={15} color="#555" />
                 <Text style={s.previewBtnShareText}>Teilen</Text>
               </TouchableOpacity>
             </View>
