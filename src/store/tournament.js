@@ -325,7 +325,7 @@ export function TournamentProvider({ children }) {
         });
       })
     );
-    return Object.values(stats).sort((a, b) => b.points - a.points || b.diff - a.diff);
+    return Object.values(stats).sort((a, b) => b.wins - a.wins || b.diff - a.diff);
   };
 
   const getCurrentRoundData = () => rounds.find((r) => r.id === currentRound);

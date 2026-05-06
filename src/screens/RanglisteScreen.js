@@ -199,7 +199,7 @@ export default function RanglisteScreen() {
                     <View style={s.colTableHead}>
                       <Text style={[s.colHeadCell, { width: 22 }]}>#</Text>
                       <Text style={[s.colHeadCell, { flex: 1 }]}>Name</Text>
-                      <Text style={[s.colHeadCell, { width: 44, textAlign: 'right' }]}>Pkt/Sp/±</Text>
+                      <Text style={[s.colHeadCell, { width: 44, textAlign: 'right' }]}>Sp/S/±</Text>
                     </View>
 
                     {/* Spielerzeilen */}
@@ -250,9 +250,8 @@ export default function RanglisteScreen() {
                           {/* Stats-Spalte rechts */}
                           <View style={s.colStatsBox}>
                             <Text style={[s.colPts, { color: isTop3 ? medalColor : colors.silverDim }]}>
-                              {p.points}
+                              {p.games}Sp · {p.wins}S
                             </Text>
-                            <Text style={s.colStats}>{p.games}Sp · {p.wins}S</Text>
                             <Text style={[s.colStats, { color: p.diff >= 0 ? colors.success + 'AA' : colors.error + 'AA' }]}>
                               {p.diff > 0 ? '+' : ''}{p.diff}
                             </Text>
