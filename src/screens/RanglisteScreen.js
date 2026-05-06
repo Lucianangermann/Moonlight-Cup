@@ -199,7 +199,7 @@ export default function RanglisteScreen() {
                     <View style={s.colTableHead}>
                       <Text style={[s.colHeadCell, { width: 22 }]}>#</Text>
                       <Text style={[s.colHeadCell, { flex: 1 }]}>Name</Text>
-                      <Text style={[s.colHeadCell, { width: 28, textAlign: 'right' }]}>Pkt</Text>
+                      <Text style={[s.colHeadCell, { width: 44, textAlign: 'right' }]}>Pkt/Sp/±</Text>
                     </View>
 
                     {/* Spielerzeilen */}
@@ -234,28 +234,29 @@ export default function RanglisteScreen() {
                             )}
                           </View>
 
-                          {/* Name + Liga + Stats */}
-                          <View style={{ flex: 1, overflow: 'hidden' }}>
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
-                              <Text
-                                style={[s.colName, isFirst && { color: group.color }]}
-                                numberOfLines={1}
-                              >
-                                {firstName}
-                              </Text>
-                              {p.league ? (
-                                <Text style={[s.colLeague, { color: group.color + '99' }]}>{p.league}</Text>
-                              ) : null}
-                            </View>
-                            <Text style={s.colStats} numberOfLines={1}>
-                              {p.games}Sp · {p.wins}S · {p.diff > 0 ? '+' : ''}{p.diff}
+                          {/* Name + Liga */}
+                          <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 3, overflow: 'hidden' }}>
+                            <Text
+                              style={[s.colName, isFirst && { color: group.color }]}
+                              numberOfLines={1}
+                            >
+                              {firstName}
                             </Text>
+                            {p.league ? (
+                              <Text style={[s.colLeague, { color: group.color + '99' }]}>{p.league}</Text>
+                            ) : null}
                           </View>
 
-                          {/* Punkte */}
-                          <Text style={[s.colPts, { color: isTop3 ? medalColor : colors.silverDim }]}>
-                            {p.points}
-                          </Text>
+                          {/* Stats-Spalte rechts */}
+                          <View style={s.colStatsBox}>
+                            <Text style={[s.colPts, { color: isTop3 ? medalColor : colors.silverDim }]}>
+                              {p.points}
+                            </Text>
+                            <Text style={s.colStats}>{p.games}Sp · {p.wins}S</Text>
+                            <Text style={[s.colStats, { color: p.diff >= 0 ? colors.success + 'AA' : colors.error + 'AA' }]}>
+                              {p.diff > 0 ? '+' : ''}{p.diff}
+                            </Text>
+                          </View>
                         </TouchableOpacity>
                       );
                     })}
@@ -483,11 +484,13 @@ const s = StyleSheet.create({
     color: colors.textDim,
     fontSize: 8,
     fontWeight: '600',
-    letterSpacing: 0.2,
-    marginTop: 1,
+    textAlign: 'right',
+  },
+  colStatsBox: {
+    width: 44,
+    alignItems: 'flex-end',
   },
   colPts: {
-    width: 28,
     fontSize: 11,
     fontWeight: '700',
     textAlign: 'right',
