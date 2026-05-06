@@ -20,7 +20,7 @@ export default function TimerScreen() {
   const getName = (id) => {
     const p = participants.find((x) => x.id === id);
     if (!p) return '?';
-    const first = p.name.trim();
+    const parts = p.name.split(','); const first = parts.length > 1 ? `${parts[1].trim()} ${parts[0].trim()}` : p.name.trim();
     return p.league ? `${first} [${p.league}]` : first;
   };
   const getTeam = (ids) => ids?.map(getName).join(' & ') ?? '';

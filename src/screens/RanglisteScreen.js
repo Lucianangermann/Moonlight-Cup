@@ -63,7 +63,7 @@ const buildPrintHtml = (groups, groupSize) => {
     const end = start + players.length - 1;
     const rows = players.map((p, i) => {
       const medal = i < 3 ? `<span style="font-size:14px">${medalSymbols[i]}</span>` : `<span style="color:#666">${i + 1}</span>`;
-      const name = p.name.trim();
+      const parts = p.name.split(','); const name = parts.length > 1 ? `${parts[1].trim()} ${parts[0].trim()}` : p.name.trim();
       const league = p.league ? ` <span style="font-size:9px;color:#888;font-weight:700">[${p.league}]</span>` : '';
       const bg = i === 0 ? `background:${gc.light};font-weight:700;` : i % 2 === 0 ? 'background:#fafafa;' : '';
       return `<tr style="${bg}">
@@ -209,7 +209,7 @@ export default function RanglisteScreen() {
                       const medalColor = group.medalColors[i] ?? colors.textMuted;
                       const medalBg    = group.medalBgs[i];
                       const isSelected = selected === p.id;
-                      const firstName = p.name.trim();
+                      const parts = p.name.split(','); const firstName = parts.length > 1 ? `${parts[1].trim()} ${parts[0].trim()}` : p.name.trim();
 
                       return (
                         <TouchableOpacity
@@ -273,7 +273,7 @@ export default function RanglisteScreen() {
               <View style={s.detailTop}>
                 <View style={{ flex: 1 }}>
                   <Text style={[s.detailName, { color: selectedGroup.color }]}>
-                    {selectedPlayer.name}
+                    {(() => { const p = selectedPlayer.name.split(','); return p.length > 1 ? `${p[1].trim()} ${p[0].trim()}` : selectedPlayer.name.trim(); })()}
                   </Text>
                   <Text style={s.detailMeta}>
                     {selectedGroup.fullLabel} · Platz {selectedGroupRank} · Gesamt #{selectedOverallIdx + 1}
