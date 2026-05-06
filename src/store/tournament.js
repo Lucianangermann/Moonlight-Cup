@@ -23,6 +23,8 @@ const shuffle = (arr) => {
 };
 
 export function TournamentProvider({ children }) {
+  const [pausedParticipants, setPausedParticipants] = useState([]);
+
   const [participants, setParticipants] = useState([
     { id: '1',  name: 'Müller, Max',          gender: 'M', league: 'FZ'  },
     { id: '2',  name: 'Lang, Lisa',           gender: 'F', league: 'BK'  },
@@ -137,6 +139,28 @@ export function TournamentProvider({ children }) {
 
   const removeParticipant = (id) => {
     setParticipants((prev) => prev.filter((p) => p.id !== id));
+    setPausedParticipants((prev) => prev.filter((p) => p.id !== id));
+  };
+
+  const updateParticipant = (id, changes) => {
+    setParticipants((prev) => prev.map((p) => p.id === id ? { ...p, ...changes } : p));
+    setPausedParticipants((prev) => prev.map((p) => p.id === id ? { ...p, ...changes } : p));
+  };
+
+  const pauseParticipant = (id) => {
+    setParticipants((prev) => {
+      const p = prev.find((x) => x.id === id);
+      if (p) setPausedParticipants((pp) => [...pp, p]);
+      return prev.filter((x) => x.id !== id);
+    });
+  };
+
+  const resumeParticipant = (id) => {
+    setPausedParticipants((prev) => {
+      const p = prev.find((x) => x.id === id);
+      if (p) setParticipants((pp) => [...pp, p]);
+      return prev.filter((x) => x.id !== id);
+    });
   };
 
   const saveResult = (matchId, scoreA, scoreB) => {
@@ -369,7 +393,9 @@ export function TournamentProvider({ children }) {
   return (
     <TournamentContext.Provider
       value={{
-        participants, addParticipant, removeParticipant,
+        participants, pausedParticipants,
+        addParticipant, removeParticipant, updateParticipant,
+        pauseParticipant, resumeParticipant,
         rounds, currentRound, saveResult, startNewRound,
         getStandings, getCurrentRoundData, allMatchesDone,
         advanceDurchgang, currentDurchgangDone,

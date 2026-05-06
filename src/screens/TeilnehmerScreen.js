@@ -9,12 +9,24 @@ import { shared, cardShadow } from '../theme/styles';
 import { useTournament, LEAGUES } from '../store/tournament';
 
 export default function TeilnehmerScreen() {
-  const { participants, addParticipant, removeParticipant, getStandings } = useTournament();
+  const {
+    participants, pausedParticipants,
+    addParticipant, removeParticipant,
+    updateParticipant, pauseParticipant, resumeParticipant,
+    getStandings,
+  } = useTournament();
+
   const [search, setSearch] = useState('');
   const [showAdd, setShowAdd] = useState(false);
   const [newName, setNewName] = useState('');
   const [newGender, setNewGender] = useState('M');
   const [newLeague, setNewLeague] = useState('FZ');
+
+  const [editTarget, setEditTarget] = useState(null);
+  const [editName, setEditName] = useState('');
+  const [editGender, setEditGender] = useState('M');
+  const [editLeague, setEditLeague] = useState('FZ');
+
   const standings = getStandings();
 
   const getRank = (id) => {
@@ -41,10 +53,44 @@ export default function TeilnehmerScreen() {
     setShowAdd(false);
   };
 
+  const openEdit = (p) => {
+    setEditTarget(p);
+    setEditName(p.name);
+    setEditGender(p.gender);
+    setEditLeague(p.league ?? 'FZ');
+  };
+
+  const closeEdit = () => {
+    setEditTarget(null);
+    setEditName('');
+    setEditGender('M');
+    setEditLeague('FZ');
+  };
+
+  const handleSaveEdit = () => {
+    if (!editName.trim() || !editTarget) return;
+    updateParticipant(editTarget.id, {
+      name: editName.trim(),
+      gender: editGender,
+      league: editLeague,
+    });
+    closeEdit();
+  };
+
+  const handlePause = () => {
+    if (!editTarget) return;
+    pauseParticipant(editTarget.id);
+    closeEdit();
+  };
+
+  const handleResume = (p) => {
+    resumeParticipant(p.id);
+  };
+
   const handleRemove = (p) => {
-    Alert.alert('Entfernen', `${p.name} wirklich entfernen?`, [
+    Alert.alert('Entfernen', `${p.name} wirklich dauerhaft entfernen?`, [
       { text: 'Abbrechen', style: 'cancel' },
-      { text: 'Entfernen', style: 'destructive', onPress: () => removeParticipant(p.id) },
+      { text: 'Entfernen', style: 'destructive', onPress: () => { removeParticipant(p.id); closeEdit(); } },
     ]);
   };
 
@@ -106,7 +152,6 @@ export default function TeilnehmerScreen() {
         )}
       </View>
 
-      {/* List */}
       <ScrollView showsVerticalScrollIndicator={false}>
         {filtered.length === 0 && (
           <View style={s.emptySearch}>
@@ -114,6 +159,8 @@ export default function TeilnehmerScreen() {
             <Text style={s.emptySearchText}>Keine Teilnehmer gefunden</Text>
           </View>
         )}
+
+        {/* Active participants */}
         {filtered.map((p) => {
           const isFemale = p.gender === 'F';
           const accentColor = isFemale ? '#E879A0' : colors.info;
@@ -121,7 +168,7 @@ export default function TeilnehmerScreen() {
             <TouchableOpacity
               key={p.id}
               style={s.card}
-              onLongPress={() => handleRemove(p)}
+              onPress={() => openEdit(p)}
               activeOpacity={0.75}
             >
               <View style={[s.avatar, { backgroundColor: accentColor + '20', borderColor: accentColor + '40' }]}>
@@ -141,11 +188,55 @@ export default function TeilnehmerScreen() {
                 </View>
                 <Text style={s.cardSub}>{getRank(p.id)}  ·  {getWins(p.id)} Siege</Text>
               </View>
-              <Ionicons name="ellipsis-vertical" size={16} color={colors.textDim} />
+              <Ionicons name="chevron-forward" size={16} color={colors.textDim} />
             </TouchableOpacity>
           );
         })}
-        <Text style={s.hint}>Lang gedrückt halten zum Entfernen</Text>
+
+        {/* Paused participants section */}
+        {pausedParticipants.length > 0 && (
+          <>
+            <View style={s.sectionDivider}>
+              <View style={s.dividerLine} />
+              <Text style={s.sectionLabel}>AUSGESTIEGEN ({pausedParticipants.length})</Text>
+              <View style={s.dividerLine} />
+            </View>
+            {pausedParticipants.map((p) => {
+              const isFemale = p.gender === 'F';
+              const accentColor = isFemale ? '#E879A0' : colors.info;
+              return (
+                <View key={p.id} style={[s.card, s.cardPaused]}>
+                  <View style={[s.avatar, { backgroundColor: accentColor + '10', borderColor: accentColor + '20' }]}>
+                    <Text style={[s.avatarText, { color: accentColor + '80' }]}>
+                      {p.name[0].toUpperCase()}
+                    </Text>
+                  </View>
+                  <View style={s.cardBody}>
+                    <View style={s.nameRow}>
+                      <Text style={[s.cardName, { color: colors.textMuted }]} numberOfLines={1}>{p.name}</Text>
+                      <View style={[s.leagueBadge, { opacity: 0.5 }]}>
+                        <Text style={s.leagueBadgeText}>{p.league ?? 'FZ'}</Text>
+                      </View>
+                    </View>
+                    <Text style={s.cardSub}>Pausiert</Text>
+                  </View>
+                  <View style={s.pausedActions}>
+                    <TouchableOpacity
+                      style={s.resumeBtn}
+                      onPress={() => handleResume(p)}
+                      activeOpacity={0.7}
+                    >
+                      <Ionicons name="enter-outline" size={14} color={colors.success} />
+                      <Text style={s.resumeBtnText}>Einsteigen</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              );
+            })}
+          </>
+        )}
+
+        <Text style={s.hint}>Antippen zum Bearbeiten</Text>
         <View style={{ height: 100 }} />
       </ScrollView>
 
@@ -227,6 +318,87 @@ export default function TeilnehmerScreen() {
               <Text style={shared.saveBtnText}>SPEICHERN</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={closeSheet} activeOpacity={0.7}>
+              <Text style={shared.cancelText}>Abbrechen</Text>
+            </TouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      {/* Edit Modal */}
+      <Modal visible={!!editTarget} transparent animationType="slide">
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={shared.modalBg}>
+          <View style={shared.sheet}>
+            <View style={s.sheetHeader}>
+              <Text style={shared.sheetTitle}>Teilnehmer bearbeiten</Text>
+              <TouchableOpacity onPress={closeEdit} activeOpacity={0.7}>
+                <Ionicons name="close" size={22} color={colors.textMuted} />
+              </TouchableOpacity>
+            </View>
+
+            <TextInput
+              style={shared.input}
+              placeholder="Name (z.B. Müller, Max)"
+              placeholderTextColor={colors.textMuted}
+              value={editName}
+              onChangeText={setEditName}
+              autoFocus
+            />
+
+            <Text style={s.genderLabel}>GESCHLECHT</Text>
+            <View style={s.genderRow}>
+              <TouchableOpacity
+                style={[s.genderBtn, editGender === 'M' && s.genderBtnActiveM]}
+                onPress={() => setEditGender('M')}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="male" size={18} color={editGender === 'M' ? colors.info : colors.textMuted} />
+                <Text style={[s.genderBtnText, editGender === 'M' && { color: colors.white }]}>Herr</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[s.genderBtn, editGender === 'F' && s.genderBtnActiveF]}
+                onPress={() => setEditGender('F')}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="female" size={18} color={editGender === 'F' ? '#E879A0' : colors.textMuted} />
+                <Text style={[s.genderBtnText, editGender === 'F' && { color: colors.white }]}>Dame</Text>
+              </TouchableOpacity>
+            </View>
+
+            <Text style={s.genderLabel}>LIGA</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.leagueScroll} contentContainerStyle={s.leagueScrollContent}>
+              {LEAGUES.map((lg) => (
+                <TouchableOpacity
+                  key={lg.key}
+                  style={[s.leagueBtn, editLeague === lg.key && s.leagueBtnActive]}
+                  onPress={() => setEditLeague(lg.key)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[s.leagueBtnKey, editLeague === lg.key && s.leagueBtnKeyActive]}>{lg.key}</Text>
+                  <Text style={[s.leagueBtnLabel, editLeague === lg.key && s.leagueBtnLabelActive]} numberOfLines={1}>{lg.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            <TouchableOpacity style={shared.saveBtn} onPress={handleSaveEdit} activeOpacity={0.8}>
+              <Text style={shared.saveBtnText}>SPEICHERN</Text>
+            </TouchableOpacity>
+
+            {/* Pause / exit button */}
+            <TouchableOpacity style={s.pauseBtn} onPress={handlePause} activeOpacity={0.8}>
+              <Ionicons name="exit-outline" size={16} color={colors.warning} />
+              <Text style={s.pauseBtnText}>AUSSTEIGEN (vorerst pausieren)</Text>
+            </TouchableOpacity>
+
+            {/* Permanent remove */}
+            <TouchableOpacity
+              onPress={() => editTarget && handleRemove(editTarget)}
+              activeOpacity={0.7}
+              style={s.removeLink}
+            >
+              <Text style={s.removeLinkText}>Dauerhaft entfernen</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity onPress={closeEdit} activeOpacity={0.7}>
               <Text style={shared.cancelText}>Abbrechen</Text>
             </TouchableOpacity>
           </View>
@@ -334,6 +506,9 @@ const s = StyleSheet.create({
     marginBottom: 8,
     ...cardShadow,
   },
+  cardPaused: {
+    opacity: 0.6,
+  },
   avatar: {
     width: 42,
     height: 42,
@@ -378,6 +553,42 @@ const s = StyleSheet.create({
     textAlign: 'center',
     marginTop: 8,
     marginBottom: 4,
+  },
+  sectionDivider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginVertical: 16,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: colors.border,
+  },
+  sectionLabel: {
+    color: colors.textDim,
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 1.5,
+  },
+  pausedActions: {
+    alignItems: 'flex-end',
+  },
+  resumeBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: colors.success + '15',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.success + '40',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  resumeBtnText: {
+    color: colors.success,
+    fontSize: 12,
+    fontWeight: '700',
   },
   sheetHeader: {
     flexDirection: 'row',
@@ -473,5 +684,33 @@ const s = StyleSheet.create({
   },
   leagueBtnLabelActive: {
     color: colors.goldDim,
+  },
+  pauseBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.warning + '40',
+    backgroundColor: colors.warning + '10',
+    paddingVertical: 14,
+    marginTop: 10,
+    marginBottom: 4,
+  },
+  pauseBtnText: {
+    color: colors.warning,
+    fontSize: 13,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  removeLink: {
+    alignItems: 'center',
+    paddingVertical: 10,
+  },
+  removeLinkText: {
+    color: colors.error + 'AA',
+    fontSize: 13,
+    fontWeight: '500',
   },
 });
