@@ -30,6 +30,7 @@ export default function TeilnehmerScreen() {
   const [editGames, setEditGames] = useState('');
   const [editWins, setEditWins] = useState('');
   const [editDiff, setEditDiff] = useState('');
+  const [statsError, setStatsError] = useState('');
 
   const standings = getStandings();
 
@@ -76,6 +77,7 @@ export default function TeilnehmerScreen() {
     setEditGames('');
     setEditWins('');
     setEditDiff('');
+    setStatsError('');
   };
 
   const handleSaveEdit = () => {
@@ -84,9 +86,10 @@ export default function TeilnehmerScreen() {
     const wins  = parseInt(editWins,  10) || 0;
     const diff  = parseInt(editDiff,  10) || 0;
     if (wins > games) {
-      Alert.alert('Ungültige Eingabe', 'Die Anzahl der Siege kann nicht größer als die Anzahl der Spiele sein.');
+      setStatsError('Siege dürfen die Anzahl der Spiele nicht überschreiten.');
       return;
     }
+    setStatsError('');
     updateParticipant(editTarget.id, {
       name: editName.trim(),
       gender: editGender,
@@ -412,20 +415,20 @@ export default function TeilnehmerScreen() {
               <View style={s.statsEditField}>
                 <Text style={s.statsEditLabel}>Spiele</Text>
                 <TextInput
-                  style={s.statsEditInput}
+                  style={[s.statsEditInput, statsError && parseInt(editWins,10) > parseInt(editGames,10) && s.statsEditInputError]}
                   keyboardType="numeric"
                   value={editGames}
-                  onChangeText={setEditGames}
+                  onChangeText={(v) => { setEditGames(v); setStatsError(''); }}
                   placeholderTextColor={colors.textMuted}
                 />
               </View>
               <View style={s.statsEditField}>
                 <Text style={s.statsEditLabel}>Siege</Text>
                 <TextInput
-                  style={s.statsEditInput}
+                  style={[s.statsEditInput, statsError && s.statsEditInputError]}
                   keyboardType="numeric"
                   value={editWins}
-                  onChangeText={setEditWins}
+                  onChangeText={(v) => { setEditWins(v); setStatsError(''); }}
                   placeholderTextColor={colors.textMuted}
                 />
               </View>
@@ -440,6 +443,12 @@ export default function TeilnehmerScreen() {
                 />
               </View>
             </View>
+            {!!statsError && (
+              <View style={s.statsErrorBox}>
+                <Ionicons name="warning-outline" size={13} color={colors.error} />
+                <Text style={s.statsErrorText}>{statsError}</Text>
+              </View>
+            )}
 
             <TouchableOpacity style={shared.saveBtn} onPress={handleSaveEdit} activeOpacity={0.8}>
               <Text style={shared.saveBtnText}>SPEICHERN</Text>
@@ -774,6 +783,28 @@ const s = StyleSheet.create({
     fontWeight: '700',
     textAlign: 'center',
     paddingVertical: 10,
+  },
+  statsEditInputError: {
+    borderColor: colors.error,
+    color: colors.error,
+  },
+  statsErrorBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: colors.error + '15',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.error + '40',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginBottom: 14,
+  },
+  statsErrorText: {
+    color: colors.error,
+    fontSize: 12,
+    fontWeight: '500',
+    flex: 1,
   },
   pauseBtn: {
     flexDirection: 'row',
