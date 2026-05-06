@@ -1,7 +1,7 @@
-import { Text } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { StatusBar } from 'expo-status-bar';
+import { Ionicons } from '@expo/vector-icons';
 
 import { TournamentProvider } from './src/store/tournament';
 import { colors } from './src/theme/colors';
@@ -15,11 +15,11 @@ import TimerScreen from './src/screens/TimerScreen';
 const Tab = createBottomTabNavigator();
 
 const TAB_ICONS = {
-  Runde: '🏸',
-  Ergebnisse: '📊',
-  Rangliste: '🏆',
-  Teilnehmer: '👥',
-  Timer: '⏱️',
+  Runde:      { focused: 'grid',        outline: 'grid-outline' },
+  Ergebnisse: { focused: 'bar-chart',   outline: 'bar-chart-outline' },
+  Rangliste:  { focused: 'trophy',      outline: 'trophy-outline' },
+  Teilnehmer: { focused: 'people',      outline: 'people-outline' },
+  Timer:      { focused: 'timer',       outline: 'timer-outline' },
 };
 
 export default function App() {
@@ -30,26 +30,31 @@ export default function App() {
         <Tab.Navigator
           screenOptions={({ route }) => ({
             headerShown: false,
-            tabBarIcon: ({ focused }) => (
-              <Text style={{ fontSize: 20, opacity: focused ? 1 : 0.5 }}>
-                {TAB_ICONS[route.name]}
-              </Text>
-            ),
-            tabBarLabel: ({ focused }) => (
-              <Text style={{
-                fontSize: 10,
-                color: focused ? colors.gold : colors.textMuted,
-                fontWeight: focused ? '700' : '400',
-                marginBottom: 4,
-              }}>
-                {route.name}
-              </Text>
-            ),
+            tabBarIcon: ({ focused, size }) => {
+              const icons = TAB_ICONS[route.name];
+              const name = focused ? icons.focused : icons.outline;
+              return (
+                <Ionicons
+                  name={name}
+                  size={22}
+                  color={focused ? colors.gold : colors.textMuted}
+                />
+              );
+            },
+            tabBarLabel: route.name,
+            tabBarActiveTintColor: colors.gold,
+            tabBarInactiveTintColor: colors.textMuted,
+            tabBarLabelStyle: {
+              fontSize: 10,
+              fontWeight: '600',
+              marginBottom: 4,
+              letterSpacing: 0.3,
+            },
             tabBarStyle: {
               backgroundColor: colors.panel,
               borderTopColor: colors.border,
               borderTopWidth: 1,
-              height: 64,
+              height: 68,
               paddingTop: 8,
             },
           })}

@@ -3,10 +3,16 @@ import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
   Modal, TextInput, KeyboardAvoidingView, Platform,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
+import { shared, cardShadow } from '../theme/styles';
 import { useTournament } from '../store/tournament';
 
-const TYPE_LABEL = { MM: '♂ Herrendoppel', FF: '♀ Damendoppel', MF: '⚤ Mixed' };
+const TYPE_CONFIG = {
+  MM: { label: 'HERRENDOPPEL', color: colors.info },
+  FF: { label: 'DAMENDOPPEL',  color: '#E879A0' },
+  MF: { label: 'MIXED',        color: colors.gold },
+};
 
 export default function ErgebnisseScreen() {
   const { rounds, participants, saveResult } = useTournament();
@@ -19,11 +25,13 @@ export default function ErgebnisseScreen() {
   const getTeam = (ids) => ids.map(getName).join(' & ');
 
   const allMatches = rounds.flatMap((r) =>
-    r.matches.map((m) => ({ ...m, roundId: r.id }))
+    r.matches.map((m) => ({ ...m, roundId: r.id, isSchnellrunde: r.isSchnellrunde }))
   );
   const filtered = selectedRound === 'all'
     ? allMatches
     : allMatches.filter((m) => m.roundId === Number(selectedRound));
+
+  const isEditSchnellrunde = editMatch?.isSchnellrunde ?? false;
 
   const openEdit = (match) => {
     setEditMatch(match);
@@ -37,72 +45,155 @@ export default function ErgebnisseScreen() {
     setEditMatch(null);
   };
 
-  return (
-    <View style={s.container}>
-      <Text style={s.title}>Ergebnisse</Text>
+  const doneCount = filtered.filter((m) => m.done).length;
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.filterRow}>
+  return (
+    <View style={shared.screen}>
+      {/* Header */}
+      <View style={s.header}>
+        <Text style={shared.screenTitle}>Ergebnisse</Text>
+        {filtered.length > 0 && (
+          <View style={s.progressPill}>
+            <Text style={s.progressText}>{doneCount}/{filtered.length}</Text>
+          </View>
+        )}
+      </View>
+
+      {/* Round Filter */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={s.filterScroll}
+        contentContainerStyle={{ paddingRight: 8 }}
+      >
         {[{ key: 'all', label: 'Alle' }, ...rounds.map((r) => ({ key: String(r.id), label: `Runde ${r.id}` }))].map((f) => (
           <TouchableOpacity
             key={f.key}
             style={[s.filterChip, selectedRound === f.key && s.filterChipActive]}
             onPress={() => setSelectedRound(f.key)}
+            activeOpacity={0.7}
           >
-            <Text style={[s.filterText, selectedRound === f.key && s.filterTextActive]}>{f.label}</Text>
+            <Text style={[s.filterText, selectedRound === f.key && s.filterTextActive]}>
+              {f.label}
+            </Text>
           </TouchableOpacity>
         ))}
       </ScrollView>
 
+      {/* Match List */}
       <ScrollView style={s.list} showsVerticalScrollIndicator={false}>
-        {filtered.map((match) => (
-          <TouchableOpacity key={match.id} style={s.matchCard} onPress={() => openEdit(match)}>
-            <Text style={s.matchType}>{TYPE_LABEL[match.type]} · Runde {match.roundId}</Text>
-            <View style={s.matchRow}>
-              <Text style={[s.teamName, match.done && match.scoreA > match.scoreB && s.winner]}>
-                {getTeam(match.teamA)}
-              </Text>
-              <Text style={s.scoreText}>
-                {match.done ? `${match.scoreA} – ${match.scoreB}` : '? – ?'}
-              </Text>
-              <Text style={[s.teamName, s.right, match.done && match.scoreB > match.scoreA && s.winner]}>
-                {getTeam(match.teamB)}
-              </Text>
-            </View>
-            {!match.done && <Text style={s.editHint}>✏️ Tippen zum Eingeben</Text>}
-          </TouchableOpacity>
-        ))}
-        {filtered.length === 0 && <Text style={s.empty}>Keine Spiele vorhanden.</Text>}
+        {filtered.length === 0 ? (
+          <View style={s.empty}>
+            <Ionicons name="bar-chart-outline" size={36} color={colors.textDim} />
+            <Text style={s.emptyText}>Keine Spiele vorhanden</Text>
+          </View>
+        ) : (
+          filtered.map((match) => {
+            const cfg = TYPE_CONFIG[match.type] ?? TYPE_CONFIG.MF;
+            const aWins = match.done && match.scoreA > match.scoreB;
+            const bWins = match.done && match.scoreB > match.scoreA;
+            return (
+              <TouchableOpacity
+                key={match.id}
+                style={[s.matchCard, match.done && s.matchCardDone]}
+                onPress={() => openEdit(match)}
+                activeOpacity={0.75}
+              >
+                <View style={s.cardTop}>
+                  <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
+                    <View style={[s.typePill, { borderColor: cfg.color + '50' }]}>
+                      <Text style={[s.typeText, { color: cfg.color }]}>{cfg.label}</Text>
+                    </View>
+                    {match.isSchnellrunde && (
+                      <View style={s.schnellBadge}>
+                        <Ionicons name="flash" size={9} color={colors.warning} />
+                        <Text style={s.schnellBadgeText}>SCHNELL</Text>
+                      </View>
+                    )}
+                  </View>
+                  <View style={s.roundTag}>
+                    <Text style={s.roundTagText}>R{match.roundId}</Text>
+                  </View>
+                </View>
+
+                <View style={s.matchRow}>
+                  <Text style={[s.teamName, aWins && s.teamWinner]} numberOfLines={1}>
+                    {getTeam(match.teamA)}
+                  </Text>
+
+                  <View style={s.scoreBox}>
+                    {match.done ? (
+                      <Text style={s.scoreText}>{match.scoreA} – {match.scoreB}</Text>
+                    ) : (
+                      <View style={s.editHintBox}>
+                        <Ionicons name="pencil-outline" size={12} color={colors.textMuted} />
+                        <Text style={s.editHintText}>Eingeben</Text>
+                      </View>
+                    )}
+                  </View>
+
+                  <Text style={[s.teamName, s.teamRight, bWins && s.teamWinner]} numberOfLines={1}>
+                    {getTeam(match.teamB)}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            );
+          })
+        )}
+        <View style={{ height: 24 }} />
       </ScrollView>
 
+      {/* Edit Modal */}
       <Modal visible={!!editMatch} transparent animationType="slide">
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={s.modalBg}>
-          <View style={s.sheet}>
-            <Text style={s.sheetTitle}>Ergebnis eingeben</Text>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={shared.modalBg}>
+          <View style={shared.sheet}>
+            <View style={s.sheetHeader}>
+              <Text style={shared.sheetTitle}>Ergebnis eingeben</Text>
+              <TouchableOpacity onPress={() => setEditMatch(null)} activeOpacity={0.7}>
+                <Ionicons name="close" size={22} color={colors.textMuted} />
+              </TouchableOpacity>
+            </View>
             {editMatch && (
-              <>
-                <Text style={s.sheetTeamA}>{getTeam(editMatch.teamA)}</Text>
-                <Text style={s.sheetVs}>vs</Text>
-                <Text style={s.sheetTeamB}>{getTeam(editMatch.teamB)}</Text>
-              </>
+              <View style={s.matchPreview}>
+                <Text style={s.previewTeam} numberOfLines={1}>{getTeam(editMatch.teamA)}</Text>
+                <Text style={s.previewVs}>VS</Text>
+                <Text style={s.previewTeam} numberOfLines={1}>{getTeam(editMatch.teamB)}</Text>
+              </View>
+            )}
+            {isEditSchnellrunde && (
+              <View style={s.schnellHint}>
+                <Ionicons name="flash" size={13} color={colors.warning} />
+                <Text style={s.schnellHintText}>
+                  Schnellrunde · Max 21 Pkt · Verlierer mind. 16 Pkt
+                </Text>
+              </View>
             )}
             <View style={s.scoreRow}>
               <TextInput
-                style={s.scoreInput} keyboardType="numeric" placeholder="0"
-                placeholderTextColor={colors.textMuted} value={scoreA}
+                style={s.scoreInput}
+                keyboardType="numeric"
+                placeholder="0"
+                placeholderTextColor={colors.textDim}
+                value={scoreA}
                 onChangeText={setScoreA}
               />
-              <Text style={s.dash}>–</Text>
+              <View style={s.dashBox}>
+                <Text style={s.dashText}>–</Text>
+              </View>
               <TextInput
-                style={s.scoreInput} keyboardType="numeric" placeholder="0"
-                placeholderTextColor={colors.textMuted} value={scoreB}
+                style={s.scoreInput}
+                keyboardType="numeric"
+                placeholder="0"
+                placeholderTextColor={colors.textDim}
+                value={scoreB}
                 onChangeText={setScoreB}
               />
             </View>
-            <TouchableOpacity style={s.saveBtn} onPress={handleSave}>
-              <Text style={s.saveBtnText}>SPEICHERN</Text>
+            <TouchableOpacity style={shared.saveBtn} onPress={handleSave} activeOpacity={0.8}>
+              <Text style={shared.saveBtnText}>SPEICHERN</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => setEditMatch(null)}>
-              <Text style={s.cancelText}>Abbrechen</Text>
+            <TouchableOpacity onPress={() => setEditMatch(null)} activeOpacity={0.7}>
+              <Text style={shared.cancelText}>Abbrechen</Text>
             </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>
@@ -112,33 +203,226 @@ export default function ErgebnisseScreen() {
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.bg, paddingHorizontal: 16, paddingTop: 56 },
-  title: { color: colors.white, fontSize: 22, fontWeight: '800', marginBottom: 16 },
-  filterRow: { flexGrow: 0, marginBottom: 14 },
-  filterChip: { borderRadius: 20, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 14, paddingVertical: 6, marginRight: 8 },
-  filterChipActive: { backgroundColor: colors.gold, borderColor: colors.gold },
-  filterText: { color: colors.textMuted, fontSize: 13 },
-  filterTextActive: { color: colors.bg, fontWeight: '700' },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  progressPill: {
+    backgroundColor: colors.goldGlow,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.borderGoldGlow,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+  },
+  progressText: {
+    color: colors.gold,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  filterScroll: {
+    flexGrow: 0,
+    marginBottom: 14,
+  },
+  filterChip: {
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: 16,
+    paddingVertical: 7,
+    marginRight: 8,
+    backgroundColor: colors.panel,
+  },
+  filterChipActive: {
+    backgroundColor: colors.gold,
+    borderColor: colors.gold,
+  },
+  filterText: {
+    color: colors.textMuted,
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  filterTextActive: {
+    color: colors.bg,
+    fontWeight: '700',
+  },
   list: { flex: 1 },
-  matchCard: { backgroundColor: colors.panel, borderRadius: 12, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: colors.border },
-  matchType: { color: colors.textMuted, fontSize: 11, fontWeight: '600', letterSpacing: 1, marginBottom: 8 },
-  matchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  teamName: { color: colors.silver, fontSize: 13, fontWeight: '600', flex: 1 },
-  right: { textAlign: 'right' },
-  winner: { color: colors.gold },
-  scoreText: { color: colors.white, fontSize: 16, fontWeight: '700', marginHorizontal: 8 },
-  editHint: { color: colors.textMuted, fontSize: 11, marginTop: 6 },
-  empty: { color: colors.textMuted, textAlign: 'center', marginTop: 40 },
-  modalBg: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.6)' },
-  sheet: { backgroundColor: colors.panel, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24 },
-  sheetTitle: { color: colors.white, fontSize: 18, fontWeight: '800', marginBottom: 12 },
-  sheetTeamA: { color: colors.gold, fontSize: 14, fontWeight: '700', textAlign: 'center' },
-  sheetVs: { color: colors.textMuted, fontSize: 12, textAlign: 'center', marginVertical: 2 },
-  sheetTeamB: { color: colors.gold, fontSize: 14, fontWeight: '700', textAlign: 'center', marginBottom: 20 },
-  scoreRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 24 },
-  scoreInput: { backgroundColor: colors.bg, color: colors.white, fontSize: 32, fontWeight: '700', borderRadius: 12, padding: 16, width: 90, textAlign: 'center' },
-  dash: { color: colors.textMuted, fontSize: 24, marginHorizontal: 16 },
-  saveBtn: { backgroundColor: colors.gold, borderRadius: 12, padding: 16, alignItems: 'center', marginBottom: 12 },
-  saveBtnText: { color: colors.bg, fontSize: 15, fontWeight: '800' },
-  cancelText: { color: colors.textMuted, textAlign: 'center', fontSize: 14, paddingVertical: 8 },
+  empty: {
+    alignItems: 'center',
+    paddingVertical: 60,
+    gap: 12,
+  },
+  emptyText: {
+    color: colors.textMuted,
+    fontSize: 14,
+  },
+  matchCard: {
+    backgroundColor: colors.panel,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 14,
+    marginBottom: 10,
+    ...cardShadow,
+  },
+  matchCardDone: {
+    borderColor: colors.success + '25',
+  },
+  cardTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  typePill: {
+    borderWidth: 1,
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  typeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 1,
+  },
+  roundTag: {
+    backgroundColor: colors.bgSurface,
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  roundTagText: {
+    color: colors.textMuted,
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  matchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  teamName: {
+    flex: 1,
+    color: colors.silverDim,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  teamRight: {
+    textAlign: 'right',
+  },
+  teamWinner: {
+    color: colors.gold,
+  },
+  scoreBox: {
+    minWidth: 64,
+    alignItems: 'center',
+    paddingHorizontal: 4,
+  },
+  scoreText: {
+    color: colors.white,
+    fontSize: 16,
+    fontWeight: '800',
+    letterSpacing: 1,
+  },
+  editHintBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  editHintText: {
+    color: colors.textMuted,
+    fontSize: 11,
+  },
+  sheetHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  matchPreview: {
+    backgroundColor: colors.bg,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 14,
+    alignItems: 'center',
+    marginBottom: 20,
+    gap: 4,
+  },
+  previewTeam: {
+    color: colors.gold,
+    fontSize: 14,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  previewVs: {
+    color: colors.textDim,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1,
+  },
+  scoreRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 24,
+    gap: 8,
+  },
+  scoreInput: {
+    backgroundColor: colors.bg,
+    color: colors.gold,
+    fontSize: 36,
+    fontWeight: '800',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
+    padding: 16,
+    width: 96,
+    textAlign: 'center',
+  },
+  dashBox: {
+    width: 28,
+    alignItems: 'center',
+  },
+  dashText: {
+    color: colors.textMuted,
+    fontSize: 24,
+    fontWeight: '300',
+  },
+  schnellBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: colors.warning + '18',
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: colors.warning + '40',
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+  },
+  schnellBadgeText: {
+    color: colors.warning,
+    fontSize: 9,
+    fontWeight: '800',
+    letterSpacing: 1,
+  },
+  schnellHint: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    backgroundColor: colors.warning + '12',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.warning + '35',
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    marginBottom: 16,
+  },
+  schnellHintText: {
+    color: colors.warning,
+    fontSize: 12,
+    fontWeight: '500',
+    flex: 1,
+  },
 });

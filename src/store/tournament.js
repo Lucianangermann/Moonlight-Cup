@@ -39,12 +39,21 @@ export function TournamentProvider({ children }) {
 
   const saveResult = (matchId, scoreA, scoreB) => {
     setRounds((prev) =>
-      prev.map((r) => ({
-        ...r,
-        matches: r.matches.map((m) =>
-          m.id === matchId ? { ...m, scoreA, scoreB, done: true } : m
-        ),
-      }))
+      prev.map((r) => {
+        if (!r.matches.some((m) => m.id === matchId)) return r;
+        let effA = scoreA;
+        let effB = scoreB;
+        if (r.isSchnellrunde) {
+          if (scoreA > scoreB) effB = Math.max(16, scoreB);
+          else if (scoreB > scoreA) effA = Math.max(16, scoreA);
+        }
+        return {
+          ...r,
+          matches: r.matches.map((m) =>
+            m.id === matchId ? { ...m, scoreA: effA, scoreB: effB, done: true } : m
+          ),
+        };
+      })
     );
   };
 
@@ -91,7 +100,7 @@ export function TournamentProvider({ children }) {
 
     const sittingOut = [...men, ...women];
 
-    const newRound = { id: roundId, matches, sittingOut };
+    const newRound = { id: roundId, matches, sittingOut, isSchnellrunde: roundId <= 3 };
     setRounds((prev) => [...prev, newRound]);
     setCurrentRound(roundId);
   };

@@ -1,107 +1,364 @@
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
+import { shared, cardShadow } from '../theme/styles';
 import { useTournament } from '../store/tournament';
 
-const TYPE_LABEL = { MM: '♂ Herrendoppel', FF: '♀ Damendoppel', MF: '⚤ Mixed' };
+const TYPE_CONFIG = {
+  MM: { label: 'HERRENDOPPEL', icon: 'man',       color: colors.info },
+  FF: { label: 'DAMENDOPPEL',  icon: 'woman',     color: '#E879A0' },
+  MF: { label: 'MIXED',        icon: 'swap-horizontal', color: colors.gold },
+};
 
 export default function RundeScreen() {
   const { getCurrentRoundData, currentRound, allMatchesDone, startNewRound, participants } = useTournament();
   const round = getCurrentRoundData();
+  const isSchnellrunde = round?.isSchnellrunde ?? false;
 
   const getName = (id) => participants.find((x) => x.id === id)?.name.split(',')[0] ?? '?';
   const getTeam = (ids) => ids.map(getName).join(' & ');
 
+  const pendingCount = round?.matches?.filter((m) => !m.done).length ?? 0;
+  const doneCount = round?.matches?.filter((m) => m.done).length ?? 0;
+  const canStart = allMatchesDone();
+
   return (
-    <View style={s.container}>
+    <View style={shared.screen}>
+      {/* Header */}
       <View style={s.header}>
-        <Text style={s.logo}>☽ MOONLIGHT CUP</Text>
-        {currentRound > 0 && <Text style={s.roundBadge}>Runde {currentRound}</Text>}
+        <View>
+          <Text style={s.logoText}>☽ MOONLIGHT CUP</Text>
+          <Text style={s.logoSub}>Badminton Turniermanager</Text>
+        </View>
+        <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+          {isSchnellrunde && (
+            <View style={s.schnellPill}>
+              <Ionicons name="flash" size={10} color={colors.warning} />
+              <Text style={s.schnellPillText}>SCHNELL</Text>
+            </View>
+          )}
+          {currentRound > 0 && (
+            <View style={s.roundPill}>
+              <Text style={s.roundPillText}>RUNDE {currentRound}</Text>
+            </View>
+          )}
+        </View>
       </View>
 
       {round ? (
         <>
-          <View style={s.summaryCard}>
-            <Text style={s.summaryTitle}>AKTUELLE RUNDE: {currentRound}</Text>
-            <Text style={s.summarySubtitle}>
-              {round.matches.length} Spiele · {round.matches.filter((m) => !m.done).length} ausstehend
-            </Text>
-            {round.sittingOut?.length > 0 && (
-              <Text style={s.sittingOut}>
-                Pausiert: {round.sittingOut.map(getName).join(', ')}
-              </Text>
-            )}
+          {/* Stats row */}
+          <View style={s.statsRow}>
+            <View style={s.statBox}>
+              <Text style={s.statNum}>{round.matches.length}</Text>
+              <Text style={s.statLbl}>Spiele</Text>
+            </View>
+            <View style={[s.statBox, s.statBoxMid]}>
+              <Text style={[s.statNum, { color: colors.success }]}>{doneCount}</Text>
+              <Text style={s.statLbl}>Fertig</Text>
+            </View>
+            <View style={s.statBox}>
+              <Text style={[s.statNum, pendingCount > 0 && { color: colors.warning }]}>{pendingCount}</Text>
+              <Text style={s.statLbl}>Offen</Text>
+            </View>
           </View>
 
-          <Text style={s.sectionLabel}>── Paarungen ──</Text>
+          {round.sittingOut?.length > 0 && (
+            <View style={s.sittingBanner}>
+              <Ionicons name="pause-circle-outline" size={14} color={colors.warning} />
+              <Text style={s.sittingText}>
+                Pausiert: {round.sittingOut.map(getName).join(', ')}
+              </Text>
+            </View>
+          )}
 
-          <ScrollView style={s.list} showsVerticalScrollIndicator={false}>
-            {round.matches.map((match) => (
-              <View key={match.id} style={s.matchCard}>
-                <Text style={s.matchType}>{TYPE_LABEL[match.type]}</Text>
-                <View style={s.teamsRow}>
-                  <Text style={s.teamName}>{getTeam(match.teamA)}</Text>
-                  <Text style={s.vs}>vs</Text>
-                  <Text style={[s.teamName, s.teamRight]}>{getTeam(match.teamB)}</Text>
+          <Text style={shared.sectionLabel}>PAARUNGEN</Text>
+
+          <ScrollView showsVerticalScrollIndicator={false}>
+            {round.matches.map((match, idx) => {
+              const cfg = TYPE_CONFIG[match.type] ?? TYPE_CONFIG.MF;
+              return (
+                <View key={match.id} style={[s.matchCard, match.done && s.matchCardDone]}>
+                  <View style={s.matchCardHeader}>
+                    <View style={[s.typePill, { borderColor: cfg.color + '60' }]}>
+                      <Ionicons name={cfg.icon} size={10} color={cfg.color} />
+                      <Text style={[s.typeLabel, { color: cfg.color }]}>{cfg.label}</Text>
+                    </View>
+                    {match.done ? (
+                      <View style={s.doneBadge}>
+                        <Ionicons name="checkmark-circle" size={14} color={colors.success} />
+                        <Text style={s.doneText}>Fertig</Text>
+                      </View>
+                    ) : (
+                      <View style={s.pendingBadge}>
+                        <Text style={s.pendingText}>Ausstehend</Text>
+                      </View>
+                    )}
+                  </View>
+
+                  <View style={s.teamsRow}>
+                    <Text style={s.teamA} numberOfLines={1}>{getTeam(match.teamA)}</Text>
+                    <View style={s.vsBox}>
+                      {match.done ? (
+                        <Text style={s.scoreText}>{match.scoreA} – {match.scoreB}</Text>
+                      ) : (
+                        <Text style={s.vsText}>VS</Text>
+                      )}
+                    </View>
+                    <Text style={s.teamB} numberOfLines={1}>{getTeam(match.teamB)}</Text>
+                  </View>
                 </View>
-                {match.done ? (
-                  <Text style={s.score}>{match.scoreA} – {match.scoreB}</Text>
-                ) : (
-                  <Text style={s.matchStatus}>⏳ Ausstehend</Text>
-                )}
-              </View>
-            ))}
-            <View style={{ height: 20 }} />
+              );
+            })}
+            <View style={{ height: 24 }} />
           </ScrollView>
         </>
       ) : (
         <View style={s.emptyState}>
-          <Text style={s.emptyIcon}>🏸</Text>
-          <Text style={s.emptyText}>Noch keine Runde gestartet.</Text>
-          <Text style={s.emptyHint}>Tippe auf "Neue Runde starten" um die Auslosung zu beginnen.</Text>
+          <View style={s.emptyIcon}>
+            <Ionicons name="tennisball-outline" size={40} color={colors.gold} />
+          </View>
+          <Text style={s.emptyTitle}>Noch keine Runde</Text>
+          <Text style={s.emptyHint}>Tippe unten auf "Neue Runde starten" um die Auslosung zu beginnen.</Text>
         </View>
       )}
 
       <TouchableOpacity
-        style={[s.button, !allMatchesDone() && s.buttonDisabled]}
+        style={[shared.goldBtn, !canStart && shared.disabledBtn]}
         onPress={startNewRound}
-        disabled={!allMatchesDone()}
+        disabled={!canStart}
+        activeOpacity={0.8}
       >
-        <Text style={s.buttonText}>▶  NEUE RUNDE STARTEN</Text>
+        <View style={s.btnInner}>
+          <Ionicons
+            name="play"
+            size={14}
+            color={canStart ? colors.bg : colors.textMuted}
+            style={{ marginRight: 8 }}
+          />
+          <Text style={[shared.goldBtnText, !canStart && shared.disabledBtnText]}>
+            NEUE RUNDE STARTEN
+          </Text>
+        </View>
       </TouchableOpacity>
     </View>
   );
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.bg, paddingHorizontal: 16, paddingTop: 56 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-  logo: { color: colors.silver, fontSize: 16, fontWeight: '700', letterSpacing: 1 },
-  roundBadge: { color: colors.gold, fontSize: 14, fontWeight: '600' },
-  summaryCard: { backgroundColor: colors.panel, borderRadius: 12, padding: 16, marginBottom: 20 },
-  summaryTitle: { color: colors.white, fontSize: 15, fontWeight: '700' },
-  summarySubtitle: { color: colors.textMuted, fontSize: 13, marginTop: 4 },
-  sittingOut: { color: colors.warning, fontSize: 12, marginTop: 6 },
-  sectionLabel: { color: colors.textMuted, fontSize: 12, marginBottom: 12, letterSpacing: 1 },
-  list: { flex: 1 },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 20,
+  },
+  logoText: {
+    color: colors.silver,
+    fontSize: 15,
+    fontWeight: '800',
+    letterSpacing: 2,
+  },
+  logoSub: {
+    color: colors.textMuted,
+    fontSize: 11,
+    letterSpacing: 0.5,
+    marginTop: 2,
+  },
+  roundPill: {
+    backgroundColor: colors.goldGlow,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.borderGoldGlow,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+  },
+  roundPillText: {
+    color: colors.gold,
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 1.5,
+  },
+  schnellPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: colors.warning + '18',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.warning + '40',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  schnellPillText: {
+    color: colors.warning,
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 1.5,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    backgroundColor: colors.panel,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginBottom: 12,
+    ...cardShadow,
+  },
+  statBox: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 14,
+  },
+  statBoxMid: {
+    borderLeftWidth: 1,
+    borderRightWidth: 1,
+    borderColor: colors.border,
+  },
+  statNum: {
+    color: colors.gold,
+    fontSize: 22,
+    fontWeight: '800',
+    letterSpacing: -0.5,
+  },
+  statLbl: {
+    color: colors.textMuted,
+    fontSize: 11,
+    fontWeight: '500',
+    marginTop: 2,
+    letterSpacing: 0.5,
+  },
+  sittingBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: colors.warning + '15',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.warning + '30',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginBottom: 14,
+  },
+  sittingText: {
+    color: colors.warning,
+    fontSize: 12,
+    fontWeight: '500',
+    flex: 1,
+  },
   matchCard: {
-    backgroundColor: colors.panel, borderRadius: 12, padding: 14,
-    marginBottom: 10, borderWidth: 1, borderColor: colors.border,
+    backgroundColor: colors.panel,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 14,
+    marginBottom: 10,
+    ...cardShadow,
   },
-  matchType: { color: colors.textMuted, fontSize: 11, fontWeight: '600', letterSpacing: 1, marginBottom: 8 },
-  teamsRow: { flexDirection: 'row', alignItems: 'center' },
-  teamName: { flex: 1, color: colors.white, fontSize: 14, fontWeight: '600' },
-  teamRight: { textAlign: 'right' },
-  vs: { color: colors.textMuted, fontSize: 12, marginHorizontal: 8 },
-  score: { color: colors.gold, fontSize: 18, fontWeight: '700', marginTop: 8, textAlign: 'center' },
-  matchStatus: { color: colors.textMuted, fontSize: 12, marginTop: 6 },
-  emptyState: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  emptyIcon: { fontSize: 48, marginBottom: 16 },
-  emptyText: { color: colors.white, fontSize: 16, fontWeight: '700', marginBottom: 8 },
-  emptyHint: { color: colors.textMuted, fontSize: 13, textAlign: 'center' },
-  button: {
-    backgroundColor: colors.gold, borderRadius: 12, padding: 16,
-    alignItems: 'center', marginVertical: 16,
+  matchCardDone: {
+    borderColor: colors.success + '30',
+    backgroundColor: colors.panel,
   },
-  buttonDisabled: { backgroundColor: colors.border },
-  buttonText: { color: colors.bg, fontSize: 15, fontWeight: '800', letterSpacing: 1 },
+  matchCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  typePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    borderWidth: 1,
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  typeLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 1,
+  },
+  doneBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  doneText: {
+    color: colors.success,
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  pendingBadge: {},
+  pendingText: {
+    color: colors.textMuted,
+    fontSize: 11,
+  },
+  teamsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  teamA: {
+    flex: 1,
+    color: colors.white,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  teamB: {
+    flex: 1,
+    color: colors.white,
+    fontSize: 13,
+    fontWeight: '600',
+    textAlign: 'right',
+  },
+  vsBox: {
+    minWidth: 52,
+    alignItems: 'center',
+  },
+  vsText: {
+    color: colors.textDim,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1,
+  },
+  scoreText: {
+    color: colors.gold,
+    fontSize: 16,
+    fontWeight: '800',
+    letterSpacing: 1,
+  },
+  emptyState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingBottom: 60,
+  },
+  emptyIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: colors.goldGlow,
+    borderWidth: 1,
+    borderColor: colors.borderGoldGlow,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
+  },
+  emptyTitle: {
+    color: colors.white,
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 8,
+  },
+  emptyHint: {
+    color: colors.textMuted,
+    fontSize: 13,
+    textAlign: 'center',
+    lineHeight: 20,
+    paddingHorizontal: 24,
+  },
+  btnInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
 });

@@ -3,7 +3,9 @@ import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
   Modal, TextInput, KeyboardAvoidingView, Platform, Alert,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
+import { shared, cardShadow } from '../theme/styles';
 import { useTournament } from '../store/tournament';
 
 export default function TeilnehmerScreen() {
@@ -16,7 +18,7 @@ export default function TeilnehmerScreen() {
 
   const getRank = (id) => {
     const idx = standings.findIndex((s) => s.id === id);
-    return idx === -1 ? '-' : `#${idx + 1}`;
+    return idx === -1 ? '—' : `#${idx + 1}`;
   };
 
   const getWins = (id) => standings.find((s) => s.id === id)?.wins ?? 0;
@@ -44,107 +46,168 @@ export default function TeilnehmerScreen() {
     ]);
   };
 
+  const closeSheet = () => { setShowAdd(false); setNewName(''); setNewGender('M'); };
+  const maxReached = participants.length >= 99;
   const menCount = participants.filter((p) => p.gender === 'M').length;
   const womenCount = participants.filter((p) => p.gender === 'F').length;
 
   return (
-    <View style={s.container}>
+    <View style={shared.screen}>
+      {/* Header */}
       <View style={s.header}>
-        <Text style={s.title}>👥 Teilnehmer</Text>
+        <Text style={shared.screenTitle}>Teilnehmer</Text>
         <TouchableOpacity
-          style={[s.addBtn, participants.length >= 99 && s.addBtnDisabled]}
-          onPress={() => setShowAdd(true)}
-          disabled={participants.length >= 99}
+          style={[s.addBtn, maxReached && s.addBtnDisabled]}
+          onPress={() => !maxReached && setShowAdd(true)}
+          activeOpacity={0.7}
         >
-          <Text style={[s.addBtnText, participants.length >= 99 && s.addBtnTextDisabled]}>
-            {participants.length >= 99 ? 'Max. 99' : '+ Neu'}
+          <Ionicons name="add" size={18} color={maxReached ? colors.textMuted : colors.gold} />
+          <Text style={[s.addBtnText, maxReached && s.addBtnTextDisabled]}>
+            {maxReached ? 'Max 99' : 'Neu'}
           </Text>
         </TouchableOpacity>
       </View>
 
+      {/* Stats */}
       <View style={s.statsRow}>
-        <View style={s.statChip}>
-          <Text style={s.statLabel}>♂ Herren</Text>
+        <View style={s.statCard}>
+          <Ionicons name="male" size={16} color={colors.info} />
           <Text style={s.statValue}>{menCount}</Text>
+          <Text style={s.statLabel}>Herren</Text>
         </View>
-        <View style={s.statChip}>
-          <Text style={s.statLabel}>♀ Damen</Text>
+        <View style={[s.statCard, s.statCardMid]}>
+          <Ionicons name="female" size={16} color="#E879A0" />
           <Text style={s.statValue}>{womenCount}</Text>
+          <Text style={s.statLabel}>Damen</Text>
         </View>
-        <View style={s.statChip}>
+        <View style={s.statCard}>
+          <Ionicons name="people" size={16} color={colors.gold} />
+          <Text style={[s.statValue, { color: colors.gold }]}>{participants.length}</Text>
           <Text style={s.statLabel}>Gesamt</Text>
-          <Text style={s.statValue}>{participants.length}</Text>
         </View>
       </View>
 
+      {/* Search */}
       <View style={s.searchBox}>
-        <Text style={s.searchIcon}>🔍</Text>
+        <Ionicons name="search-outline" size={16} color={colors.textMuted} style={{ marginRight: 8 }} />
         <TextInput
-          style={s.searchInput} placeholder="Suchen..." placeholderTextColor={colors.textMuted}
-          value={search} onChangeText={setSearch}
+          style={s.searchInput}
+          placeholder="Name suchen..."
+          placeholderTextColor={colors.textMuted}
+          value={search}
+          onChangeText={setSearch}
         />
+        {search.length > 0 && (
+          <TouchableOpacity onPress={() => setSearch('')} activeOpacity={0.7}>
+            <Ionicons name="close-circle" size={16} color={colors.textMuted} />
+          </TouchableOpacity>
+        )}
       </View>
 
+      {/* List */}
       <ScrollView showsVerticalScrollIndicator={false}>
-        {filtered.map((p) => (
-          <TouchableOpacity key={p.id} style={s.card} onLongPress={() => handleRemove(p)}>
-            <View style={[s.avatar, p.gender === 'F' && s.avatarF]}>
-              <Text style={s.avatarText}>{p.name[0]}</Text>
-            </View>
-            <View style={s.cardInfo}>
-              <View style={s.nameRow}>
-                <Text style={s.cardName}>{p.name}</Text>
-                <View style={[s.genderBadge, p.gender === 'F' && s.genderBadgeF]}>
-                  <Text style={s.genderText}>{p.gender === 'M' ? '♂' : '♀'}</Text>
-                </View>
+        {filtered.length === 0 && (
+          <View style={s.emptySearch}>
+            <Ionicons name="search-outline" size={32} color={colors.textDim} />
+            <Text style={s.emptySearchText}>Keine Teilnehmer gefunden</Text>
+          </View>
+        )}
+        {filtered.map((p) => {
+          const isFemale = p.gender === 'F';
+          const accentColor = isFemale ? '#E879A0' : colors.info;
+          return (
+            <TouchableOpacity
+              key={p.id}
+              style={s.card}
+              onLongPress={() => handleRemove(p)}
+              activeOpacity={0.75}
+            >
+              <View style={[s.avatar, { backgroundColor: accentColor + '20', borderColor: accentColor + '40' }]}>
+                <Text style={[s.avatarText, { color: accentColor }]}>
+                  {p.name[0].toUpperCase()}
+                </Text>
               </View>
-              <Text style={s.cardSub}>{getRank(p.id)} · {getWins(p.id)} Siege</Text>
-            </View>
-          </TouchableOpacity>
-        ))}
+              <View style={s.cardBody}>
+                <View style={s.nameRow}>
+                  <Text style={s.cardName}>{p.name}</Text>
+                  <View style={[s.genderBadge, { borderColor: accentColor + '50', backgroundColor: accentColor + '15' }]}>
+                    <Ionicons name={isFemale ? 'female' : 'male'} size={10} color={accentColor} />
+                  </View>
+                </View>
+                <Text style={s.cardSub}>{getRank(p.id)}  ·  {getWins(p.id)} Siege</Text>
+              </View>
+              <Ionicons name="ellipsis-vertical" size={16} color={colors.textDim} />
+            </TouchableOpacity>
+          );
+        })}
         <Text style={s.hint}>Lang gedrückt halten zum Entfernen</Text>
-        <View style={{ height: 80 }} />
+        <View style={{ height: 100 }} />
       </ScrollView>
 
+      {/* FAB */}
       <TouchableOpacity
-        style={[s.fabButton, participants.length >= 99 && s.fabButtonDisabled]}
-        onPress={() => setShowAdd(true)}
-        disabled={participants.length >= 99}
+        style={[shared.goldBtn, maxReached && shared.disabledBtn]}
+        onPress={() => !maxReached && setShowAdd(true)}
+        disabled={maxReached}
+        activeOpacity={0.8}
       >
-        <Text style={s.fabText}>
-          {participants.length >= 99 ? '👥 MAXIMUM ERREICHT (99)' : '👤+  TEILNEHMER HINZUFÜGEN'}
-        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <Ionicons
+            name={maxReached ? 'lock-closed-outline' : 'person-add-outline'}
+            size={16}
+            color={maxReached ? colors.textMuted : colors.bg}
+          />
+          <Text style={[shared.goldBtnText, maxReached && shared.disabledBtnText]}>
+            {maxReached ? 'MAXIMUM ERREICHT (99)' : 'TEILNEHMER HINZUFÜGEN'}
+          </Text>
+        </View>
       </TouchableOpacity>
 
+      {/* Add Modal */}
       <Modal visible={showAdd} transparent animationType="slide">
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={s.modalBg}>
-          <View style={s.sheet}>
-            <Text style={s.sheetTitle}>Neuer Teilnehmer</Text>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={shared.modalBg}>
+          <View style={shared.sheet}>
+            <View style={s.sheetHeader}>
+              <Text style={shared.sheetTitle}>Neuer Teilnehmer</Text>
+              <TouchableOpacity onPress={closeSheet} activeOpacity={0.7}>
+                <Ionicons name="close" size={22} color={colors.textMuted} />
+              </TouchableOpacity>
+            </View>
+
             <TextInput
-              style={s.input} placeholder="Name (z.B. Müller, Max)"
-              placeholderTextColor={colors.textMuted} value={newName}
-              onChangeText={setNewName} autoFocus
+              style={shared.input}
+              placeholder="Name (z.B. Müller, Max)"
+              placeholderTextColor={colors.textMuted}
+              value={newName}
+              onChangeText={setNewName}
+              autoFocus
             />
-            <Text style={s.genderLabel}>Geschlecht</Text>
+
+            <Text style={s.genderLabel}>GESCHLECHT</Text>
             <View style={s.genderRow}>
               <TouchableOpacity
-                style={[s.genderBtn, newGender === 'M' && s.genderBtnActive]}
+                style={[s.genderBtn, newGender === 'M' && s.genderBtnActiveM]}
                 onPress={() => setNewGender('M')}
+                activeOpacity={0.7}
               >
-                <Text style={[s.genderBtnText, newGender === 'M' && s.genderBtnTextActive]}>♂ Herr</Text>
+                <Ionicons name="male" size={18} color={newGender === 'M' ? colors.info : colors.textMuted} />
+                <Text style={[s.genderBtnText, newGender === 'M' && { color: colors.white }]}>Herr</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[s.genderBtn, newGender === 'F' && s.genderBtnActiveF]}
                 onPress={() => setNewGender('F')}
+                activeOpacity={0.7}
               >
-                <Text style={[s.genderBtnText, newGender === 'F' && s.genderBtnTextActive]}>♀ Dame</Text>
+                <Ionicons name="female" size={18} color={newGender === 'F' ? '#E879A0' : colors.textMuted} />
+                <Text style={[s.genderBtnText, newGender === 'F' && { color: colors.white }]}>Dame</Text>
               </TouchableOpacity>
             </View>
-            <TouchableOpacity style={s.saveBtn} onPress={handleAdd}>
-              <Text style={s.saveBtnText}>SPEICHERN</Text>
+
+            <TouchableOpacity style={shared.saveBtn} onPress={handleAdd} activeOpacity={0.8}>
+              <Text style={shared.saveBtnText}>SPEICHERN</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => { setShowAdd(false); setNewName(''); setNewGender('M'); }}>
-              <Text style={s.cancelText}>Abbrechen</Text>
+            <TouchableOpacity onPress={closeSheet} activeOpacity={0.7}>
+              <Text style={shared.cancelText}>Abbrechen</Text>
             </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>
@@ -154,47 +217,188 @@ export default function TeilnehmerScreen() {
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.bg, paddingHorizontal: 16, paddingTop: 56 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  title: { color: colors.white, fontSize: 22, fontWeight: '800' },
-  addBtn: { backgroundColor: colors.panel, borderRadius: 8, paddingHorizontal: 14, paddingVertical: 6, borderWidth: 1, borderColor: colors.gold },
-  addBtnText: { color: colors.gold, fontSize: 14, fontWeight: '600' },
-  addBtnDisabled: { borderColor: colors.border },
-  addBtnTextDisabled: { color: colors.textMuted },
-  statsRow: { flexDirection: 'row', gap: 8, marginBottom: 14 },
-  statChip: { flex: 1, backgroundColor: colors.panel, borderRadius: 10, padding: 10, alignItems: 'center' },
-  statLabel: { color: colors.textMuted, fontSize: 11 },
-  statValue: { color: colors.gold, fontSize: 18, fontWeight: '800' },
-  searchBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.panel, borderRadius: 12, paddingHorizontal: 12, marginBottom: 16 },
-  searchIcon: { fontSize: 14, marginRight: 8 },
-  searchInput: { flex: 1, color: colors.white, fontSize: 14, paddingVertical: 12 },
-  card: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.panel, borderRadius: 12, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: colors.border },
-  avatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.gold + '33', alignItems: 'center', justifyContent: 'center', marginRight: 12 },
-  avatarF: { backgroundColor: '#FF69B4' + '33' },
-  avatarText: { color: colors.gold, fontSize: 16, fontWeight: '700' },
-  cardInfo: { flex: 1 },
-  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  cardName: { color: colors.white, fontSize: 15, fontWeight: '600' },
-  genderBadge: { backgroundColor: colors.gold + '22', borderRadius: 4, paddingHorizontal: 6, paddingVertical: 1 },
-  genderBadgeF: { backgroundColor: '#FF69B4' + '22' },
-  genderText: { color: colors.gold, fontSize: 11 },
-  cardSub: { color: colors.textMuted, fontSize: 13, marginTop: 2 },
-  hint: { color: colors.border, fontSize: 11, marginTop: 4 },
-  fabButton: { backgroundColor: colors.gold, borderRadius: 12, padding: 16, alignItems: 'center', marginVertical: 16 },
-  fabButtonDisabled: { backgroundColor: colors.border },
-  fabText: { color: colors.bg, fontSize: 14, fontWeight: '800' },
-  modalBg: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.6)' },
-  sheet: { backgroundColor: colors.panel, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24 },
-  sheetTitle: { color: colors.white, fontSize: 18, fontWeight: '800', marginBottom: 16 },
-  input: { backgroundColor: colors.bg, color: colors.white, fontSize: 16, borderRadius: 12, padding: 14, marginBottom: 16 },
-  genderLabel: { color: colors.textMuted, fontSize: 13, marginBottom: 8 },
-  genderRow: { flexDirection: 'row', gap: 10, marginBottom: 20 },
-  genderBtn: { flex: 1, borderRadius: 10, borderWidth: 1, borderColor: colors.border, padding: 12, alignItems: 'center' },
-  genderBtnActive: { backgroundColor: colors.gold + '22', borderColor: colors.gold },
-  genderBtnActiveF: { backgroundColor: '#FF69B4' + '22', borderColor: '#FF69B4' },
-  genderBtnText: { color: colors.textMuted, fontSize: 15, fontWeight: '600' },
-  genderBtnTextActive: { color: colors.white },
-  saveBtn: { backgroundColor: colors.gold, borderRadius: 12, padding: 16, alignItems: 'center', marginBottom: 12 },
-  saveBtnText: { color: colors.bg, fontSize: 15, fontWeight: '800' },
-  cancelText: { color: colors.textMuted, textAlign: 'center', fontSize: 14, paddingVertical: 8 },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  addBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.borderGoldGlow,
+    backgroundColor: colors.goldGlow,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+  },
+  addBtnDisabled: {
+    borderColor: colors.border,
+    backgroundColor: 'transparent',
+  },
+  addBtnText: {
+    color: colors.gold,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  addBtnTextDisabled: {
+    color: colors.textMuted,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    backgroundColor: colors.panel,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginBottom: 14,
+    ...cardShadow,
+  },
+  statCard: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 14,
+    gap: 4,
+  },
+  statCardMid: {
+    borderLeftWidth: 1,
+    borderRightWidth: 1,
+    borderColor: colors.border,
+  },
+  statValue: {
+    color: colors.silver,
+    fontSize: 20,
+    fontWeight: '800',
+    letterSpacing: -0.5,
+  },
+  statLabel: {
+    color: colors.textMuted,
+    fontSize: 10,
+    fontWeight: '500',
+    letterSpacing: 0.5,
+  },
+  searchBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.panel,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: 14,
+    marginBottom: 14,
+  },
+  searchInput: {
+    flex: 1,
+    color: colors.white,
+    fontSize: 14,
+    paddingVertical: 13,
+  },
+  emptySearch: {
+    alignItems: 'center',
+    paddingVertical: 40,
+    gap: 12,
+  },
+  emptySearchText: {
+    color: colors.textMuted,
+    fontSize: 14,
+  },
+  card: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.panel,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 14,
+    marginBottom: 8,
+    ...cardShadow,
+  },
+  avatar: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  avatarText: {
+    fontSize: 17,
+    fontWeight: '700',
+  },
+  cardBody: {
+    flex: 1,
+  },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 3,
+  },
+  cardName: {
+    color: colors.white,
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  genderBadge: {
+    borderRadius: 4,
+    borderWidth: 1,
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+  },
+  cardSub: {
+    color: colors.textMuted,
+    fontSize: 12,
+    letterSpacing: 0.3,
+  },
+  hint: {
+    color: colors.textDim,
+    fontSize: 11,
+    textAlign: 'center',
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  sheetHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  genderLabel: {
+    color: colors.textMuted,
+    fontSize: 11,
+    fontWeight: '600',
+    letterSpacing: 1.5,
+    marginBottom: 10,
+  },
+  genderRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 20,
+  },
+  genderBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingVertical: 13,
+  },
+  genderBtnActiveM: {
+    backgroundColor: colors.info + '15',
+    borderColor: colors.info + '60',
+  },
+  genderBtnActiveF: {
+    backgroundColor: '#E879A0' + '15',
+    borderColor: '#E879A0' + '60',
+  },
+  genderBtnText: {
+    color: colors.textMuted,
+    fontSize: 15,
+    fontWeight: '600',
+  },
 });
