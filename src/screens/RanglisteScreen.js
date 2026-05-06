@@ -70,9 +70,14 @@ export default function RanglisteScreen() {
                       <Text style={s.rankNum}>{i + 1}</Text>
                     )}
                   </View>
-                  <Text style={[s.col, s.colName, s.nameText, i === 0 && { color: colors.gold }]} numberOfLines={1}>
-                    {p.name}
-                  </Text>
+                  <View style={[s.col, s.colName, { flexDirection: 'row', alignItems: 'center', gap: 6 }]}>
+                    <Text style={[s.nameText, i === 0 && { color: colors.gold }]} numberOfLines={1}>{p.name}</Text>
+                    {p.league ? (
+                      <View style={s.leaguePill}>
+                        <Text style={s.leaguePillText}>{p.league}</Text>
+                      </View>
+                    ) : null}
+                  </View>
                   <Text style={[s.col, s.colNum, s.numText, { color: medalColor }]}>{p.points}</Text>
                   <Text style={[s.col, s.colNum, s.numText]}>{p.wins}</Text>
                   <Text style={[s.col, s.colNum, s.numText, p.diff > 0 && s.diffPos, p.diff < 0 && s.diffNeg]}>
@@ -244,6 +249,20 @@ const s = StyleSheet.create({
   },
   diffPos: { color: colors.success },
   diffNeg: { color: colors.error },
+  leaguePill: {
+    backgroundColor: colors.goldGlow,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: colors.borderGoldGlow,
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+  },
+  leaguePillText: {
+    color: colors.gold,
+    fontSize: 9,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
   detailCard: {
     backgroundColor: colors.panelLight,
     borderRadius: 12,

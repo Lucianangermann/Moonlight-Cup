@@ -6,7 +6,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 import { shared, cardShadow } from '../theme/styles';
-import { useTournament } from '../store/tournament';
+import { useTournament, LEAGUES } from '../store/tournament';
 
 export default function TeilnehmerScreen() {
   const { participants, addParticipant, removeParticipant, getStandings } = useTournament();
@@ -14,6 +14,7 @@ export default function TeilnehmerScreen() {
   const [showAdd, setShowAdd] = useState(false);
   const [newName, setNewName] = useState('');
   const [newGender, setNewGender] = useState('M');
+  const [newLeague, setNewLeague] = useState('FZ');
   const standings = getStandings();
 
   const getRank = (id) => {
@@ -33,9 +34,10 @@ export default function TeilnehmerScreen() {
       Alert.alert('Maximum erreicht', 'Es können maximal 99 Teilnehmer teilnehmen.');
       return;
     }
-    addParticipant(newName.trim(), newGender);
+    addParticipant(newName.trim(), newGender, newLeague);
     setNewName('');
     setNewGender('M');
+    setNewLeague('FZ');
     setShowAdd(false);
   };
 
@@ -46,7 +48,7 @@ export default function TeilnehmerScreen() {
     ]);
   };
 
-  const closeSheet = () => { setShowAdd(false); setNewName(''); setNewGender('M'); };
+  const closeSheet = () => { setShowAdd(false); setNewName(''); setNewGender('M'); setNewLeague('FZ'); };
   const maxReached = participants.length >= 99;
   const menCount = participants.filter((p) => p.gender === 'M').length;
   const womenCount = participants.filter((p) => p.gender === 'F').length;
@@ -129,9 +131,12 @@ export default function TeilnehmerScreen() {
               </View>
               <View style={s.cardBody}>
                 <View style={s.nameRow}>
-                  <Text style={s.cardName}>{p.name}</Text>
+                  <Text style={s.cardName} numberOfLines={1}>{p.name}</Text>
                   <View style={[s.genderBadge, { borderColor: accentColor + '50', backgroundColor: accentColor + '15' }]}>
                     <Ionicons name={isFemale ? 'female' : 'male'} size={10} color={accentColor} />
+                  </View>
+                  <View style={s.leagueBadge}>
+                    <Text style={s.leagueBadgeText}>{p.league ?? 'FZ'}</Text>
                   </View>
                 </View>
                 <Text style={s.cardSub}>{getRank(p.id)}  ·  {getWins(p.id)} Siege</Text>
@@ -202,6 +207,21 @@ export default function TeilnehmerScreen() {
                 <Text style={[s.genderBtnText, newGender === 'F' && { color: colors.white }]}>Dame</Text>
               </TouchableOpacity>
             </View>
+
+            <Text style={s.genderLabel}>LIGA</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.leagueScroll} contentContainerStyle={s.leagueScrollContent}>
+              {LEAGUES.map((lg) => (
+                <TouchableOpacity
+                  key={lg.key}
+                  style={[s.leagueBtn, newLeague === lg.key && s.leagueBtnActive]}
+                  onPress={() => setNewLeague(lg.key)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[s.leagueBtnKey, newLeague === lg.key && s.leagueBtnKeyActive]}>{lg.key}</Text>
+                  <Text style={[s.leagueBtnLabel, newLeague === lg.key && s.leagueBtnLabelActive]} numberOfLines={1}>{lg.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
 
             <TouchableOpacity style={shared.saveBtn} onPress={handleAdd} activeOpacity={0.8}>
               <Text style={shared.saveBtnText}>SPEICHERN</Text>
@@ -400,5 +420,58 @@ const s = StyleSheet.create({
     color: colors.textMuted,
     fontSize: 15,
     fontWeight: '600',
+  },
+  leagueBadge: {
+    backgroundColor: colors.goldGlow,
+    borderRadius: 5,
+    borderWidth: 1,
+    borderColor: colors.borderGoldGlow,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  leagueBadgeText: {
+    color: colors.gold,
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  leagueScroll: {
+    marginBottom: 20,
+  },
+  leagueScrollContent: {
+    gap: 8,
+    paddingRight: 4,
+  },
+  leagueBtn: {
+    alignItems: 'center',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    minWidth: 72,
+  },
+  leagueBtnActive: {
+    backgroundColor: colors.goldGlow,
+    borderColor: colors.borderGoldGlow,
+  },
+  leagueBtnKey: {
+    color: colors.textMuted,
+    fontSize: 13,
+    fontWeight: '800',
+    letterSpacing: 1,
+  },
+  leagueBtnKeyActive: {
+    color: colors.gold,
+  },
+  leagueBtnLabel: {
+    color: colors.textDim,
+    fontSize: 9,
+    fontWeight: '500',
+    marginTop: 2,
+    textAlign: 'center',
+  },
+  leagueBtnLabelActive: {
+    color: colors.goldDim,
   },
 });
