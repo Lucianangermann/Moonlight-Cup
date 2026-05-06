@@ -108,13 +108,17 @@ export default function RundeScreen() {
     try { await Print.printAsync({ html }); } catch (_) {}
   };
 
+  const wait = (ms) => new Promise((res) => setTimeout(res, ms));
+
   const printRound = async () => {
     setShowPrintAsk(false);
+    await wait(400);
     await buildAndPrint(getCurrentRoundData());
   };
 
   const printSelectedRound = async (r) => {
     setPrintMenuOpen(false);
+    await wait(400);
     await buildAndPrint(r);
   };
 
