@@ -80,26 +80,46 @@ export default function RundeScreen() {
   const buildHtml = (r) => {
     const d1 = r.matches.filter((m) => m.durchgang === 1);
     const d2 = r.matches.filter((m) => m.durchgang === 2);
-    const rows = (list) => list.map((m, i) => `
-      <tr style="background:${i % 2 === 0 ? '#f9f9f9' : '#fff'}">
-        <td style="padding:7px 10px;font-size:11px;color:#555;font-weight:600">${TYPE_LABELS[m.type] ?? m.type}</td>
-        <td style="padding:7px 10px;font-weight:700">${m.teamA.map(getName).join(' &amp; ')}</td>
-        <td style="padding:7px 6px;text-align:center;color:#aaa;font-size:11px">VS</td>
-        <td style="padding:7px 10px;font-weight:700">${m.teamB.map(getName).join(' &amp; ')}</td>
-      </tr>`).join('');
-    const section = (label, list) => list.length === 0 ? '' : `
-      <h3 style="margin:16px 0 6px;font-size:12px;color:#666;letter-spacing:1px;text-transform:uppercase">${label}</h3>
-      <table style="width:100%;border-collapse:collapse;font-size:13px">
-        <tbody>${rows(list)}</tbody>
-      </table>`;
     const sitOut = r.sittingOut?.length > 0
       ? `<p style="margin-top:14px;font-size:12px;color:#888"><b>Pausiert:</b> ${r.sittingOut.map(getName).join(', ')}</p>` : '';
-    return `<html><body style="font-family:Arial,sans-serif;padding:20px;color:#222;max-width:700px;margin:0 auto">
-      <h2 style="margin:0 0 2px">☽ Moonlight Cup — Runde ${r.id}</h2>
-      <p style="margin:0 0 10px;color:#666;font-size:12px">${r.isSchnellrunde ? 'Schnellrunde' : 'Normale Runde'}</p>
-      <hr style="border:none;border-top:1px solid #ddd;margin:10px 0"/>
-      ${section('Durchgang 1', d1)}${section('Durchgang 2', d2)}${sitOut}
-    </body></html>`;
+    const rows = (list) => list.map((m, i) => `
+      <tr style="background:${i % 2 === 0 ? '#f5f5f5' : '#fff'}">
+        <td style="padding:9px 12px;font-size:11px;color:#555;font-weight:700;white-space:nowrap">${TYPE_LABELS[m.type] ?? m.type}</td>
+        <td style="padding:9px 12px;font-size:14px;font-weight:700">${m.teamA.map(getName).join(' &amp; ')}</td>
+        <td style="padding:9px 8px;text-align:center;color:#bbb;font-size:12px;font-weight:700">VS</td>
+        <td style="padding:9px 12px;font-size:14px;font-weight:700">${m.teamB.map(getName).join(' &amp; ')}</td>
+      </tr>`).join('');
+    const pageHtml = (dgLabel, list, extraBottom) => `
+      <div style="font-family:Arial,sans-serif;padding:28px 32px;color:#222;max-width:720px;margin:0 auto">
+        <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:6px">
+          <div>
+            <div style="font-size:20px;font-weight:800">☽ Moonlight Cup — Runde ${r.id}</div>
+            <div style="font-size:12px;color:#666;margin-top:2px">${r.isSchnellrunde ? 'Schnellrunde' : 'Normale Runde'}</div>
+          </div>
+          <div style="background:#1a1a2e;color:#fff;padding:6px 14px;border-radius:6px;font-size:13px;font-weight:800;letter-spacing:1px">${dgLabel}</div>
+        </div>
+        <hr style="border:none;border-top:2px solid #1a1a2e;margin:10px 0 16px"/>
+        <table style="width:100%;border-collapse:collapse;font-size:14px">
+          <thead>
+            <tr style="background:#1a1a2e;color:#fff">
+              <th style="padding:8px 12px;text-align:left;font-size:10px;letter-spacing:1px;font-weight:700">TYP</th>
+              <th style="padding:8px 12px;text-align:left;font-weight:700">TEAM A</th>
+              <th style="padding:8px 8px;width:36px"></th>
+              <th style="padding:8px 12px;text-align:left;font-weight:700">TEAM B</th>
+            </tr>
+          </thead>
+          <tbody>${rows(list)}</tbody>
+        </table>
+        ${extraBottom}
+      </div>`;
+    return `<html>
+      <head><style>@page { margin: 0; } body { margin: 0; }</style></head>
+      <body>
+        ${pageHtml('DURCHGANG 1', d1, '')}
+        <div style="page-break-after: always"></div>
+        ${pageHtml('DURCHGANG 2', d2, sitOut)}
+      </body>
+    </html>`;
   };
 
   const doPrint = async (r) => {
