@@ -212,7 +212,10 @@ export default function TimerScreen() {
       <View style={s.controls}>
         <TouchableOpacity
           style={[s.ctrlBtn, running && s.ctrlBtnActive]}
-          onPress={() => setRunning((r) => !r)}
+          onPress={() => {
+            if (phase === 'idle') setPhase('game');
+            setRunning((r) => !r);
+          }}
           activeOpacity={0.75}
         >
           <Ionicons
