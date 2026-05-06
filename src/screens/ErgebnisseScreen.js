@@ -81,9 +81,7 @@ export default function ErgebnisseScreen() {
     );
     pending.forEach((m) => {
       const schnell = round.isSchnellrunde;
-      const maxWin = schnell ? 21 : 40;
-      const minWin = schnell ? 16 : 21;
-      const winScore = Math.floor(Math.random() * (maxWin - minWin + 1)) + minWin;
+      const winScore = schnell ? 21 : 40;
       const loseScore = Math.floor(Math.random() * winScore);
       const aWins = Math.random() < 0.5;
       saveResult(m.id, aWins ? winScore : loseScore, aWins ? loseScore : winScore);
