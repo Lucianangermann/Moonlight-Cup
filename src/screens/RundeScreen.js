@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Modal } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 import { shared, cardShadow } from '../theme/styles';
@@ -10,8 +10,11 @@ const TYPE_CONFIG = {
   MF: { label: 'MIXED',        icon: 'swap-horizontal', color: colors.gold },
 };
 
+import { useState } from 'react';
+
 export default function RundeScreen() {
   const { getCurrentRoundData, currentRound, allMatchesDone, startNewRound, participants, advanceDurchgang, currentDurchgangDone } = useTournament();
+  const [showConfirm, setShowConfirm] = useState(false);
   const round = getCurrentRoundData();
   const isSchnellrunde = round?.isSchnellrunde ?? false;
   const durchgang = round?.currentDurchgang ?? 1;
@@ -37,21 +40,17 @@ export default function RundeScreen() {
   const primaryLabel = !round ? 'NEUE RUNDE STARTEN' : inD1 ? 'DURCHGANG 2 STARTEN' : 'NEUE RUNDE STARTEN';
   const primaryEnabled = !round || (inD1 ? d1Done : allDone);
 
-  const confirmAndStart = () => {
-    const isNewRound = !round || !inD1;
-    if (isNewRound) {
-      const nextRound = currentRound + 1;
-      Alert.alert(
-        'Neue Runde starten?',
-        `Runde ${nextRound} wird ausgelost und kann nicht rückgängig gemacht werden.`,
-        [
-          { text: 'Abbrechen', style: 'cancel' },
-          { text: 'Starten', style: 'default', onPress: startNewRound },
-        ]
-      );
+  const handlePrimaryPress = () => {
+    if (!round || !inD1) {
+      setShowConfirm(true);
     } else {
       advanceDurchgang();
     }
+  };
+
+  const handleConfirmStart = () => {
+    setShowConfirm(false);
+    startNewRound();
   };
 
   return (
@@ -166,9 +165,29 @@ export default function RundeScreen() {
         </View>
       )}
 
+      <Modal visible={showConfirm} transparent animationType="fade">
+        <View style={s.modalOverlay}>
+          <View style={s.modalCard}>
+            <Text style={s.modalTitle}>Neue Runde starten?</Text>
+            <Text style={s.modalBody}>
+              Runde {currentRound + 1} wird jetzt ausgelost.{'\n'}Diese Aktion kann nicht rückgängig gemacht werden.
+            </Text>
+            <View style={s.modalButtons}>
+              <TouchableOpacity style={s.modalBtnCancel} onPress={() => setShowConfirm(false)} activeOpacity={0.8}>
+                <Text style={s.modalBtnCancelText}>Abbrechen</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={s.modalBtnConfirm} onPress={handleConfirmStart} activeOpacity={0.8}>
+                <Ionicons name="play" size={13} color={colors.bg} style={{ marginRight: 5 }} />
+                <Text style={s.modalBtnConfirmText}>Starten</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       <TouchableOpacity
         style={[shared.goldBtn, !primaryEnabled && shared.disabledBtn]}
-        onPress={confirmAndStart}
+        onPress={handlePrimaryPress}
         disabled={!primaryEnabled}
         activeOpacity={0.8}
       >
@@ -444,5 +463,66 @@ const s = StyleSheet.create({
   btnInner: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.65)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 32,
+  },
+  modalCard: {
+    width: '100%',
+    backgroundColor: colors.panelLight,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.borderGoldGlow,
+    padding: 24,
+    ...cardShadow,
+  },
+  modalTitle: {
+    color: colors.white,
+    fontSize: 17,
+    fontWeight: '800',
+    marginBottom: 10,
+    letterSpacing: -0.3,
+  },
+  modalBody: {
+    color: colors.textMuted,
+    fontSize: 13,
+    lineHeight: 20,
+    marginBottom: 24,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  modalBtnCancel: {
+    flex: 1,
+    backgroundColor: colors.panel,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  modalBtnCancelText: {
+    color: colors.textMuted,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  modalBtnConfirm: {
+    flex: 1,
+    backgroundColor: colors.gold,
+    borderRadius: 12,
+    paddingVertical: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalBtnConfirmText: {
+    color: colors.bg,
+    fontSize: 13,
+    fontWeight: '800',
   },
 });
