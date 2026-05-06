@@ -159,6 +159,14 @@ export default function RanglisteScreen() {
 
   const closePrintPreview = () => setPrintPreview(false);
 
+  // Try printing the full HTML in one job — works if expo-print renders HTML
+  const doPrintAll = async () => {
+    try {
+      await Print.printAsync({ html: buildPrintHtml(groups, groupSize) });
+      setPrintPreview(false);
+    } catch (_) {}
+  };
+
   const selectedPlayer = selected ? standings.find((p) => p.id === selected) : null;
   const selectedOverallIdx = selectedPlayer ? standings.indexOf(selectedPlayer) : -1;
   const selectedGroupIdx = selectedOverallIdx >= 0 ? Math.floor(selectedOverallIdx / groupSize) : -1;
@@ -344,6 +352,12 @@ export default function RanglisteScreen() {
                   <Ionicons name="close-circle" size={26} color="#999" />
                 </TouchableOpacity>
               </View>
+
+              {/* Alle-drucken Button — versucht vollständiges HTML-Rendering */}
+              <TouchableOpacity style={s.previewBtnAll} onPress={doPrintAll} activeOpacity={0.8}>
+                <Ionicons name="print-outline" size={14} color="#1a1a2e" />
+                <Text style={s.previewBtnAllText}>Alle {printPages.length} Seiten auf einmal drucken</Text>
+              </TouchableOpacity>
 
               <View style={[s.previewGrpHeader, { backgroundColor: gc.header }]}>
                 <Text style={s.previewGrpLabel}>{page.group.fullLabel.toUpperCase()}</Text>
@@ -649,4 +663,6 @@ const s = StyleSheet.create({
   previewBtnPrintText: { color: '#fff', fontSize: 14, fontWeight: '800' },
   previewBtnBack: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#f0f0f0', borderRadius: 12, paddingVertical: 14, paddingHorizontal: 16 },
   previewBtnBackText: { color: '#333', fontSize: 13, fontWeight: '700' },
+  previewBtnAll: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#e8f0fe', borderRadius: 10, borderWidth: 1, borderColor: '#1a1a2e40', paddingVertical: 10, marginBottom: 12 },
+  previewBtnAllText: { color: '#1a1a2e', fontSize: 13, fontWeight: '800' },
 });

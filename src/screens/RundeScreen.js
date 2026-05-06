@@ -116,6 +116,25 @@ export default function RundeScreen() {
     </body></html>`;
   };
 
+  // Try printing both Durchgänge in one job via HTML rendering
+  const doPrintBoth = async (r) => {
+    const d1html = buildPageHtml(r, 1);
+    const d2html = buildPageHtml(r, 2);
+    const html = `<html><head><style>
+      @page{margin:0} body{margin:0}
+      .pg{page-break-after:always;break-after:page}
+      .last{page-break-after:auto;break-after:auto}
+    </style></head><body>
+      <div class="pg">${d1html.replace(/<\/?html>|<\/?body[^>]*>/g,'')}</div>
+      <div class="last">${d2html.replace(/<\/?html>|<\/?body[^>]*>/g,'')}</div>
+    </body></html>`;
+    try {
+      await Print.printAsync({ html });
+      setPrintPreview(null);
+      setPreviewDg(null);
+    } catch (_) {}
+  };
+
   // expo-print captures the current screen — preview shows only one Durchgang,
   // then print captures it. After D1 print auto-advances to D2.
   const doPrint = async () => {
@@ -681,6 +700,10 @@ export default function RundeScreen() {
             <View style={s.previewActions}>
               {!previewDg ? (
                 <>
+                  <TouchableOpacity style={[s.previewBtnShare, { flex: 1 }]} onPress={() => doPrintBoth(printPreview)} activeOpacity={0.8}>
+                    <Ionicons name="print-outline" size={15} color="#1a1a2e" />
+                    <Text style={[s.previewBtnShareText, { color: '#1a1a2e', fontWeight: '800' }]}>Beide auf einmal</Text>
+                  </TouchableOpacity>
                   <TouchableOpacity style={s.previewBtnPrint} onPress={() => setPreviewDg(1)} activeOpacity={0.8}>
                     <Ionicons name="print-outline" size={15} color="#fff" />
                     <Text style={s.previewBtnPrintText}>D1 drucken</Text>
@@ -688,10 +711,6 @@ export default function RundeScreen() {
                   <TouchableOpacity style={s.previewBtnPrint} onPress={() => setPreviewDg(2)} activeOpacity={0.8}>
                     <Ionicons name="print-outline" size={15} color="#fff" />
                     <Text style={s.previewBtnPrintText}>D2 drucken</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={s.previewBtnShare} onPress={() => doShare(printPreview)} activeOpacity={0.8}>
-                    <Ionicons name="share-outline" size={15} color="#555" />
-                    <Text style={s.previewBtnShareText}>Teilen</Text>
                   </TouchableOpacity>
                 </>
               ) : (
