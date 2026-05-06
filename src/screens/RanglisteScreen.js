@@ -234,17 +234,22 @@ export default function RanglisteScreen() {
                             )}
                           </View>
 
-                          {/* Name + Liga */}
-                          <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 3, overflow: 'hidden' }}>
-                            <Text
-                              style={[s.colName, isFirst && { color: group.color }]}
-                              numberOfLines={1}
-                            >
-                              {firstName}
+                          {/* Name + Liga + Stats */}
+                          <View style={{ flex: 1, overflow: 'hidden' }}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+                              <Text
+                                style={[s.colName, isFirst && { color: group.color }]}
+                                numberOfLines={1}
+                              >
+                                {firstName}
+                              </Text>
+                              {p.league ? (
+                                <Text style={[s.colLeague, { color: group.color + '99' }]}>{p.league}</Text>
+                              ) : null}
+                            </View>
+                            <Text style={s.colStats} numberOfLines={1}>
+                              {p.games}Sp · {p.wins}S · {p.diff > 0 ? '+' : ''}{p.diff}
                             </Text>
-                            {p.league ? (
-                              <Text style={[s.colLeague, { color: group.color + '99' }]}>{p.league}</Text>
-                            ) : null}
                           </View>
 
                           {/* Punkte */}
@@ -473,6 +478,13 @@ const s = StyleSheet.create({
     fontWeight: '800',
     letterSpacing: 0.3,
     flexShrink: 0,
+  },
+  colStats: {
+    color: colors.textDim,
+    fontSize: 8,
+    fontWeight: '600',
+    letterSpacing: 0.2,
+    marginTop: 1,
   },
   colPts: {
     width: 28,
