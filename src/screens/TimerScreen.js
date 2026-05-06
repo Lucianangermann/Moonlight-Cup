@@ -89,6 +89,19 @@ export default function TimerScreen() {
     return () => clearInterval(intervalRef.current);
   }, [running]);
 
+  const skipCurrent = () => {
+    clearInterval(intervalRef.current);
+    setRunning(false);
+    if (phaseRef.current === 'warmup') {
+      Vibration.vibrate([0, 300, 100, 300, 100, 300]);
+      setPhaseComplete('warmup');
+    } else if (phaseRef.current === 'game') {
+      Vibration.vibrate([0, 400, 100, 400]);
+      setSecondsLeft(0);
+      setPhaseComplete('game');
+    }
+  };
+
   const reset = () => {
     setRunning(false);
     setPhase('idle');
@@ -226,6 +239,16 @@ export default function TimerScreen() {
           <Text style={[s.ctrlLabel, { color: colors.error + 'AA' }]}>Stop</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Skip button — only visible during active phase */}
+      {phase !== 'idle' && !isFinished && (
+        <TouchableOpacity style={s.skipBtn} onPress={skipCurrent} activeOpacity={0.75}>
+          <Ionicons name="play-skip-forward" size={15} color={colors.textMuted} />
+          <Text style={s.skipBtnText}>
+            {phase === 'warmup' ? 'Einspielen überspringen → Spielzeit starten' : 'Spielzeit überspringen'}
+          </Text>
+        </TouchableOpacity>
+      )}
 
       <Text style={s.hint}>
         {phase === 'idle'
@@ -429,6 +452,23 @@ const s = StyleSheet.create({
   ctrlLabelActive: {
     color: colors.bg,
     fontWeight: '700',
+  },
+  skipBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    backgroundColor: colors.panel,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    marginBottom: 16,
+  },
+  skipBtnText: {
+    color: colors.textMuted,
+    fontSize: 12,
+    fontWeight: '600',
   },
   hint: {
     color: colors.textDim,
