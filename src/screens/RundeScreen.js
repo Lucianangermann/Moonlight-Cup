@@ -42,8 +42,9 @@ export default function RundeScreen() {
   };
   const getTeam = (ids) => ids.map(getName).join(' & ');
 
-  // Nur Matches des aktuellen Durchgangs anzeigen
-  const visibleMatches = round?.matches?.filter((m) => m.durchgang === durchgang) ?? [];
+  // Nur Matches des aktuellen Durchgangs anzeigen, nach Feld sortiert (Feld 1 zuerst)
+  const visibleMatches = (round?.matches?.filter((m) => m.durchgang === durchgang) ?? [])
+    .sort((a, b) => (a.feld ?? 0) - (b.feld ?? 0));
   const pendingCount = visibleMatches.filter((m) => !m.done).length;
   const doneCount = visibleMatches.filter((m) => m.done).length;
 
@@ -84,11 +85,13 @@ export default function RundeScreen() {
   const TYPE_LABELS = { MM: 'Herrendoppel', FF: 'Damendoppel', MF: 'Mixed' };
 
   const buildPageHtml = (r, dg) => {
-    const matches = r.matches.filter((m) => m.durchgang === dg);
+    const matches = [...r.matches.filter((m) => m.durchgang === dg)]
+      .sort((a, b) => (a.feld ?? 0) - (b.feld ?? 0));
     const sitOut = dg === 2 && r.sittingOut?.length > 0
       ? `<p style="margin-top:14px;font-size:12px;color:#888"><b>Freilos:</b> ${r.sittingOut.map(getName).join(', ')}</p>` : '';
     const rows = matches.map((m, i) => `
       <tr style="background:${i % 2 === 0 ? '#f5f5f5' : '#fff'}">
+        <td style="padding:9px 10px;font-size:12px;font-weight:800;color:#1a1a2e;white-space:nowrap;text-align:center">${m.feld != null ? `F${m.feld}` : ''}</td>
         <td style="padding:9px 12px;font-size:11px;color:#555;font-weight:700;white-space:nowrap">${TYPE_LABELS[m.type] ?? m.type}</td>
         <td style="padding:9px 12px;font-size:14px;font-weight:700">${m.teamA.map(getName).join(' &amp; ')}</td>
         <td style="padding:9px 8px;text-align:center;color:#bbb;font-size:12px;font-weight:700">VS</td>
@@ -106,6 +109,7 @@ export default function RundeScreen() {
       <table style="width:100%;border-collapse:collapse;font-size:14px">
         <thead>
           <tr style="background:#1a1a2e;color:#fff">
+            <th style="padding:8px 10px;text-align:center;font-size:10px;letter-spacing:1px;width:36px">FELD</th>
             <th style="padding:8px 12px;text-align:left;font-size:10px;letter-spacing:1px">TYP</th>
             <th style="padding:8px 12px;text-align:left">TEAM A</th>
             <th style="padding:8px 8px;width:36px"></th>
@@ -590,9 +594,16 @@ export default function RundeScreen() {
               return (
                 <View key={match.id} style={[s.matchCard, match.done && s.matchCardDone]}>
                   <View style={s.matchCardHeader}>
-                    <View style={[s.typePill, { borderColor: cfg.color + '60' }]}>
-                      <Ionicons name={cfg.icon} size={10} color={cfg.color} />
-                      <Text style={[s.typeLabel, { color: cfg.color }]}>{cfg.label}</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <View style={[s.typePill, { borderColor: cfg.color + '60' }]}>
+                        <Ionicons name={cfg.icon} size={10} color={cfg.color} />
+                        <Text style={[s.typeLabel, { color: cfg.color }]}>{cfg.label}</Text>
+                      </View>
+                      {match.feld != null && (
+                        <View style={s.feldPill}>
+                          <Text style={s.feldText}>FELD {match.feld}</Text>
+                        </View>
+                      )}
                     </View>
                     {match.done ? (
                       <View style={s.doneBadge}>
@@ -672,7 +683,8 @@ export default function RundeScreen() {
             <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
               {[1, 2].map((dg) => {
                 if (previewDg && previewDg !== dg) return null; // zeige nur gewählten DG
-                const dgMatches = printPreview.matches.filter((m) => m.durchgang === dg);
+                const dgMatches = [...printPreview.matches.filter((m) => m.durchgang === dg)]
+                  .sort((a, b) => (a.feld ?? 0) - (b.feld ?? 0));
                 if (!dgMatches.length) return null;
                 return (
                   <View key={dg}>
@@ -683,6 +695,9 @@ export default function RundeScreen() {
                       const cfg = TYPE_CONFIG[m.type] ?? TYPE_CONFIG.MF;
                       return (
                         <View key={m.id} style={[s.previewRow, i % 2 === 0 && s.previewRowAlt]}>
+                          {m.feld != null && (
+                            <Text style={s.previewFeld}>F{m.feld}</Text>
+                          )}
                           <Text style={[s.previewType, { color: cfg.color }]}>{cfg.label}</Text>
                           <Text style={s.previewTeam} numberOfLines={1}>{getTeam(m.teamA)}</Text>
                           <Text style={s.previewVs}>vs</Text>
@@ -943,6 +958,20 @@ const s = StyleSheet.create({
   pendingText: {
     color: colors.textMuted,
     fontSize: 11,
+  },
+  feldPill: {
+    backgroundColor: colors.goldGlow,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: colors.borderGoldGlow,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+  },
+  feldText: {
+    color: colors.gold,
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.5,
   },
   teamsRow: {
     flexDirection: 'row',
@@ -1346,6 +1375,12 @@ const s = StyleSheet.create({
   },
   previewRowAlt: {
     backgroundColor: '#f9f9f9',
+  },
+  previewFeld: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#1a1a2e',
+    width: 28,
   },
   previewType: {
     fontSize: 10,

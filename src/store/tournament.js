@@ -341,7 +341,21 @@ export function TournamentProvider({ children }) {
     const d2Ids = new Set(sorted.slice(0, d2Count).map((m) => m.id));
     const matchesWithD = matches.map((m) => ({ ...m, durchgang: d2Ids.has(m.id) ? 2 : 1 }));
 
-    setRounds((prev) => [...prev, { id: roundId, matches: matchesWithD, sittingOut, isSchnellrunde, currentDurchgang: 1 }]);
+    // Feldzuweisung: schlechtestes Spiel im DG → niedrigstes Feld, bestes → Feld 12
+    // Bei weniger als 12 Spielen pro DG fallen die untersten Felder weg (Feld 1 zuerst)
+    const assignFields = (dgMatches) => {
+      if (dgMatches.length === 0) return [];
+      const startField = 13 - dgMatches.length;
+      // Schlechteste Spieler zuerst → niedrigste Feldnummer
+      const byScore = [...dgMatches].sort((a, b) => matchScore(b) - matchScore(a));
+      return byScore.map((m, i) => ({ ...m, feld: startField + i }));
+    };
+    const withFields = [
+      ...assignFields(matchesWithD.filter((m) => m.durchgang === 1)),
+      ...assignFields(matchesWithD.filter((m) => m.durchgang === 2)),
+    ];
+
+    setRounds((prev) => [...prev, { id: roundId, matches: withFields, sittingOut, isSchnellrunde, currentDurchgang: 1 }]);
     setCurrentRound(roundId);
   };
 

@@ -43,7 +43,10 @@ export default function ErgebnisseScreen() {
     : allMatches.filter((m) => m.roundId === Number(selectedRound));
 
   // Pending first, done at bottom
-  const sortMatches = (arr) => [...arr].sort((a, b) => (a.done ? 1 : 0) - (b.done ? 1 : 0));
+  // Pending first, done at bottom; within same done-state sort by Feld ascending
+  const sortMatches = (arr) => [...arr].sort((a, b) =>
+    (a.done ? 1 : 0) - (b.done ? 1 : 0) || (a.feld ?? 0) - (b.feld ?? 0)
+  );
   const isRoundView = selectedRound !== 'all';
   const selectedRoundObj = rounds.find((r) => r.id === Number(selectedRound));
   // Wenn die ausgewählte Runde in D2 ist, D1 ausblenden
@@ -116,6 +119,11 @@ export default function ErgebnisseScreen() {
             )}
           </View>
           <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
+            {match.feld != null && (
+              <View style={[s.feldTag, match.done && s.tagDone]}>
+                <Text style={[s.feldTagText, match.done && s.tagTextDone]}>F{match.feld}</Text>
+              </View>
+            )}
             {!isRoundView && (
               <View style={[s.durchgangTag, match.durchgang === 2 && s.durchgangTag2, match.done && s.tagDone]}>
                 <Text style={[s.durchgangTagText, match.durchgang === 2 && s.durchgangTagText2, match.done && s.tagTextDone]}>D{match.durchgang}</Text>
@@ -479,6 +487,20 @@ const s = StyleSheet.create({
     fontSize: 10,
     fontWeight: '700',
     letterSpacing: 1,
+  },
+  feldTag: {
+    backgroundColor: colors.goldGlow,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: colors.borderGoldGlow,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+  },
+  feldTagText: {
+    color: colors.gold,
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.5,
   },
   durchgangTag: {
     backgroundColor: colors.info + '18',
