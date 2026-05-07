@@ -154,14 +154,14 @@ export default function RundeScreen() {
         <div style="background:#1a1a2e;color:#fff;padding:6px 14px;border-radius:6px;font-size:13px;font-weight:800;letter-spacing:1px">DURCHGANG ${dg}</div>
       </div>
       <hr style="border:none;border-top:2px solid #1a1a2e;margin:10px 0 16px"/>
-      <table style="width:100%;border-collapse:collapse;font-size:14px">
+      <table style="width:100%;border-collapse:collapse;font-size:14px;table-layout:fixed">
         <thead>
           <tr style="background:#1a1a2e;color:#fff">
-            <th style="padding:8px 10px;text-align:center;font-size:10px;letter-spacing:1px;width:36px">FELD</th>
-            <th style="padding:8px 12px;text-align:left;font-size:10px;letter-spacing:1px">TYP</th>
-            <th style="padding:8px 12px;text-align:left">TEAM A</th>
-            <th style="padding:8px 8px;width:36px"></th>
-            <th style="padding:8px 12px;text-align:left">TEAM B</th>
+            <th style="padding:8px 10px;text-align:center;font-size:10px;letter-spacing:1px;width:7%">FELD</th>
+            <th style="padding:8px 12px;text-align:left;font-size:10px;letter-spacing:1px;width:11%">TYP</th>
+            <th style="padding:8px 12px;text-align:left;width:38%">TEAM A</th>
+            <th style="padding:8px 8px;width:6%;text-align:center"></th>
+            <th style="padding:8px 12px;text-align:left;width:38%">TEAM B</th>
           </tr>
         </thead>
         <tbody>${rows}</tbody>
