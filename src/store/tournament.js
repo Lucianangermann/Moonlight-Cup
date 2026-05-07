@@ -358,6 +358,15 @@ export function TournamentProvider({ children }) {
         });
       })
     );
+    rounds.forEach((r) => {
+      (r.sittingOut ?? []).forEach((id) => {
+        if (!stats[id]) return;
+        stats[id].games += 1;
+        stats[id].wins += 1;
+        stats[id].points += 2;
+        // diff bleibt +-0 (Freilos = Sieg ohne Punkte)
+      });
+    });
     Object.entries(statAdjustments).forEach(([id, adj]) => {
       if (!stats[id]) return;
       stats[id].games += adj.games ?? 0;

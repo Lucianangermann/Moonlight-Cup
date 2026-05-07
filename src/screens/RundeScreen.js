@@ -86,7 +86,7 @@ export default function RundeScreen() {
   const buildPageHtml = (r, dg) => {
     const matches = r.matches.filter((m) => m.durchgang === dg);
     const sitOut = dg === 2 && r.sittingOut?.length > 0
-      ? `<p style="margin-top:14px;font-size:12px;color:#888"><b>Pausiert:</b> ${r.sittingOut.map(getName).join(', ')}</p>` : '';
+      ? `<p style="margin-top:14px;font-size:12px;color:#888"><b>Freilos:</b> ${r.sittingOut.map(getName).join(', ')}</p>` : '';
     const rows = matches.map((m, i) => `
       <tr style="background:${i % 2 === 0 ? '#f5f5f5' : '#fff'}">
         <td style="padding:9px 12px;font-size:11px;color:#555;font-weight:700;white-space:nowrap">${TYPE_LABELS[m.type] ?? m.type}</td>
@@ -162,7 +162,7 @@ export default function RundeScreen() {
       '─'.repeat(38) +
       fmt(r.matches.filter(m => m.durchgang === 1), 'DURCHGANG 1') +
       fmt(r.matches.filter(m => m.durchgang === 2), 'DURCHGANG 2') +
-      (r.sittingOut?.length > 0 ? `\n\nPausiert: ${r.sittingOut.map(getName).join(', ')}` : '');
+      (r.sittingOut?.length > 0 ? `\n\nFreilos: ${r.sittingOut.map(getName).join(', ')}` : '');
     try { await Share.share({ message: text }); } catch (_) {}
   };
 
@@ -577,7 +577,7 @@ export default function RundeScreen() {
             <View style={s.sittingBanner}>
               <Ionicons name="pause-circle-outline" size={14} color={colors.warning} />
               <Text style={s.sittingText}>
-                Pausiert: {round.sittingOut.map(getName).join(', ')}
+                Freilos: {round.sittingOut.map(getName).join(', ')}
               </Text>
             </View>
           )}
@@ -694,7 +694,7 @@ export default function RundeScreen() {
                 );
               })}
               {previewDg === 2 && printPreview.sittingOut?.length > 0 && (
-                <Text style={s.previewSitOut}>Pausiert: {printPreview.sittingOut.map(getName).join(', ')}</Text>
+                <Text style={s.previewSitOut}>Freilos: {printPreview.sittingOut.map(getName).join(', ')}</Text>
               )}
               <View style={{ height: 20 }} />
             </ScrollView>
