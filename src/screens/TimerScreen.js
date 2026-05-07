@@ -40,7 +40,7 @@ export default function TimerScreen() {
   const setPhase = (p) => { phaseRef.current = p; setPhaseState(p); };
 
   const cycleSpeed = () => {
-    const next = speed >= 5 ? 1 : speed + 1;
+    const next = speed >= 20 ? 1 : speed + 1;
     speedRef.current = next;
     setSpeed(next);
   };
