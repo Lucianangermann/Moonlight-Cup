@@ -63,7 +63,7 @@ export default function RundeScreen() {
       if (!isFinalRunde) setShowConfirm(true);
     } else {
       advanceDurchgang();
-      triggerAutoTimer(2);
+      triggerAutoTimer(2, currentRound === 1);
     }
   };
 
@@ -198,7 +198,7 @@ export default function RundeScreen() {
       buildPageContent(r, 2) +
       `</body></html>`;
     openPrintTab(html);
-    triggerAutoTimer(1);
+    triggerAutoTimer(1, currentRound === 1);
     setPrintPreview(null);
     setPreviewDg(null);
   };
@@ -206,7 +206,7 @@ export default function RundeScreen() {
   const doPrint = () => {
     openPrintTab(buildPageHtml(printPreview, previewDg));
     if (previewDg === 1) {
-      triggerAutoTimer(1);
+      triggerAutoTimer(1, currentRound === 1);
       setPreviewDg(2);
     } else {
       setPreviewDg(null);

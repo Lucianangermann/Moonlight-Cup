@@ -28,7 +28,7 @@ export function TournamentProvider({ children }) {
   const [statAdjustments, setStatAdjustments] = useState({});
   // { durchgang: 1|2, at: number } — signal for TimerScreen to auto-start
   const [autoTimerTrigger, setAutoTimerTrigger] = useState(null);
-  const triggerAutoTimer = (durchgang) => setAutoTimerTrigger({ durchgang, at: Date.now() });
+  const triggerAutoTimer = (durchgang, isFirstRound = false) => setAutoTimerTrigger({ durchgang, isFirstRound, at: Date.now() });
 
   const [participants, setParticipants] = useState([
     { id: '1',  name: 'Müller, Max',          gender: 'M', league: 'FZ'  },

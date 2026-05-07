@@ -9,6 +9,7 @@ import {
 } from '../services/spotify';
 
 const WARMUP_SECONDS = 3 * 60;
+const FIRST_ROUND_WARMUP_SECONDS = 5 * 60;
 const DEFAULT_SECONDS = 20 * 60;
 const WARNING_SECONDS = 60; // letzte Minute
 
@@ -21,6 +22,7 @@ export default function TimerScreen() {
   const [warned, setWarned] = useState(false);
   const [phaseComplete, setPhaseComplete] = useState(null);
   const [speed, setSpeed] = useState(1);
+  const [warmupSeconds, setWarmupSeconds] = useState(WARMUP_SECONDS);
   const intervalRef = useRef(null);
   const phaseRef = useRef('idle');
   const speedRef = useRef(1);
@@ -50,11 +52,13 @@ export default function TimerScreen() {
   // Auto-start from RundeScreen print trigger
   useEffect(() => {
     if (!autoTimerTrigger) return;
+    const warmup = autoTimerTrigger.isFirstRound ? FIRST_ROUND_WARMUP_SECONDS : WARMUP_SECONDS;
     setRunning(false);
     clearInterval(intervalRef.current);
     setPhase('warmup');
     setTimerDurchgang(autoTimerTrigger.durchgang);
-    setSecondsLeft(WARMUP_SECONDS);
+    setWarmupSeconds(warmup);
+    setSecondsLeft(warmup);
     setWarned(false);
     setPhaseComplete(null);
     speedRef.current = 1;
@@ -168,7 +172,7 @@ export default function TimerScreen() {
     : isWarning ? colors.warning + '60'
     : colors.borderGoldGlow;
 
-  const totalSeconds = phase === 'warmup' ? WARMUP_SECONDS : DEFAULT_SECONDS;
+  const totalSeconds = phase === 'warmup' ? warmupSeconds : DEFAULT_SECONDS;
   const progress = phase === 'idle' ? 1 : secondsLeft / totalSeconds;
   const progressPct = Math.round(progress * 100);
 
@@ -176,7 +180,7 @@ export default function TimerScreen() {
     : phase === 'game' ? 'SPIELZEIT'
     : 'BEREIT';
 
-  const phaseHint = phase === 'warmup' ? '3 Min. Einspielen'
+  const phaseHint = phase === 'warmup' ? `${warmupSeconds / 60} Min. Einspielen`
     : phase === 'game' ? '20 Min. Spielzeit'
     : 'Warte auf Rundenstart';
 
@@ -216,7 +220,9 @@ export default function TimerScreen() {
             <Text style={s.warningText}>1 Min. Rest</Text>
           )}
           {phase === 'warmup' && !isFinished && (
-            <Text style={[s.phaseHintText, { color: colors.success + 'AA' }]}>→ danach 20 Min.</Text>
+            <Text style={[s.phaseHintText, { color: colors.success + 'AA' }]}>
+              {warmupSeconds / 60} Min. → danach 20 Min.
+            </Text>
           )}
         </View>
       </View>
