@@ -67,17 +67,17 @@ const buildPrintHtml = (standings, groupSize) => {
     const isGroupStart = i % groupSize === 0;
     const groupBar = isGroupStart ? `
       <tr>
-        <td colspan="6" style="background:${gc.header};color:#fff;padding:5px 10px;font-size:11px;font-weight:800;letter-spacing:1px">
+        <td colspan="6" style="background:${gc.header};color:#fff;padding:3px 8px;font-size:10px;font-weight:800;letter-spacing:1px">
           ${grp.fullLabel.toUpperCase()} · ${grp.sublabel}
         </td>
       </tr>` : '';
     return `${groupBar}<tr style="background:${bg}">
-      <td style="text-align:center;padding:6px 8px;width:36px">${medal}</td>
-      <td style="padding:6px 10px;font-size:13px;font-weight:600">${name}${league}</td>
-      <td style="text-align:right;padding:6px 8px;width:50px;font-weight:700">${p.points} Pkt</td>
-      <td style="text-align:right;padding:6px 8px;width:40px;color:#555">${p.wins}S</td>
-      <td style="text-align:right;padding:6px 8px;width:40px;color:#555">${p.games}Sp</td>
-      <td style="text-align:right;padding:6px 8px;width:46px;color:${p.diff >= 0 ? '#2e7d32' : '#c62828'};font-weight:700">${p.diff > 0 ? '+' : ''}${p.diff}</td>
+      <td style="text-align:center;padding:3px 6px;width:30px">${medal}</td>
+      <td style="padding:3px 8px;font-size:11px;font-weight:600">${name}${league}</td>
+      <td style="text-align:right;padding:3px 6px;width:44px;font-weight:700">${p.points} Pkt</td>
+      <td style="text-align:right;padding:3px 6px;width:34px;color:#555">${p.wins}S</td>
+      <td style="text-align:right;padding:3px 6px;width:34px;color:#555">${p.games}Sp</td>
+      <td style="text-align:right;padding:3px 6px;width:40px;color:${p.diff >= 0 ? '#2e7d32' : '#c62828'};font-weight:700">${p.diff > 0 ? '+' : ''}${p.diff}</td>
     </tr>`;
   }).join('');
 
@@ -88,12 +88,12 @@ const buildPrintHtml = (standings, groupSize) => {
 <head>
   <meta charset="utf-8">
   <style>
-    @page { margin: 15mm; }
+    @page { margin: 12mm; }
     body { font-family: sans-serif; color: #1a1a2e; }
-    h1 { font-size: 22px; letter-spacing: 3px; margin: 0 0 4px; }
-    .subtitle { font-size: 11px; color: #888; margin-bottom: 16px; letter-spacing: 1px; }
-    table { width: 100%; border-collapse: collapse; font-size: 13px; }
-    thead th { background: #1a1a2e; color: #fff; padding: 7px 10px; font-size: 10px; letter-spacing: 1px; }
+    h1 { font-size: 18px; letter-spacing: 3px; margin: 0 0 2px; }
+    .subtitle { font-size: 10px; color: #888; margin-bottom: 10px; letter-spacing: 1px; }
+    table { width: 100%; border-collapse: collapse; font-size: 11px; }
+    thead th { background: #1a1a2e; color: #fff; padding: 5px 8px; font-size: 9px; letter-spacing: 1px; }
   </style>
   <script>window.onload=function(){window.focus();setTimeout(function(){window.print();window.onafterprint=function(){window.close();};},250);}<\/script>
 </head>
