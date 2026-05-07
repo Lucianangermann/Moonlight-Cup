@@ -17,7 +17,7 @@ export default function RundeScreen() {
     getCurrentRoundData, currentRound, rounds, allMatchesDone, startNewRound, startFinalRunde,
     participants, advanceDurchgang, currentDurchgangDone,
     deleteCurrentRound, deleteRound, swapMatchPlayers,
-    triggerAutoTimer,
+    triggerAutoTimer, getStandings,
   } = useTournament();
   const [showConfirm, setShowConfirm] = useState(false);
   const [showFinalConfirm, setShowFinalConfirm] = useState(false);
@@ -54,16 +54,62 @@ export default function RundeScreen() {
 
   // Primäre Aktion: In D1 → "Durchgang 2 starten"; in D2 → "Neue Runde starten"
   const inD1 = round && durchgang === 1;
-  const primaryLabel = !round ? 'NEUE RUNDE STARTEN' : inD1 ? 'DURCHGANG 2 STARTEN' : 'NEUE RUNDE STARTEN';
-  const primaryEnabled = !round || (inD1 ? d1Done : allDone);
+  const isFinalRunde = round?.isFinalRunde ?? false;
+  // Nach der Finale-Runde kann keine neue Runde mehr gestartet werden
+  const primaryLabel = !round ? 'NEUE RUNDE STARTEN' : inD1 ? 'DURCHGANG 2 STARTEN' : isFinalRunde ? 'FINALE LÄUFT' : 'NEUE RUNDE STARTEN';
+  const primaryEnabled = !round || (inD1 ? d1Done : (isFinalRunde ? false : allDone));
 
   const handlePrimaryPress = () => {
     if (!round || !inD1) {
-      setShowConfirm(true);
+      if (!isFinalRunde) setShowConfirm(true);
     } else {
       advanceDurchgang();
       triggerAutoTimer(2);
     }
+  };
+
+  const buildSiegerHtml = () => {
+    const standings = getStandings();
+    const groupSize = Math.ceil(standings.length / 3);
+    const groupDefs = [
+      { label: 'Vollmondgruppe', color: '#B8860B', light: '#FFF8E1', border: '#F0C040' },
+      { label: 'Halbmondgruppe', color: '#607D8B', light: '#ECEFF1', border: '#B0BEC5' },
+      { label: 'Neumondgruppe',  color: '#1565C0', light: '#E3F2FD', border: '#90CAF9' },
+    ];
+    const medals = ['🥇', '🥈', '🥉'];
+    const cols = groupDefs.map((g, gi) => {
+      const players = standings.slice(gi * groupSize, (gi + 1) * groupSize);
+      if (!players.length) return '';
+      const rows = players.slice(0, 3).map((p, i) => {
+        const parts = p.name.split(',');
+        const name = parts.length > 1 ? `${parts[1].trim()} ${parts[0].trim()}` : p.name.trim();
+        const league = p.league ? ` <span style="font-size:10px;color:#888">[${p.league}]</span>` : '';
+        return `<tr style="background:${i === 0 ? g.light : i % 2 === 0 ? '#fafafa' : '#fff'}">
+          <td style="padding:10px 8px;text-align:center;font-size:18px">${medals[i]}</td>
+          <td style="padding:10px 12px;font-size:15px;font-weight:${i === 0 ? '800' : '600'}">${name}${league}</td>
+          <td style="padding:10px 10px;text-align:right;font-size:13px;font-weight:700;color:#555">${p.wins}S · ${p.diff > 0 ? '+' : ''}${p.diff}</td>
+        </tr>`;
+      }).join('');
+      return `<div style="margin-bottom:24px;border-radius:10px;overflow:hidden;border:1px solid ${g.border}">
+        <div style="background:${g.color};color:#fff;padding:10px 14px;font-size:14px;font-weight:800;letter-spacing:1px">${g.label.toUpperCase()}</div>
+        <table style="width:100%;border-collapse:collapse">${rows}</table>
+      </div>`;
+    }).join('');
+    const date = new Date().toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    return `<!DOCTYPE html><html><head><meta charset="utf-8">
+      <style>@page{margin:20mm} body{font-family:sans-serif;color:#1a1a2e;margin:0}</style>
+    </head><body>
+      <div style="text-align:center;margin-bottom:24px">
+        <div style="font-size:26px;font-weight:800;letter-spacing:3px">☽ MOONLIGHT CUP</div>
+        <div style="font-size:13px;color:#888;margin-top:4px;letter-spacing:2px">SIEGEREHRUNG · ${date}</div>
+        <div style="width:60px;height:3px;background:#B8860B;margin:12px auto 0"></div>
+      </div>
+      ${cols}
+    </body></html>`;
+  };
+
+  const printSieger = async () => {
+    try { await Print.printAsync({ html: buildSiegerHtml() }); } catch (_) {}
   };
 
   const handleConfirmStart = () => {
@@ -773,6 +819,16 @@ export default function RundeScreen() {
         </View>
       </TouchableOpacity>
 
+      {/* Sieger drucken — sichtbar wenn Finale abgeschlossen */}
+      {isFinalRunde && allDone && (
+        <TouchableOpacity style={s.siegerBtn} onPress={printSieger} activeOpacity={0.8}>
+          <View style={s.btnInner}>
+            <Ionicons name="print-outline" size={14} color={colors.gold} style={{ marginRight: 8 }} />
+            <Text style={s.finalBtnText}>SIEGER DRUCKEN</Text>
+          </View>
+        </TouchableOpacity>
+      )}
+
       {/* Finale starten — nur sichtbar wenn mind. 1 Runde gespielt und nicht bereits in Finale */}
       {currentRound > 0 && !round?.isFinalRunde && (
         <TouchableOpacity
@@ -869,6 +925,16 @@ const s = StyleSheet.create({
     fontSize: 11,
     fontWeight: '800',
     letterSpacing: 1.5,
+  },
+  siegerBtn: {
+    marginTop: 10,
+    backgroundColor: colors.goldGlow,
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderWidth: 1,
+    borderColor: colors.gold,
+    alignItems: 'center',
   },
   finalBtn: {
     marginTop: 10,
