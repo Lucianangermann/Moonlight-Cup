@@ -149,7 +149,7 @@ export default function RundeScreen() {
         <td style="padding:9px 12px;font-size:14px;font-weight:700">${m.teamB.map(getName).join(' &amp; ')}</td>
       </tr>`).join('');
     return `<!DOCTYPE html><html><head><meta charset="utf-8">
-      <style>@page{size:landscape;margin:15mm} body{font-family:Arial,sans-serif;padding:28px 32px;color:#222;margin:0}</style>
+      <style>@page{size:A4 landscape;margin:15mm} body{font-family:Arial,sans-serif;padding:28px 32px;color:#222;margin:0}</style>
       <script>window.onload = function() { window.focus(); window.print(); window.onafterprint = function() { window.close(); }; }<\/script>
     </head><body>
       <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:6px">
@@ -188,7 +188,7 @@ export default function RundeScreen() {
     const d2 = buildPageHtml(r, 2).replace(/<script[\s\S]*?<\/script>/gi, '');
     const stripWrap = (s) => s.replace(/<!DOCTYPE html>|<\/?html[^>]*>|<head[\s\S]*?<\/head>|<\/?body[^>]*>/gi, '');
     const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
-      <style>@page{size:landscape;margin:15mm} body{font-family:Arial,sans-serif;padding:28px 32px;color:#222;margin:0} .pg{page-break-after:always;break-after:page}</style>
+      <style>@page{size:A4 landscape;margin:15mm} body{font-family:Arial,sans-serif;padding:28px 32px;color:#222;margin:0} .pg{page-break-after:always;break-after:page}</style>
       <script>window.onload = function() { window.focus(); window.print(); window.onafterprint = function() { window.close(); }; }<\/script>
     </head><body>
       <div class="pg">${stripWrap(d1)}</div>
