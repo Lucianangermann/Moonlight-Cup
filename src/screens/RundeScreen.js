@@ -121,15 +121,12 @@ export default function RundeScreen() {
     startNewRound();
   };
 
-  // Auto-open print preview with D1 pre-selected when a new round starts
+  // Auto-print both Durchgänge when a new round starts
   useEffect(() => {
     if (currentRound > prevRoundRef.current) {
       prevRoundRef.current = currentRound;
       const newRound = rounds.find((r) => r.id === currentRound);
-      if (newRound) {
-        setPrintPreview(newRound);
-        setPreviewDg(1); // start directly on D1
-      }
+      if (newRound) doPrintBoth(newRound);
     }
   }, [currentRound, rounds]);
 
@@ -173,11 +170,9 @@ export default function RundeScreen() {
   };
 
   const PRINT_CSS = `
-    @page{size:landscape;margin:15mm}
+    @page{margin:15mm}
     *{box-sizing:border-box}
     body{margin:0;padding:20px 28px;font-family:Arial,sans-serif;color:#222}
-    .hint{display:block;background:#fff3cd;border:1px solid #ffc107;border-radius:6px;padding:6px 12px;margin-bottom:14px;font-size:12px;color:#856404}
-    @media print{.hint{display:none}}
     .pg{page-break-after:always;break-after:page;padding-bottom:20px}
   `;
   const AUTO_PRINT = `window.onload=function(){window.focus();setTimeout(function(){window.print();window.onafterprint=function(){window.close();};},250);}`;
@@ -185,7 +180,6 @@ export default function RundeScreen() {
   const buildPageHtml = (r, dg) =>
     `<!DOCTYPE html><html><head><meta charset="utf-8"><style>${PRINT_CSS}</style>` +
     `<script>${AUTO_PRINT}<\/script></head><body>` +
-    `<div class="hint">⚠️ Bitte Ausrichtung auf <b>Querformat</b> stellen</div>` +
     buildPageContent(r, dg) +
     `</body></html>`;
 
@@ -200,7 +194,6 @@ export default function RundeScreen() {
     const html =
       `<!DOCTYPE html><html><head><meta charset="utf-8"><style>${PRINT_CSS}</style>` +
       `<script>${AUTO_PRINT}<\/script></head><body>` +
-      `<div class="hint">⚠️ Bitte Ausrichtung auf <b>Querformat</b> stellen</div>` +
       `<div class="pg">${buildPageContent(r, 1)}</div>` +
       buildPageContent(r, 2) +
       `</body></html>`;
