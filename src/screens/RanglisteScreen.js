@@ -52,48 +52,33 @@ const GROUP_COLORS = {
   neumond:  { header: '#1565C0', light: '#E3F2FD', border: '#90CAF9' },
 };
 
-const buildPrintHtml = (groups, groupSize) => {
+const buildPrintHtml = (standings, groupSize) => {
   const medalSymbols = ['🥇', '🥈', '🥉'];
-  const cols = GROUPS.map((grp, gIdx) => {
-    const players = groups[gIdx];
-    if (!players.length) return '';
-    const gc = GROUP_COLORS[grp.key];
-    const start = gIdx * groupSize + 1;
-    const end = start + players.length - 1;
-    const rows = players.map((p, i) => {
-      const medal = i < 3 ? `<span style="font-size:14px">${medalSymbols[i]}</span>` : `<span style="color:#666">${i + 1}</span>`;
-      const parts = p.name.split(','); const name = parts.length > 1 ? `${parts[1].trim()} ${parts[0].trim()}` : p.name.trim();
-      const league = p.league ? ` <span style="font-size:9px;color:#888;font-weight:700">[${p.league}]</span>` : '';
-      const bg = i === 0 ? `background:${gc.light};font-weight:700;` : i % 2 === 0 ? 'background:#fafafa;' : '';
-      return `<tr style="${bg}">
-        <td style="text-align:center;padding:4px 6px;width:32px">${medal}</td>
-        <td style="padding:4px 6px">${name}${league}</td>
-        <td style="text-align:right;padding:4px 6px;width:36px;font-weight:700">${p.points}</td>
-        <td style="text-align:right;padding:4px 6px;width:36px;color:#555">${p.wins}</td>
-        <td style="text-align:right;padding:4px 6px;width:36px;color:#555">${p.games}</td>
-      </tr>`;
-    }).join('');
+  const groupKeys = ['vollmond', 'halbmond', 'neumond'];
 
-    return `<div style="flex:1;min-width:0">
-      <div style="background:${gc.header};color:#fff;padding:8px 10px;border-radius:8px 8px 0 0;font-weight:800;font-size:13px;letter-spacing:1px">
-        ${grp.fullLabel.toUpperCase()}
-      </div>
-      <div style="font-size:10px;color:#888;text-align:center;padding:3px 0;border:1px solid ${gc.border};border-top:none;border-bottom:none">
-        Platz ${start}–${end} · ${grp.sublabel}
-      </div>
-      <table style="width:100%;border-collapse:collapse;border:1px solid ${gc.border};border-top:none;border-radius:0 0 8px 8px;overflow:hidden;font-size:12px;font-family:sans-serif">
-        <thead>
-          <tr style="background:${gc.light};color:#444;font-size:9px;letter-spacing:1px">
-            <th style="padding:4px 6px;text-align:center">#</th>
-            <th style="padding:4px 6px;text-align:left">NAME</th>
-            <th style="padding:4px 6px;text-align:right">PKT</th>
-            <th style="padding:4px 6px;text-align:right">S</th>
-            <th style="padding:4px 6px;text-align:right">SP</th>
-          </tr>
-        </thead>
-        <tbody>${rows}</tbody>
-      </table>
-    </div>`;
+  const rows = standings.map((p, i) => {
+    const groupIdx = Math.min(Math.floor(i / groupSize), 2);
+    const gc = GROUP_COLORS[groupKeys[groupIdx]];
+    const grp = GROUPS[groupIdx];
+    const medal = i < 3 ? `<span style="font-size:14px">${medalSymbols[i]}</span>` : `<b style="color:#555">${i + 1}</b>`;
+    const parts = p.name.split(','); const name = parts.length > 1 ? `${parts[1].trim()} ${parts[0].trim()}` : p.name.trim();
+    const league = p.league ? ` <span style="font-size:10px;color:#888;font-weight:700">[${p.league}]</span>` : '';
+    const bg = i % 2 === 0 ? '#fafafa' : '#fff';
+    const isGroupStart = i % groupSize === 0;
+    const groupBar = isGroupStart ? `
+      <tr>
+        <td colspan="6" style="background:${gc.header};color:#fff;padding:5px 10px;font-size:11px;font-weight:800;letter-spacing:1px">
+          ${grp.fullLabel.toUpperCase()} · ${grp.sublabel}
+        </td>
+      </tr>` : '';
+    return `${groupBar}<tr style="background:${bg}">
+      <td style="text-align:center;padding:6px 8px;width:36px">${medal}</td>
+      <td style="padding:6px 10px;font-size:13px;font-weight:600">${name}${league}</td>
+      <td style="text-align:right;padding:6px 8px;width:50px;font-weight:700">${p.points} Pkt</td>
+      <td style="text-align:right;padding:6px 8px;width:40px;color:#555">${p.wins}S</td>
+      <td style="text-align:right;padding:6px 8px;width:40px;color:#555">${p.games}Sp</td>
+      <td style="text-align:right;padding:6px 8px;width:46px;color:${p.diff >= 0 ? '#2e7d32' : '#c62828'};font-weight:700">${p.diff > 0 ? '+' : ''}${p.diff}</td>
+    </tr>`;
   }).join('');
 
   const date = new Date().toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
@@ -107,14 +92,27 @@ const buildPrintHtml = (groups, groupSize) => {
     body { font-family: sans-serif; color: #1a1a2e; }
     h1 { font-size: 22px; letter-spacing: 3px; margin: 0 0 4px; }
     .subtitle { font-size: 11px; color: #888; margin-bottom: 16px; letter-spacing: 1px; }
-    .cols { display: flex; gap: 12px; align-items: flex-start; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    thead th { background: #1a1a2e; color: #fff; padding: 7px 10px; font-size: 10px; letter-spacing: 1px; }
   </style>
   <script>window.onload=function(){window.focus();setTimeout(function(){window.print();window.onafterprint=function(){window.close();};},250);}<\/script>
 </head>
 <body>
   <h1>☽ MOONLIGHT CUP</h1>
   <div class="subtitle">RANGLISTE · Badminton Turniermanager · ${date}</div>
-  <div class="cols">${cols}</div>
+  <table>
+    <thead>
+      <tr>
+        <th style="text-align:center;width:36px">#</th>
+        <th style="text-align:left">NAME</th>
+        <th style="text-align:right;width:50px">PUNKTE</th>
+        <th style="text-align:right;width:40px">SIEGE</th>
+        <th style="text-align:right;width:40px">SPIELE</th>
+        <th style="text-align:right;width:46px">DIFF</th>
+      </tr>
+    </thead>
+    <tbody>${rows}</tbody>
+  </table>
 </body>
 </html>`;
 };
@@ -129,7 +127,7 @@ export default function RanglisteScreen() {
 
   const doPrint = () => {
     if (standings.length === 0) return;
-    const html = buildPrintHtml(groups, groupSize);
+    const html = buildPrintHtml(standings, groupSize);
     const blob = new Blob([html], { type: 'text/html' });
     const url = URL.createObjectURL(blob);
     const win = window.open(url, '_blank');
