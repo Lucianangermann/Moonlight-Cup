@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { useState, useEffect } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
@@ -106,9 +106,10 @@ export default function RanglisteScreen() {
   const { getStandings, statAdjustments, setStatAdjustment } = useTournament();
   const [selected, setSelected] = useState(null);
   const [pendingDelta, setPendingDelta] = useState(null);
+  const [confirming, setConfirming] = useState(false);
   const standings = getStandings();
 
-  useEffect(() => { setPendingDelta(null); }, [selected]);
+  useEffect(() => { setPendingDelta(null); setConfirming(false); }, [selected]);
 
   const groupSize = Math.ceil(standings.length / 3);
   const groups = GROUPS.map((g, i) => standings.slice(i * groupSize, (i + 1) * groupSize));
@@ -267,33 +268,18 @@ export default function RanglisteScreen() {
               });
             };
 
-            const confirmSave = () => {
+            const doSave = () => {
               const savedAdj = statAdjustments[selectedPlayer.id] ?? { games: 0, wins: 0, diff: 0 };
-              const newGames = selectedPlayer.games + delta.games;
-              const newWins  = selectedPlayer.wins  + delta.wins;
-              const newDiff  = selectedPlayer.diff  + delta.diff;
-              const parts = selectedPlayer.name.split(',');
-              const displayName = parts.length > 1 ? `${parts[1].trim()} ${parts[0].trim()}` : selectedPlayer.name.trim();
-              Alert.alert(
-                'Änderungen speichern?',
-                `${displayName}\n\nSpiele: ${selectedPlayer.games} → ${newGames}\nSiege: ${selectedPlayer.wins} → ${newWins}\nDifferenz: ${selectedPlayer.diff > 0 ? '+' : ''}${selectedPlayer.diff} → ${newDiff > 0 ? '+' : ''}${newDiff}`,
-                [
-                  { text: 'Abbrechen', style: 'cancel' },
-                  {
-                    text: 'Speichern', onPress: () => {
-                      setStatAdjustment(selectedPlayer.id, {
-                        games: (savedAdj.games ?? 0) + delta.games,
-                        wins:  (savedAdj.wins  ?? 0) + delta.wins,
-                        diff:  (savedAdj.diff  ?? 0) + delta.diff,
-                      });
-                      setPendingDelta(null);
-                    },
-                  },
-                ]
-              );
+              setStatAdjustment(selectedPlayer.id, {
+                games: (savedAdj.games ?? 0) + delta.games,
+                wins:  (savedAdj.wins  ?? 0) + delta.wins,
+                diff:  (savedAdj.diff  ?? 0) + delta.diff,
+              });
+              setPendingDelta(null);
+              setConfirming(false);
             };
 
-            const discardChanges = () => setPendingDelta(null);
+            const discardChanges = () => { setPendingDelta(null); setConfirming(false); };
 
             const StatControl = ({ value, field, label, color }) => (
               <View style={s.detailStat}>
@@ -360,16 +346,55 @@ export default function RanglisteScreen() {
                   </View>
                 </View>
 
-                {hasPending && (
+                {hasPending && !confirming && (
                   <View style={s.confirmRow}>
                     <TouchableOpacity style={s.discardBtn} onPress={discardChanges} activeOpacity={0.7}>
                       <Ionicons name="close" size={14} color={colors.error} />
                       <Text style={s.discardBtnText}>Verwerfen</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={s.saveBtn} onPress={confirmSave} activeOpacity={0.8}>
+                    <TouchableOpacity style={s.saveBtn} onPress={() => setConfirming(true)} activeOpacity={0.8}>
                       <Ionicons name="checkmark" size={14} color={colors.bg} />
                       <Text style={s.saveBtnText}>Speichern</Text>
                     </TouchableOpacity>
+                  </View>
+                )}
+
+                {confirming && (
+                  <View style={s.confirmPanel}>
+                    <Text style={s.confirmTitle}>Änderungen bestätigen?</Text>
+                    <View style={s.confirmLines}>
+                      {delta.games !== 0 && (
+                        <Text style={s.confirmLine}>
+                          Spiele: <Text style={s.confirmOld}>{selectedPlayer.games - delta.games}</Text>
+                          {'  →  '}
+                          <Text style={s.confirmNew}>{selectedPlayer.games}</Text>
+                        </Text>
+                      )}
+                      {delta.wins !== 0 && (
+                        <Text style={s.confirmLine}>
+                          Siege: <Text style={s.confirmOld}>{selectedPlayer.wins - delta.wins}</Text>
+                          {'  →  '}
+                          <Text style={s.confirmNew}>{selectedPlayer.wins}</Text>
+                        </Text>
+                      )}
+                      {delta.diff !== 0 && (
+                        <Text style={s.confirmLine}>
+                          Differenz: <Text style={s.confirmOld}>{selectedPlayer.diff - delta.diff}</Text>
+                          {'  →  '}
+                          <Text style={s.confirmNew}>{selectedPlayer.diff > 0 ? '+' : ''}{selectedPlayer.diff}</Text>
+                        </Text>
+                      )}
+                    </View>
+                    <View style={s.confirmRow}>
+                      <TouchableOpacity style={s.discardBtn} onPress={() => setConfirming(false)} activeOpacity={0.7}>
+                        <Ionicons name="arrow-back" size={14} color={colors.error} />
+                        <Text style={s.discardBtnText}>Zurück</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={s.saveBtn} onPress={doSave} activeOpacity={0.8}>
+                        <Ionicons name="checkmark-circle" size={14} color={colors.bg} />
+                        <Text style={s.saveBtnText}>Bestätigen</Text>
+                      </TouchableOpacity>
+                    </View>
                   </View>
                 )}
               </View>
@@ -631,12 +656,38 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  confirmRow: {
-    flexDirection: 'row',
+  confirmPanel: {
     borderTopWidth: 1,
     borderTopColor: colors.border,
+    padding: 12,
+    gap: 10,
+  },
+  confirmTitle: {
+    color: colors.white,
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+    marginBottom: 4,
+  },
+  confirmLines: {
+    gap: 3,
+    marginBottom: 4,
+  },
+  confirmLine: {
+    color: colors.textMuted,
+    fontSize: 12,
+  },
+  confirmOld: {
+    color: colors.textMuted,
+    fontWeight: '600',
+  },
+  confirmNew: {
+    color: colors.success,
+    fontWeight: '800',
+  },
+  confirmRow: {
+    flexDirection: 'row',
     gap: 8,
-    padding: 10,
   },
   discardBtn: {
     flex: 1,
