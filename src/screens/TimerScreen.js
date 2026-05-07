@@ -20,8 +20,10 @@ export default function TimerScreen() {
   const [running, setRunning] = useState(false);
   const [warned, setWarned] = useState(false);
   const [phaseComplete, setPhaseComplete] = useState(null);
+  const [speed, setSpeed] = useState(1);
   const intervalRef = useRef(null);
   const phaseRef = useRef('idle');
+  const speedRef = useRef(1);
 
   // Spotify
   const [spConnected, setSpConnected] = useState(false);
@@ -37,6 +39,12 @@ export default function TimerScreen() {
 
   const setPhase = (p) => { phaseRef.current = p; setPhaseState(p); };
 
+  const cycleSpeed = () => {
+    const next = speed >= 5 ? 1 : speed + 1;
+    speedRef.current = next;
+    setSpeed(next);
+  };
+
   // Auto-start from RundeScreen print trigger
   useEffect(() => {
     if (!autoTimerTrigger) return;
@@ -47,6 +55,8 @@ export default function TimerScreen() {
     setSecondsLeft(WARMUP_SECONDS);
     setWarned(false);
     setPhaseComplete(null);
+    speedRef.current = 1;
+    setSpeed(1);
     setRunning(true);
     sp(spotifyPlay); // Musik an während Einspielen
   }, [autoTimerTrigger]);
@@ -68,7 +78,7 @@ export default function TimerScreen() {
 
   // Letzte Minute → Vibration + Musik an (eigener Effect, kein stale closure)
   useEffect(() => {
-    if (phase === 'game' && running && secondsLeft === WARNING_SECONDS && !warned) {
+    if (phase === 'game' && running && secondsLeft <= WARNING_SECONDS && secondsLeft > 0 && !warned) {
       setWarned(true);
       Vibration.vibrate(200);
       sp(spotifyPlay);
@@ -79,7 +89,8 @@ export default function TimerScreen() {
     if (running) {
       intervalRef.current = setInterval(() => {
         setSecondsLeft((s) => {
-          if (s <= 1) {
+          const next = s - speedRef.current;
+          if (next <= 0) {
             clearInterval(intervalRef.current);
             setRunning(false);
             const currentPhase = phaseRef.current;
@@ -92,7 +103,7 @@ export default function TimerScreen() {
             }
             return 0;
           }
-          return s - 1;
+          return next;
         });
       }, 1000);
     } else {
@@ -124,6 +135,8 @@ export default function TimerScreen() {
     setSecondsLeft(DEFAULT_SECONDS);
     setWarned(false);
     setPhaseComplete(null);
+    speedRef.current = 1;
+    setSpeed(1);
   };
 
   const handleConnectSpotify = () => {
@@ -252,6 +265,15 @@ export default function TimerScreen() {
           </Text>
         </TouchableOpacity>
       )}
+
+      {/* Speed button */}
+      <TouchableOpacity style={s.speedBtn} onPress={cycleSpeed} activeOpacity={0.75}>
+        <Ionicons name="speedometer-outline" size={14} color={speed > 1 ? colors.warning : colors.textMuted} />
+        <Text style={[s.speedBtnText, speed > 1 && { color: colors.warning }]}>
+          {speed}×
+        </Text>
+        <Text style={s.speedBtnHint}>Geschwindigkeit</Text>
+      </TouchableOpacity>
 
       <Text style={s.hint}>
         {phase === 'idle'
@@ -488,6 +510,31 @@ const s = StyleSheet.create({
     color: colors.textMuted,
     fontSize: 12,
     fontWeight: '600',
+  },
+  speedBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    backgroundColor: colors.panel,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    marginBottom: 12,
+    alignSelf: 'center',
+  },
+  speedBtnText: {
+    color: colors.textMuted,
+    fontSize: 14,
+    fontWeight: '800',
+    minWidth: 24,
+    textAlign: 'center',
+  },
+  speedBtnHint: {
+    color: colors.textDim,
+    fontSize: 11,
+    fontWeight: '500',
   },
   hint: {
     color: colors.textDim,
