@@ -165,9 +165,9 @@ export default function ErgebnisseScreen() {
     });
   };
 
-  const currentRound = getCurrentRoundData();
-  const hasPending = currentRound?.matches?.some(
-    (m) => !m.done && m.durchgang === currentRound.currentDurchgang
+  const currentRoundData = getCurrentRoundData();
+  const hasPending = currentRoundData?.matches?.some(
+    (m) => !m.done && m.durchgang === currentRoundData.currentDurchgang
   ) ?? false;
 
   return (
@@ -181,7 +181,7 @@ export default function ErgebnisseScreen() {
               <Text style={s.progressText}>{doneCount}/{filtered.length}</Text>
             </View>
           )}
-          {hasPending && (
+          {hasPending && currentRoundData && (
             <TouchableOpacity style={s.simulateBtn} onPress={simulateAll} activeOpacity={0.75}>
               <Ionicons name="dice-outline" size={14} color={colors.warning} />
               <Text style={s.simulateBtnText}>Simulieren</Text>
