@@ -133,7 +133,7 @@ export default function RundeScreen() {
     }
   }, [currentRound, rounds]);
 
-  const TYPE_LABELS = { MM: 'Herrendoppel', FF: 'Damendoppel', MF: 'Mixed' };
+  const TYPE_LABELS = { MM: 'Herrendoppel', FF: 'Damendoppel', MF: 'Gemischt' };
 
   const buildPageHtml = (r, dg) => {
     const matches = [...r.matches.filter((m) => m.durchgang === dg)]
@@ -145,7 +145,7 @@ export default function RundeScreen() {
         <td style="padding:9px 10px;font-size:12px;font-weight:800;color:#1a1a2e;white-space:nowrap;text-align:center">${m.feld != null ? `Feld ${m.feld}` : ''}</td>
         <td style="padding:9px 12px;font-size:11px;color:#555;font-weight:700;white-space:nowrap">${TYPE_LABELS[m.type] ?? m.type}</td>
         <td style="padding:9px 12px;font-size:14px;font-weight:700">${m.teamA.map(getName).join(' &amp; ')}</td>
-        <td style="padding:9px 8px;text-align:center;color:#bbb;font-size:12px;font-weight:700">VS</td>
+        <td style="padding:9px 8px;text-align:center;color:#bbb;font-size:14px;font-weight:700">:</td>
         <td style="padding:9px 12px;font-size:14px;font-weight:700">${m.teamB.map(getName).join(' &amp; ')}</td>
       </tr>`).join('');
     return `<!DOCTYPE html><html><head><meta charset="utf-8">
@@ -195,6 +195,7 @@ export default function RundeScreen() {
       <div>${stripWrap(d2)}</div>
     </body></html>`;
     openPrintTab(html);
+    triggerAutoTimer(1);
     setPrintPreview(null);
     setPreviewDg(null);
   };
@@ -226,7 +227,7 @@ export default function RundeScreen() {
 
   const printSelectedRound = (r) => {
     setPrintMenuOpen(false);
-    setPrintPreview(r);
+    doPrintBoth(r);
   };
 
   // Edit helpers
