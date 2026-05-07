@@ -66,12 +66,14 @@ export default function TimerScreen() {
     }
   }, [phaseComplete]);
 
-  // Letzte Minute → Musik an
+  // Letzte Minute → Vibration + Musik an (eigener Effect, kein stale closure)
   useEffect(() => {
-    if (warned && phaseRef.current === 'game') {
+    if (phase === 'game' && running && secondsLeft === WARNING_SECONDS && !warned) {
+      setWarned(true);
+      Vibration.vibrate(200);
       sp(spotifyPlay);
     }
-  }, [warned]);
+  }, [secondsLeft]);
 
   useEffect(() => {
     if (running) {
@@ -89,10 +91,6 @@ export default function TimerScreen() {
               setPhaseComplete('game');
             }
             return 0;
-          }
-          if (phaseRef.current === 'game' && s === WARNING_SECONDS + 1 && !warned) {
-            setWarned(true);
-            Vibration.vibrate(200);
           }
           return s - 1;
         });
