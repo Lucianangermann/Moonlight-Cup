@@ -52,7 +52,7 @@ const GROUP_COLORS = {
   neumond:  { header: '#1565C0', light: '#E3F2FD', border: '#90CAF9' },
 };
 
-const buildPrintHtml = (standings, groupSize) => {
+const buildPrintContent = (standings, groupSize) => {
   const medalSymbols = ['🥇', '🥈', '🥉'];
   const groupKeys = ['vollmond', 'halbmond', 'neumond'];
 
@@ -60,62 +60,46 @@ const buildPrintHtml = (standings, groupSize) => {
     const groupIdx = Math.min(Math.floor(i / groupSize), 2);
     const gc = GROUP_COLORS[groupKeys[groupIdx]];
     const grp = GROUPS[groupIdx];
-    const medal = i < 3 ? `<span style="font-size:14px">${medalSymbols[i]}</span>` : `<b style="color:#555">${i + 1}</b>`;
+    const medal = i < 3 ? `<span style="font-size:11px">${medalSymbols[i]}</span>` : `<b style="color:#555">${i + 1}</b>`;
     const parts = p.name.split(','); const name = parts.length > 1 ? `${parts[1].trim()} ${parts[0].trim()}` : p.name.trim();
-    const league = p.league ? ` <span style="font-size:10px;color:#888;font-weight:700">[${p.league}]</span>` : '';
+    const league = p.league ? ` <span style="font-size:8px;color:#888;font-weight:700">[${p.league}]</span>` : '';
     const bg = i % 2 === 0 ? '#fafafa' : '#fff';
     const isGroupStart = i % groupSize === 0;
     const groupBar = isGroupStart ? `
       <tr>
-        <td colspan="6" style="background:${gc.header};color:#fff;padding:3px 8px;font-size:10px;font-weight:800;letter-spacing:1px">
+        <td colspan="6" style="background:${gc.header};color:#fff;padding:2px 6px;font-size:8px;font-weight:800;letter-spacing:1px">
           ${grp.fullLabel.toUpperCase()} · ${grp.sublabel}
         </td>
       </tr>` : '';
     return `${groupBar}<tr style="background:${bg}">
-      <td style="text-align:center;padding:3px 6px;width:30px">${medal}</td>
-      <td style="padding:3px 8px;font-size:11px;font-weight:600">${name}${league}</td>
-      <td style="text-align:right;padding:3px 6px;width:44px;font-weight:700">${p.points} Pkt</td>
-      <td style="text-align:right;padding:3px 6px;width:34px;color:#555">${p.wins}S</td>
-      <td style="text-align:right;padding:3px 6px;width:34px;color:#555">${p.games}Sp</td>
-      <td style="text-align:right;padding:3px 6px;width:40px;color:${p.diff >= 0 ? '#2e7d32' : '#c62828'};font-weight:700">${p.diff > 0 ? '+' : ''}${p.diff}</td>
+      <td style="text-align:center;padding:2px 4px;width:26px">${medal}</td>
+      <td style="padding:2px 6px;font-size:9px;font-weight:600">${name}${league}</td>
+      <td style="text-align:right;padding:2px 4px;width:40px;font-weight:700;font-size:9px">${p.points} Pkt</td>
+      <td style="text-align:right;padding:2px 4px;width:30px;color:#555;font-size:9px">${p.wins}S</td>
+      <td style="text-align:right;padding:2px 4px;width:30px;color:#555;font-size:9px">${p.games}Sp</td>
+      <td style="text-align:right;padding:2px 4px;width:36px;color:${p.diff >= 0 ? '#2e7d32' : '#c62828'};font-weight:700;font-size:9px">${p.diff > 0 ? '+' : ''}${p.diff}</td>
     </tr>`;
   }).join('');
 
   const date = new Date().toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
-  return `<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <style>
-    @page { margin: 12mm; }
-    body { font-family: sans-serif; color: #1a1a2e; }
-    h1 { font-size: 18px; letter-spacing: 3px; margin: 0 0 2px; }
-    .subtitle { font-size: 10px; color: #888; margin-bottom: 10px; letter-spacing: 1px; }
-    table { width: 100%; border-collapse: collapse; font-size: 11px; }
-    thead th { background: #1a1a2e; color: #fff; padding: 5px 8px; font-size: 9px; letter-spacing: 1px; }
-  </style>
-  <script>window.onload=function(){window.focus();setTimeout(function(){window.print();window.onafterprint=function(){window.close();};},250);}<\/script>
-</head>
-<body>
-  <h1>☽ MOONLIGHT CUP</h1>
-  <div class="subtitle">RANGLISTE · Badminton Turniermanager · ${date}</div>
-  <table>
+  return `<div style="font-family:sans-serif;color:#1a1a2e">
+  <div style="font-size:15px;font-weight:800;letter-spacing:3px;margin-bottom:2px">☽ MOONLIGHT CUP</div>
+  <div style="font-size:8px;color:#888;margin-bottom:8px;letter-spacing:1px">RANGLISTE · Badminton Turniermanager · ${date}</div>
+  <table style="width:100%;border-collapse:collapse;font-size:9px">
     <thead>
-      <tr>
-        <th style="text-align:center;width:36px">#</th>
-        <th style="text-align:left">NAME</th>
-        <th style="text-align:right;width:50px">PUNKTE</th>
-        <th style="text-align:right;width:40px">SIEGE</th>
-        <th style="text-align:right;width:40px">SPIELE</th>
-        <th style="text-align:right;width:46px">DIFF</th>
+      <tr style="background:#1a1a2e;color:#fff">
+        <th style="text-align:center;width:30px;padding:4px 4px;font-size:8px;letter-spacing:1px">#</th>
+        <th style="text-align:left;padding:4px 6px;font-size:8px;letter-spacing:1px">NAME</th>
+        <th style="text-align:right;width:44px;padding:4px 4px;font-size:8px;letter-spacing:1px">PUNKTE</th>
+        <th style="text-align:right;width:34px;padding:4px 4px;font-size:8px;letter-spacing:1px">SIEGE</th>
+        <th style="text-align:right;width:34px;padding:4px 4px;font-size:8px;letter-spacing:1px">SPIELE</th>
+        <th style="text-align:right;width:38px;padding:4px 4px;font-size:8px;letter-spacing:1px">DIFF</th>
       </tr>
     </thead>
     <tbody>${rows}</tbody>
   </table>
-</body>
-</html>`;
-};
+</div>`;
 
 export default function RanglisteScreen() {
   const { getStandings } = useTournament();
@@ -126,12 +110,20 @@ export default function RanglisteScreen() {
   const groups = GROUPS.map((g, i) => standings.slice(i * groupSize, (i + 1) * groupSize));
 
   const doPrint = () => {
-    if (standings.length === 0) return;
-    const html = buildPrintHtml(standings, groupSize);
-    const blob = new Blob([html], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    const win = window.open(url, '_blank');
-    if (win) win.addEventListener('load', () => URL.revokeObjectURL(url), { once: true });
+    if (standings.length === 0 || typeof document === 'undefined') return;
+    const content = buildPrintContent(standings, groupSize);
+    const div = document.createElement('div');
+    div.id = 'mc-print';
+    div.innerHTML = content;
+    document.body.appendChild(div);
+    const style = document.createElement('style');
+    style.textContent =
+      '@media screen{#mc-print{display:none}}' +
+      '@media print{#root{display:none!important}#mc-print{display:block!important}@page{margin:10mm}}';
+    document.head.appendChild(style);
+    window.print();
+    if (div.parentNode) div.parentNode.removeChild(div);
+    if (style.parentNode) style.parentNode.removeChild(style);
   };
 
   const selectedPlayer = selected ? standings.find((p) => p.id === selected) : null;
