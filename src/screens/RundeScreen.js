@@ -1,7 +1,6 @@
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Modal, Share } from 'react-native';
 import { useState, useEffect, useRef } from 'react';
 import { Ionicons } from '@expo/vector-icons';
-import * as Print from 'expo-print';
 import { colors } from '../theme/colors';
 import { shared, cardShadow } from '../theme/styles';
 import { useTournament } from '../store/tournament';
@@ -149,7 +148,10 @@ export default function RundeScreen() {
         <td style="padding:9px 8px;text-align:center;color:#bbb;font-size:12px;font-weight:700">VS</td>
         <td style="padding:9px 12px;font-size:14px;font-weight:700">${m.teamB.map(getName).join(' &amp; ')}</td>
       </tr>`).join('');
-    return `<html><body style="font-family:Arial,sans-serif;padding:28px 32px;color:#222;margin:0">
+    return `<!DOCTYPE html><html><head><meta charset="utf-8">
+      <style>@page{margin:20mm} body{font-family:Arial,sans-serif;padding:28px 32px;color:#222;margin:0}</style>
+      <script>window.onload = function() { window.focus(); window.print(); window.onafterprint = function() { window.close(); }; }<\/script>
+    </head><body>
       <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:6px">
         <div>
           <div style="font-size:20px;font-weight:800">☽ Moonlight Cup — Runde ${r.id}</div>
@@ -174,38 +176,38 @@ export default function RundeScreen() {
     </body></html>`;
   };
 
-  // Try printing both Durchgänge in one job via HTML rendering
-  const doPrintBoth = async (r) => {
-    const d1html = buildPageHtml(r, 1);
-    const d2html = buildPageHtml(r, 2);
-    const html = `<html><head><style>
-      @page{margin:0} body{margin:0}
-      .pg{page-break-after:always;break-after:page}
-      .last{page-break-after:auto;break-after:auto}
-    </style></head><body>
-      <div class="pg">${d1html.replace(/<\/?html>|<\/?body[^>]*>/g,'')}</div>
-      <div class="last">${d2html.replace(/<\/?html>|<\/?body[^>]*>/g,'')}</div>
-    </body></html>`;
-    try {
-      await Print.printAsync({ html });
-      setPrintPreview(null);
-      setPreviewDg(null);
-    } catch (_) {}
+  const openPrintTab = (html) => {
+    const blob = new Blob([html], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const win = window.open(url, '_blank');
+    if (win) win.addEventListener('load', () => URL.revokeObjectURL(url), { once: true });
   };
 
-  // expo-print captures the current screen — preview shows only one Durchgang,
-  // then print captures it. After D1 print auto-advances to D2.
-  const doPrint = async () => {
-    try {
-      await Print.printAsync({ html: buildPageHtml(printPreview, previewDg) });
-      if (previewDg === 1) {
-        triggerAutoTimer(1);
-        setPreviewDg(2);
-      } else {
-        setPreviewDg(null);
-        setPrintPreview(null);
-      }
-    } catch (_) {}
+  const doPrintBoth = (r) => {
+    const d1 = buildPageHtml(r, 1).replace(/<script[\s\S]*?<\/script>/gi, '');
+    const d2 = buildPageHtml(r, 2).replace(/<script[\s\S]*?<\/script>/gi, '');
+    const stripWrap = (s) => s.replace(/<!DOCTYPE html>|<\/?html[^>]*>|<head[\s\S]*?<\/head>|<\/?body[^>]*>/gi, '');
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
+      <style>@page{margin:20mm} body{font-family:Arial,sans-serif;padding:28px 32px;color:#222;margin:0} .pg{page-break-after:always;break-after:page}</style>
+      <script>window.onload = function() { window.focus(); window.print(); window.onafterprint = function() { window.close(); }; }<\/script>
+    </head><body>
+      <div class="pg">${stripWrap(d1)}</div>
+      <div>${stripWrap(d2)}</div>
+    </body></html>`;
+    openPrintTab(html);
+    setPrintPreview(null);
+    setPreviewDg(null);
+  };
+
+  const doPrint = () => {
+    openPrintTab(buildPageHtml(printPreview, previewDg));
+    if (previewDg === 1) {
+      triggerAutoTimer(1);
+      setPreviewDg(2);
+    } else {
+      setPreviewDg(null);
+      setPrintPreview(null);
+    }
   };
 
   const doShare = async (r) => {
@@ -834,8 +836,8 @@ export default function RundeScreen() {
         </TouchableOpacity>
       )}
 
-      {/* Finale starten — nur sichtbar wenn mind. 1 Runde gespielt und nicht bereits in Finale */}
-      {currentRound > 0 && !round?.isFinalRunde && (
+      {/* Finale starten — nur sichtbar wenn mind. 1 Runde gespielt, nicht bereits in Finale und keine Schnellrunde aktiv */}
+      {currentRound > 0 && !round?.isFinalRunde && !isSchnellrunde && (
         <TouchableOpacity
           style={s.finalBtn}
           onPress={() => setShowFinalConfirm(true)}
