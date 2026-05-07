@@ -1,4 +1,4 @@
-import { useState, createContext, useContext } from 'react';
+import { useState, useEffect, createContext, useContext } from 'react';
 
 const TournamentContext = createContext(null);
 
@@ -13,6 +13,16 @@ export const LEAGUES = [
   { key: 'BU',  label: 'Bundesliga' },
 ];
 
+const STORAGE_KEY = 'mc_state_v1';
+
+const loadSaved = () => {
+  try {
+    const raw = typeof window !== 'undefined' ? localStorage.getItem(STORAGE_KEY) : null;
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch { return null; }
+};
+
 const shuffle = (arr) => {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {
@@ -23,14 +33,15 @@ const shuffle = (arr) => {
 };
 
 export function TournamentProvider({ children }) {
-  const [pausedParticipants, setPausedParticipants] = useState([]);
+  const saved = loadSaved();
+  const [pausedParticipants, setPausedParticipants] = useState(() => saved?.pausedParticipants ?? []);
   // { [id]: { games: number, wins: number, diff: number } } — additive adjustments on top of computed stats
-  const [statAdjustments, setStatAdjustments] = useState({});
+  const [statAdjustments, setStatAdjustments] = useState(() => saved?.statAdjustments ?? {});
   // { durchgang: 1|2, at: number } — signal for TimerScreen to auto-start
   const [autoTimerTrigger, setAutoTimerTrigger] = useState(null);
   const triggerAutoTimer = (durchgang, isFirstRound = false) => setAutoTimerTrigger({ durchgang, isFirstRound, at: Date.now() });
 
-  const [participants, setParticipants] = useState([
+  const [participants, setParticipants] = useState(() => saved?.participants ?? [
     { id: '1',  name: 'Müller, Max',          gender: 'M', league: 'FZ'  },
     { id: '2',  name: 'Lang, Lisa',           gender: 'F', league: 'BK'  },
     { id: '3',  name: 'Wolf, Tom',            gender: 'M', league: 'BL'  },
@@ -134,8 +145,8 @@ export function TournamentProvider({ children }) {
 
   // Match structure: { id, teamA: [id, id], teamB: [id, id], type: 'MM'|'FF'|'MF', scoreA, scoreB, done }
   // Round: { id, matches, sittingOut: [id, ...] }
-  const [rounds, setRounds] = useState([]);
-  const [currentRound, setCurrentRound] = useState(0);
+  const [rounds, setRounds] = useState(() => saved?.rounds ?? []);
+  const [currentRound, setCurrentRound] = useState(() => saved?.currentRound ?? 0);
 
   const addParticipant = (name, gender, league = 'FZ') => {
     const id = Date.now().toString();
@@ -513,6 +524,19 @@ export function TournamentProvider({ children }) {
     if (!r) return true;
     return r.matches.every((m) => m.done);
   };
+
+  // Persist core tournament state to localStorage on every change
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        participants,
+        pausedParticipants,
+        rounds,
+        currentRound,
+        statAdjustments,
+      }));
+    } catch { /* storage full or unavailable */ }
+  }, [participants, pausedParticipants, rounds, currentRound, statAdjustments]);
 
   return (
     <TournamentContext.Provider
