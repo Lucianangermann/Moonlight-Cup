@@ -331,9 +331,11 @@ export function TournamentProvider({ children }) {
     // Schlechtere Spieler (Neumond/untere Halbmond) → D1, bessere (Vollmond/obere Halbmond) → D2
     // Dazu jedes Spiel nach dem Durchschnitt der Ranglistenposition seiner 4 Spieler bewerten.
     const standingIndex = Object.fromEntries(currentStandings.map((p, i) => [p.id, i]));
+    // Score = Rang des besten Spielers im Match (niedrigster Index = höchster Rang)
+    // → Match mit Platz 1 hat Score 0 und bekommt Feld 12 / geht in D2
     const matchScore = (m) => {
       const ids = [...m.teamA, ...m.teamB];
-      return ids.reduce((sum, id) => sum + (standingIndex[id] ?? currentStandings.length), 0) / ids.length;
+      return Math.min(...ids.map((id) => standingIndex[id] ?? currentStandings.length));
     };
     // Aufsteigend sortieren: niedrigster Score = beste Spieler → kommen in D2
     const sorted = [...matches].sort((a, b) => matchScore(a) - matchScore(b));
