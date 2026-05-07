@@ -260,6 +260,9 @@ export default function RanglisteScreen() {
           {selectedPlayer && selectedGroup && (() => {
             const delta = pendingDelta ?? { games: 0, wins: 0, diff: 0 };
             const hasPending = pendingDelta !== null && (pendingDelta.games !== 0 || pendingDelta.wins !== 0 || pendingDelta.diff !== 0);
+            const newWins  = selectedPlayer.wins  + delta.wins;
+            const newGames = selectedPlayer.games + delta.games;
+            const winsError = newWins > newGames;
 
             const adjust = (field, dir) => {
               setPendingDelta((prev) => {
@@ -346,15 +349,28 @@ export default function RanglisteScreen() {
                   </View>
                 </View>
 
+                {winsError && (
+                  <View style={s.errorBanner}>
+                    <Ionicons name="warning" size={13} color={colors.error} />
+                    <Text style={s.errorText}>
+                      Siege ({newWins}) können nicht größer sein als Spiele ({newGames})
+                    </Text>
+                  </View>
+                )}
+
                 {hasPending && !confirming && (
                   <View style={s.confirmRow}>
                     <TouchableOpacity style={s.discardBtn} onPress={discardChanges} activeOpacity={0.7}>
                       <Ionicons name="close" size={14} color={colors.error} />
                       <Text style={s.discardBtnText}>Verwerfen</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={s.saveBtn} onPress={() => setConfirming(true)} activeOpacity={0.8}>
-                      <Ionicons name="checkmark" size={14} color={colors.bg} />
-                      <Text style={s.saveBtnText}>Speichern</Text>
+                    <TouchableOpacity
+                      style={[s.saveBtn, winsError && s.saveBtnDisabled]}
+                      onPress={winsError ? undefined : () => setConfirming(true)}
+                      activeOpacity={winsError ? 1 : 0.8}
+                    >
+                      <Ionicons name="checkmark" size={14} color={winsError ? colors.textMuted : colors.bg} />
+                      <Text style={[s.saveBtnText, winsError && s.saveBtnTextDisabled]}>Speichern</Text>
                     </TouchableOpacity>
                   </View>
                 )}
@@ -655,6 +671,30 @@ const s = StyleSheet.create({
     borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  errorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: colors.error + '18',
+    borderTopWidth: 1,
+    borderTopColor: colors.error + '40',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  errorText: {
+    color: colors.error,
+    fontSize: 11,
+    fontWeight: '600',
+    flex: 1,
+  },
+  saveBtnDisabled: {
+    backgroundColor: colors.panel,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  saveBtnTextDisabled: {
+    color: colors.textMuted,
   },
   confirmPanel: {
     borderTopWidth: 1,
