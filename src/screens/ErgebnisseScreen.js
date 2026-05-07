@@ -121,7 +121,7 @@ export default function ErgebnisseScreen() {
           <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
             {match.feld != null && (
               <View style={[s.feldTag, match.done && s.tagDone]}>
-                <Text style={[s.feldTagText, match.done && s.tagTextDone]}>F{match.feld}</Text>
+                <Text style={[s.feldTagText, match.done && s.tagTextDone]}>Feld {match.feld}</Text>
               </View>
             )}
             {!isRoundView && (

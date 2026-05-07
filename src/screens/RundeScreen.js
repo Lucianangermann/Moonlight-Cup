@@ -601,7 +601,7 @@ export default function RundeScreen() {
                       </View>
                       {match.feld != null && (
                         <View style={s.feldPill}>
-                          <Text style={s.feldText}>FELD {match.feld}</Text>
+                          <Text style={s.feldText}>Feld {match.feld}</Text>
                         </View>
                       )}
                     </View>
@@ -696,7 +696,7 @@ export default function RundeScreen() {
                       return (
                         <View key={m.id} style={[s.previewRow, i % 2 === 0 && s.previewRowAlt]}>
                           {m.feld != null && (
-                            <Text style={s.previewFeld}>F{m.feld}</Text>
+                            <Text style={s.previewFeld}>Feld {m.feld}</Text>
                           )}
                           <Text style={[s.previewType, { color: cfg.color }]}>{cfg.label}</Text>
                           <Text style={s.previewTeam} numberOfLines={1}>{getTeam(m.teamA)}</Text>
