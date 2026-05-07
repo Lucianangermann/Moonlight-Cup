@@ -135,7 +135,6 @@ export default function RundeScreen() {
 
   const TYPE_LABELS = { MM: 'Herrendoppel', FF: 'Damendoppel', MF: 'Gemischt' };
 
-  // Returns the inner page content (header + table) without any HTML wrapper
   const buildPageContent = (r, dg) => {
     const matches = [...r.matches.filter((m) => m.durchgang === dg)]
       .sort((a, b) => (a.feld ?? 0) - (b.feld ?? 0));
@@ -173,24 +172,22 @@ export default function RundeScreen() {
       ${sitOut}`;
   };
 
-  // CSS that rotates content 90° so it appears as landscape on a portrait A4 page.
-  // Safari ignores @page{size} in Blob URLs; the transform is the only reliable workaround.
-  const LANDSCAPE_CSS = `
+  const PRINT_CSS = `
+    @page{size:landscape;margin:15mm}
     *{box-sizing:border-box}
-    @page{size:portrait;margin:0}
-    body{margin:0;padding:0;font-family:Arial,sans-serif;color:#222}
-    .page{
-      width:297mm;height:210mm;padding:15mm;overflow:hidden;
-      transform-origin:0 0;transform:translateY(297mm) rotate(90deg);
-    }
-    .page+.page{break-before:page;page-break-before:always}
+    body{margin:0;padding:20px 28px;font-family:Arial,sans-serif;color:#222}
+    .hint{display:block;background:#fff3cd;border:1px solid #ffc107;border-radius:6px;padding:6px 12px;margin-bottom:14px;font-size:12px;color:#856404}
+    @media print{.hint{display:none}}
+    .pg{page-break-after:always;break-after:page;padding-bottom:20px}
   `;
   const AUTO_PRINT = `window.onload=function(){window.focus();setTimeout(function(){window.print();window.onafterprint=function(){window.close();};},250);}`;
 
   const buildPageHtml = (r, dg) =>
-    `<!DOCTYPE html><html><head><meta charset="utf-8"><style>${LANDSCAPE_CSS}</style>` +
+    `<!DOCTYPE html><html><head><meta charset="utf-8"><style>${PRINT_CSS}</style>` +
     `<script>${AUTO_PRINT}<\/script></head><body>` +
-    `<div class="page">${buildPageContent(r, dg)}</div></body></html>`;
+    `<div class="hint">⚠️ Bitte Ausrichtung auf <b>Querformat</b> stellen</div>` +
+    buildPageContent(r, dg) +
+    `</body></html>`;
 
   const openPrintTab = (html) => {
     const blob = new Blob([html], { type: 'text/html' });
@@ -201,10 +198,11 @@ export default function RundeScreen() {
 
   const doPrintBoth = (r) => {
     const html =
-      `<!DOCTYPE html><html><head><meta charset="utf-8"><style>${LANDSCAPE_CSS}</style>` +
+      `<!DOCTYPE html><html><head><meta charset="utf-8"><style>${PRINT_CSS}</style>` +
       `<script>${AUTO_PRINT}<\/script></head><body>` +
-      `<div class="page">${buildPageContent(r, 1)}</div>` +
-      `<div class="page">${buildPageContent(r, 2)}</div>` +
+      `<div class="hint">⚠️ Bitte Ausrichtung auf <b>Querformat</b> stellen</div>` +
+      `<div class="pg">${buildPageContent(r, 1)}</div>` +
+      buildPageContent(r, 2) +
       `</body></html>`;
     openPrintTab(html);
     triggerAutoTimer(1);
