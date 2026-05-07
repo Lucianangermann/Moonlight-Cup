@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Vibration } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
-import { shared, goldGlowShadow } from '../theme/styles';
+import { shared, goldGlowShadow, cardShadow } from '../theme/styles';
 import { useTournament } from '../store/tournament';
 
 const WARMUP_SECONDS = 3 * 60;
