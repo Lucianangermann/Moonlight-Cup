@@ -135,7 +135,8 @@ export default function RundeScreen() {
 
   const TYPE_LABELS = { MM: 'Herrendoppel', FF: 'Damendoppel', MF: 'Gemischt' };
 
-  const buildPageHtml = (r, dg) => {
+  // Returns the inner page content (header + table) without any HTML wrapper
+  const buildPageContent = (r, dg) => {
     const matches = [...r.matches.filter((m) => m.durchgang === dg)]
       .sort((a, b) => (a.feld ?? 0) - (b.feld ?? 0));
     const sitOut = dg === 2 && r.sittingOut?.length > 0
@@ -148,10 +149,7 @@ export default function RundeScreen() {
         <td style="padding:9px 8px;text-align:center;color:#222;font-size:16px;font-weight:800">:</td>
         <td style="padding:9px 12px;font-size:14px;font-weight:700">${m.teamB.map(getName).join(' &amp; ')}</td>
       </tr>`).join('');
-    return `<!DOCTYPE html><html><head><meta charset="utf-8">
-      <style>@page{size:297mm 210mm;margin:15mm} body{font-family:Arial,sans-serif;padding:28px 32px;color:#222;margin:0}</style>
-      <script>window.onload = function() { window.focus(); setTimeout(function(){ window.print(); }, 250); window.onafterprint = function() { window.close(); }; }<\/script>
-    </head><body>
+    return `
       <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:6px">
         <div>
           <div style="font-size:20px;font-weight:800">☽ Moonlight Cup — Runde ${r.id}</div>
@@ -172,9 +170,27 @@ export default function RundeScreen() {
         </thead>
         <tbody>${rows}</tbody>
       </table>
-      ${sitOut}
-    </body></html>`;
+      ${sitOut}`;
   };
+
+  // CSS that rotates content 90° so it appears as landscape on a portrait A4 page.
+  // Safari ignores @page{size} in Blob URLs; the transform is the only reliable workaround.
+  const LANDSCAPE_CSS = `
+    *{box-sizing:border-box}
+    @page{size:portrait;margin:0}
+    body{margin:0;padding:0;font-family:Arial,sans-serif;color:#222}
+    .page{
+      width:297mm;height:210mm;padding:15mm;overflow:hidden;
+      transform-origin:0 0;transform:translateY(297mm) rotate(90deg);
+    }
+    .page+.page{break-before:page;page-break-before:always}
+  `;
+  const AUTO_PRINT = `window.onload=function(){window.focus();setTimeout(function(){window.print();window.onafterprint=function(){window.close();};},250);}`;
+
+  const buildPageHtml = (r, dg) =>
+    `<!DOCTYPE html><html><head><meta charset="utf-8"><style>${LANDSCAPE_CSS}</style>` +
+    `<script>${AUTO_PRINT}<\/script></head><body>` +
+    `<div class="page">${buildPageContent(r, dg)}</div></body></html>`;
 
   const openPrintTab = (html) => {
     const blob = new Blob([html], { type: 'text/html' });
@@ -184,16 +200,12 @@ export default function RundeScreen() {
   };
 
   const doPrintBoth = (r) => {
-    const d1 = buildPageHtml(r, 1).replace(/<script[\s\S]*?<\/script>/gi, '');
-    const d2 = buildPageHtml(r, 2).replace(/<script[\s\S]*?<\/script>/gi, '');
-    const stripWrap = (s) => s.replace(/<!DOCTYPE html>|<\/?html[^>]*>|<head[\s\S]*?<\/head>|<\/?body[^>]*>/gi, '');
-    const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
-      <style>@page{size:297mm 210mm;margin:15mm} body{font-family:Arial,sans-serif;padding:28px 32px;color:#222;margin:0} .pg{page-break-after:always;break-after:page}</style>
-      <script>window.onload = function() { window.focus(); setTimeout(function(){ window.print(); }, 250); window.onafterprint = function() { window.close(); }; }<\/script>
-    </head><body>
-      <div class="pg">${stripWrap(d1)}</div>
-      <div>${stripWrap(d2)}</div>
-    </body></html>`;
+    const html =
+      `<!DOCTYPE html><html><head><meta charset="utf-8"><style>${LANDSCAPE_CSS}</style>` +
+      `<script>${AUTO_PRINT}<\/script></head><body>` +
+      `<div class="page">${buildPageContent(r, 1)}</div>` +
+      `<div class="page">${buildPageContent(r, 2)}</div>` +
+      `</body></html>`;
     openPrintTab(html);
     triggerAutoTimer(1);
     setPrintPreview(null);
