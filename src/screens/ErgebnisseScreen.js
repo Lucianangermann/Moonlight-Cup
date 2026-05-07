@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
   Modal, TextInput, KeyboardAvoidingView, Platform,
@@ -15,8 +15,12 @@ const TYPE_CONFIG = {
 };
 
 export default function ErgebnisseScreen() {
-  const { rounds, participants, saveResult, getCurrentRoundData } = useTournament();
-  const [selectedRound, setSelectedRound] = useState('all');
+  const { rounds, participants, saveResult, getCurrentRoundData, currentRound } = useTournament();
+  const [selectedRound, setSelectedRound] = useState(() => currentRound > 0 ? String(currentRound) : 'all');
+
+  useEffect(() => {
+    if (currentRound > 0) setSelectedRound(String(currentRound));
+  }, [currentRound]);
   const [editMatch, setEditMatch] = useState(null);
   const [scoreA, setScoreA] = useState('');
   const [scoreB, setScoreB] = useState('');
@@ -37,6 +41,12 @@ export default function ErgebnisseScreen() {
   const filtered = selectedRound === 'all'
     ? allMatches
     : allMatches.filter((m) => m.roundId === Number(selectedRound));
+
+  // Pending first, done at bottom
+  const sortMatches = (arr) => [...arr].sort((a, b) => (a.done ? 1 : 0) - (b.done ? 1 : 0));
+  const isRoundView = selectedRound !== 'all';
+  const d1 = isRoundView ? sortMatches(filtered.filter((m) => m.durchgang === 1)) : [];
+  const d2 = isRoundView ? sortMatches(filtered.filter((m) => m.durchgang === 2)) : [];
 
   const isEditSchnellrunde = editMatch?.isSchnellrunde ?? false;
   const maxScore = isEditSchnellrunde ? 21 : 40;
@@ -72,6 +82,73 @@ export default function ErgebnisseScreen() {
   };
 
   const doneCount = filtered.filter((m) => m.done).length;
+
+  const renderMatch = (match) => {
+    const cfg = TYPE_CONFIG[match.type] ?? TYPE_CONFIG.MF;
+    const aWins = match.done && match.winnerTeam === 'A';
+    const bWins = match.done && match.winnerTeam === 'B';
+    return (
+      <TouchableOpacity
+        key={match.id}
+        style={[s.matchCard, match.done && s.matchCardDone]}
+        onPress={() => openEdit(match)}
+        activeOpacity={0.75}
+      >
+        <View style={s.cardTop}>
+          <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
+            <View style={[s.typePill, { borderColor: cfg.color + (match.done ? '30' : '50') }]}>
+              <Text style={[s.typeText, { color: cfg.color + (match.done ? '60' : 'FF') }]}>{cfg.label}</Text>
+            </View>
+            {match.isSchnellrunde ? (
+              <View style={[s.schnellBadge, match.done && s.badgeDone]}>
+                <Ionicons name="flash" size={9} color={match.done ? colors.textDim : colors.warning} />
+                <Text style={[s.schnellBadgeText, match.done && s.badgeTextDone]}>SCHNELL</Text>
+              </View>
+            ) : (
+              <View style={[s.normalBadge, match.done && s.badgeDone]}>
+                <Ionicons name="shield-checkmark" size={9} color={match.done ? colors.textDim : colors.success} />
+                <Text style={[s.normalBadgeText, match.done && s.badgeTextDone]}>NORMAL</Text>
+              </View>
+            )}
+          </View>
+          <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
+            {!isRoundView && (
+              <View style={[s.durchgangTag, match.durchgang === 2 && s.durchgangTag2, match.done && s.tagDone]}>
+                <Text style={[s.durchgangTagText, match.durchgang === 2 && s.durchgangTagText2, match.done && s.tagTextDone]}>D{match.durchgang}</Text>
+              </View>
+            )}
+            {!isRoundView && (
+              <View style={s.roundTag}>
+                <Text style={s.roundTagText}>R{match.roundId}</Text>
+              </View>
+            )}
+            {match.done && (
+              <Ionicons name="checkmark-circle" size={16} color={colors.success + '60'} />
+            )}
+          </View>
+        </View>
+
+        <View style={s.matchRow}>
+          <Text style={[s.teamName, aWins && s.teamWinner, match.done && !aWins && s.teamDimmed]} numberOfLines={1}>
+            {getTeam(match.teamA)}
+          </Text>
+          <View style={s.scoreBox}>
+            {match.done ? (
+              <Text style={s.scoreText}>{match.scoreA} – {match.scoreB}</Text>
+            ) : (
+              <View style={s.editHintBox}>
+                <Ionicons name="pencil-outline" size={12} color={colors.textMuted} />
+                <Text style={s.editHintText}>Eingeben</Text>
+              </View>
+            )}
+          </View>
+          <Text style={[s.teamName, s.teamRight, bWins && s.teamWinner, match.done && !bWins && s.teamDimmed]} numberOfLines={1}>
+            {getTeam(match.teamB)}
+          </Text>
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   const simulateAll = () => {
     const round = getCurrentRoundData();
@@ -141,68 +218,29 @@ export default function ErgebnisseScreen() {
             <Ionicons name="bar-chart-outline" size={36} color={colors.textDim} />
             <Text style={s.emptyText}>Keine Spiele vorhanden</Text>
           </View>
+        ) : isRoundView ? (
+          <>
+            {d1.length > 0 && (
+              <>
+                <View style={s.dgHeader}>
+                  <Text style={s.dgHeaderText}>DURCHGANG 1</Text>
+                  <Text style={s.dgHeaderCount}>{d1.filter((m) => m.done).length}/{d1.length}</Text>
+                </View>
+                {d1.map(renderMatch)}
+              </>
+            )}
+            {d2.length > 0 && (
+              <>
+                <View style={[s.dgHeader, { marginTop: 8 }]}>
+                  <Text style={s.dgHeaderText}>DURCHGANG 2</Text>
+                  <Text style={s.dgHeaderCount}>{d2.filter((m) => m.done).length}/{d2.length}</Text>
+                </View>
+                {d2.map(renderMatch)}
+              </>
+            )}
+          </>
         ) : (
-          filtered.map((match) => {
-            const cfg = TYPE_CONFIG[match.type] ?? TYPE_CONFIG.MF;
-            const aWins = match.done && match.winnerTeam === 'A';
-            const bWins = match.done && match.winnerTeam === 'B';
-            return (
-              <TouchableOpacity
-                key={match.id}
-                style={[s.matchCard, match.done && s.matchCardDone]}
-                onPress={() => openEdit(match)}
-                activeOpacity={0.75}
-              >
-                <View style={s.cardTop}>
-                  <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
-                    <View style={[s.typePill, { borderColor: cfg.color + '50' }]}>
-                      <Text style={[s.typeText, { color: cfg.color }]}>{cfg.label}</Text>
-                    </View>
-                    {match.isSchnellrunde ? (
-                      <View style={s.schnellBadge}>
-                        <Ionicons name="flash" size={9} color={colors.warning} />
-                        <Text style={s.schnellBadgeText}>SCHNELL</Text>
-                      </View>
-                    ) : (
-                      <View style={s.normalBadge}>
-                        <Ionicons name="shield-checkmark" size={9} color={colors.success} />
-                        <Text style={s.normalBadgeText}>NORMAL</Text>
-                      </View>
-                    )}
-                  </View>
-                  <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
-                    <View style={[s.durchgangTag, match.durchgang === 2 && s.durchgangTag2]}>
-                      <Text style={[s.durchgangTagText, match.durchgang === 2 && s.durchgangTagText2]}>D{match.durchgang}</Text>
-                    </View>
-                    <View style={s.roundTag}>
-                      <Text style={s.roundTagText}>R{match.roundId}</Text>
-                    </View>
-                  </View>
-                </View>
-
-                <View style={s.matchRow}>
-                  <Text style={[s.teamName, aWins && s.teamWinner]} numberOfLines={1}>
-                    {getTeam(match.teamA)}
-                  </Text>
-
-                  <View style={s.scoreBox}>
-                    {match.done ? (
-                      <Text style={s.scoreText}>{match.scoreA} – {match.scoreB}</Text>
-                    ) : (
-                      <View style={s.editHintBox}>
-                        <Ionicons name="pencil-outline" size={12} color={colors.textMuted} />
-                        <Text style={s.editHintText}>Eingeben</Text>
-                      </View>
-                    )}
-                  </View>
-
-                  <Text style={[s.teamName, s.teamRight, bWins && s.teamWinner]} numberOfLines={1}>
-                    {getTeam(match.teamB)}
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            );
-          })
+          filtered.map(renderMatch)
         )}
         <View style={{ height: 24 }} />
       </ScrollView>
@@ -380,7 +418,46 @@ const s = StyleSheet.create({
     ...cardShadow,
   },
   matchCardDone: {
-    borderColor: colors.success + '25',
+    borderColor: colors.border,
+    opacity: 0.42,
+  },
+  teamDimmed: {
+    color: colors.textDim,
+  },
+  badgeDone: {
+    backgroundColor: colors.panel,
+    borderColor: colors.border,
+  },
+  badgeTextDone: {
+    color: colors.textDim,
+  },
+  tagDone: {
+    backgroundColor: 'transparent',
+    borderColor: colors.border,
+  },
+  tagTextDone: {
+    color: colors.textDim,
+  },
+  dgHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 4,
+    paddingVertical: 6,
+    marginBottom: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  dgHeaderText: {
+    color: colors.textMuted,
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 1.5,
+  },
+  dgHeaderCount: {
+    color: colors.textDim,
+    fontSize: 11,
+    fontWeight: '600',
   },
   cardTop: {
     flexDirection: 'row',
