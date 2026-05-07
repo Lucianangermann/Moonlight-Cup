@@ -145,7 +145,7 @@ export default function RundeScreen() {
         <td style="padding:9px 10px;font-size:12px;font-weight:800;color:#1a1a2e;white-space:nowrap;text-align:center">${m.feld != null ? `Feld ${m.feld}` : ''}</td>
         <td style="padding:9px 12px;font-size:11px;color:#555;font-weight:700;white-space:nowrap">${TYPE_LABELS[m.type] ?? m.type}</td>
         <td style="padding:9px 12px;font-size:14px;font-weight:700">${m.teamA.map(getName).join(' &amp; ')}</td>
-        <td style="padding:9px 8px;text-align:center;color:#bbb;font-size:14px;font-weight:700">:</td>
+        <td style="padding:9px 8px;text-align:center;color:#222;font-size:16px;font-weight:800">:</td>
         <td style="padding:9px 12px;font-size:14px;font-weight:700">${m.teamB.map(getName).join(' &amp; ')}</td>
       </tr>`).join('');
     return `<!DOCTYPE html><html><head><meta charset="utf-8">
