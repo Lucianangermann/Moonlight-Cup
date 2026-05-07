@@ -13,13 +13,16 @@ export const LEAGUES = [
   { key: 'BU',  label: 'Bundesliga' },
 ];
 
-const STORAGE_KEY = 'mc_state_v1';
+const STORAGE_KEY = 'mc_state_v3';
 
 const loadSaved = () => {
   try {
     const raw = typeof window !== 'undefined' ? localStorage.getItem(STORAGE_KEY) : null;
     if (!raw) return null;
-    return JSON.parse(raw);
+    const data = JSON.parse(raw);
+    // Basic validation — if structure looks wrong, discard
+    if (!Array.isArray(data?.participants) || !Array.isArray(data?.rounds)) return null;
+    return data;
   } catch { return null; }
 };
 
