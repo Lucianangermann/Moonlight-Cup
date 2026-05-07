@@ -38,12 +38,39 @@ jobs:
 
       - name: Fix asset paths for GitHub Pages
         run: |
-          sed -i 's|href="/|href="/Moonlight-Cup/|g' dist/index.html
-          sed -i 's|src="/|src="/Moonlight-Cup/|g' dist/index.html
-          find dist -name "*.js" -exec sed -i 's|"/_expo/|"/Moonlight-Cup/_expo/|g' {} \;
-          find dist -name "*.js" -exec sed -i "s|'/_expo/|'/Moonlight-Cup/_expo/|g" {} \;
-          find dist -name "*.js" -exec sed -i 's|"/assets/|"/Moonlight-Cup/assets/|g' {} \;
-          find dist -name "*.js" -exec sed -i "s|'/assets/|'/Moonlight-Cup/assets/|g" {} \;
+          python3 - << 'PYEOF'
+          import os, glob
+
+          BASE = "/Moonlight-Cup"
+
+          # Fix index.html
+          with open("dist/index.html", "r", encoding="utf-8") as f:
+              html = f.read()
+          html = html.replace('href="/', f'href="{BASE}/')
+          html = html.replace('src="/', f'src="{BASE}/')
+          with open("dist/index.html", "w", encoding="utf-8") as f:
+              f.write(html)
+          print("Patched index.html")
+
+          # Fix all JS bundles
+          total = 0
+          for path in glob.glob("dist/**/*.js", recursive=True):
+              with open(path, "r", encoding="utf-8") as f:
+                  content = f.read()
+              new = content \
+                  .replace('"/_expo/', f'"{BASE}/_expo/') \
+                  .replace("'/_expo/", f"'{BASE}/_expo/") \
+                  .replace('"/assets/', f'"{BASE}/assets/') \
+                  .replace("'/assets/", f"'{BASE}/assets/")
+              if new != content:
+                  with open(path, "w", encoding="utf-8") as f:
+                      f.write(new)
+                  total += 1
+          print(f"Patched {total} JS files")
+          PYEOF
+
+          # Prevent Jekyll from ignoring _expo folder
+          touch dist/.nojekyll
 
       - uses: actions/configure-pages@v4
 
