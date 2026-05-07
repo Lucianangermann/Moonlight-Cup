@@ -3,10 +3,12 @@
 
 const SCOPES = 'user-read-playback-state user-modify-playback-state';
 
-const getRedirectUri = () =>
-  typeof window !== 'undefined'
-    ? window.location.origin + window.location.pathname.replace(/\/$/, '')
-    : '';
+// Feste Redirect URI — muss exakt so im Spotify Developer Dashboard eingetragen sein
+const REDIRECT_URI = 'https://lucianangermann.github.io/Moonlight-Cup';
+
+const getRedirectUri = () => REDIRECT_URI;
+
+export const getRedirectUriDisplay = () => REDIRECT_URI;
 
 const generateRandom = (len) => {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';

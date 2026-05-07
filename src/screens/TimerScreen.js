@@ -5,7 +5,7 @@ import { colors } from '../theme/colors';
 import { shared, goldGlowShadow, cardShadow } from '../theme/styles';
 import { useTournament } from '../store/tournament';
 import {
-  initiateLogin, isConnected, disconnect, spotifyPlay, spotifyPause, getClientId,
+  initiateLogin, isConnected, disconnect, spotifyPlay, spotifyPause, getClientId, getRedirectUriDisplay,
 } from '../services/spotify';
 
 const WARMUP_SECONDS = 3 * 60;
@@ -304,11 +304,12 @@ export default function TimerScreen() {
                 1. Gehe zu{' '}
                 <Text style={s.spLink}>developer.spotify.com</Text>
                 {' '}→ „Create App"{'\n'}
-                2. Redirect URI eintragen:{' '}
-                <Text style={s.spLink}>{typeof window !== 'undefined' ? window.location.origin : ''}</Text>
-                {'\n'}
-                3. Client ID hier einfügen:
+                2. Redirect URI <Text style={{fontWeight:'800'}}>exakt so</Text> eintragen:
               </Text>
+              <View style={s.spUriBox}>
+                <Text style={s.spUriText} selectable>{getRedirectUriDisplay()}</Text>
+              </View>
+              <Text style={s.spSetupText}>3. Client ID hier einfügen:</Text>
               <TextInput
                 style={s.spInput}
                 value={clientIdInput}
@@ -575,6 +576,20 @@ const s = StyleSheet.create({
   spLink: {
     color: colors.gold,
     fontWeight: '700',
+  },
+  spUriBox: {
+    backgroundColor: colors.bg,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.gold + '60',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  spUriText: {
+    color: colors.gold,
+    fontSize: 12,
+    fontWeight: '700',
+    fontFamily: 'monospace',
   },
   spInput: {
     backgroundColor: colors.bg,
