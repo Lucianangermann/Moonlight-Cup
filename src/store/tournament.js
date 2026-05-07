@@ -208,6 +208,11 @@ export function TournamentProvider({ children }) {
       scoreA: null, scoreB: null, done: false,
     });
 
+    // Vollmond-Schutz: Vollmondspieler dürfen kein Freilos bekommen
+    const currentStandings = getStandings();
+    const gsProtect = Math.ceil(currentStandings.length / 3);
+    const vollmondIds = new Set(currentStandings.slice(0, gsProtect).map((p) => p.id));
+
     if (isSchnellrunde) {
       // ── Schnellrunden: komplett zufällig, Spieltyp wird pro Spiel zufällig gewählt ──
       const pMap = Object.fromEntries(participants.map((p) => [p.id, p]));
@@ -230,9 +235,14 @@ export function TournamentProvider({ children }) {
         return { ...match, teamA: best.a, teamB: best.b };
       };
 
-      // Herren und Damen getrennt mischen, dann Spieltyp pro Spiel zufällig wählen
-      const men   = shuffle(participants.filter((p) => p.gender === 'M').map((p) => p.id));
-      const women = shuffle(participants.filter((p) => p.gender === 'F').map((p) => p.id));
+      // Vollmond-Spieler ans Ende → pop() verarbeitet sie zuerst → kein Freilos
+      const prioritize = (arr) => [
+        ...arr.filter((id) => !vollmondIds.has(id)),
+        ...arr.filter((id) => vollmondIds.has(id)),
+      ];
+
+      const men   = prioritize(shuffle(participants.filter((p) => p.gender === 'M').map((p) => p.id)));
+      const women = prioritize(shuffle(participants.filter((p) => p.gender === 'F').map((p) => p.id)));
 
       const canMM = () => men.length >= 4;
       const canFF = () => women.length >= 4;
