@@ -40,6 +40,8 @@ jobs:
         run: |
           sed -i 's|href="/|href="/Moonlight-Cup/|g' dist/index.html
           sed -i 's|src="/|src="/Moonlight-Cup/|g' dist/index.html
+          find dist -name "*.js" -exec sed -i 's|"/_expo/|"/Moonlight-Cup/_expo/|g' {} \;
+          find dist -name "*.js" -exec sed -i "s|'/_expo/|'/Moonlight-Cup/_expo/|g" {} \;
 
       - uses: actions/configure-pages@v4
 
