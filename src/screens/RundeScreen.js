@@ -14,12 +14,13 @@ const TYPE_CONFIG = {
 
 export default function RundeScreen() {
   const {
-    getCurrentRoundData, currentRound, rounds, allMatchesDone, startNewRound,
+    getCurrentRoundData, currentRound, rounds, allMatchesDone, startNewRound, startFinalRunde,
     participants, advanceDurchgang, currentDurchgangDone,
     deleteCurrentRound, deleteRound, swapMatchPlayers,
     triggerAutoTimer,
   } = useTournament();
   const [showConfirm, setShowConfirm] = useState(false);
+  const [showFinalConfirm, setShowFinalConfirm] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [pendingSwap, setPendingSwap] = useState(null);
@@ -534,7 +535,12 @@ export default function RundeScreen() {
           </View>
         )}
         <View style={{ flex: 1, flexDirection: 'row', gap: 8, alignItems: 'center', justifyContent: 'flex-end' }}>
-          {currentRound > 0 && (isSchnellrunde ? (
+          {currentRound > 0 && (round?.isFinalRunde ? (
+            <View style={s.finalPill}>
+              <Ionicons name="trophy" size={10} color={colors.gold} />
+              <Text style={s.finalPillText}>FINALE</Text>
+            </View>
+          ) : isSchnellrunde ? (
             <View style={s.schnellPill}>
               <Ionicons name="flash" size={10} color={colors.warning} />
               <Text style={s.schnellPillText}>SCHNELL</Text>
@@ -766,6 +772,50 @@ export default function RundeScreen() {
           </Text>
         </View>
       </TouchableOpacity>
+
+      {/* Finale starten — nur sichtbar wenn mind. 1 Runde gespielt und nicht bereits in Finale */}
+      {currentRound > 0 && !round?.isFinalRunde && (
+        <TouchableOpacity
+          style={s.finalBtn}
+          onPress={() => setShowFinalConfirm(true)}
+          activeOpacity={0.8}
+        >
+          <View style={s.btnInner}>
+            <Ionicons name="trophy" size={14} color={colors.gold} style={{ marginRight: 8 }} />
+            <Text style={s.finalBtnText}>FINALE AUSLOSUNG</Text>
+          </View>
+        </TouchableOpacity>
+      )}
+
+      {/* Bestätigung Finale */}
+      <Modal visible={showFinalConfirm} transparent animationType="fade">
+        <View style={s.modalOverlay}>
+          <View style={s.modalCard}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+              <Ionicons name="trophy" size={20} color={colors.gold} />
+              <Text style={s.modalTitle}>Finale starten?</Text>
+            </View>
+            <Text style={s.modalBody}>
+              Die Finale-Auslosung verwendet Gruppen von je 4 Spielern:{'\n'}
+              Platz 1+4 vs 2+3, Platz 5+8 vs 6+7 usw.{'\n\n'}
+              Diese Aktion kann nicht rückgängig gemacht werden.
+            </Text>
+            <View style={s.modalButtons}>
+              <TouchableOpacity style={s.modalBtnCancel} onPress={() => setShowFinalConfirm(false)} activeOpacity={0.8}>
+                <Text style={s.modalBtnCancelText}>Abbrechen</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={s.modalBtnFinal}
+                onPress={() => { setShowFinalConfirm(false); startFinalRunde(); }}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="trophy" size={13} color={colors.bg} style={{ marginRight: 5 }} />
+                <Text style={s.modalBtnConfirmText}>Finale starten</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -802,6 +852,48 @@ const s = StyleSheet.create({
     fontSize: 11,
     fontWeight: '800',
     letterSpacing: 1.5,
+  },
+  finalPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: colors.goldGlow,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.borderGoldGlow,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  finalPillText: {
+    color: colors.gold,
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 1.5,
+  },
+  finalBtn: {
+    marginTop: 10,
+    backgroundColor: colors.goldGlow,
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderWidth: 1,
+    borderColor: colors.borderGoldGlow,
+    alignItems: 'center',
+  },
+  finalBtnText: {
+    color: colors.gold,
+    fontSize: 14,
+    fontWeight: '800',
+    letterSpacing: 1,
+  },
+  modalBtnFinal: {
+    flex: 1,
+    backgroundColor: colors.gold,
+    borderRadius: 12,
+    paddingVertical: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   schnellPill: {
     flexDirection: 'row',

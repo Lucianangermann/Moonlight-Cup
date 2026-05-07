@@ -361,6 +361,70 @@ export function TournamentProvider({ children }) {
     setCurrentRound(roundId);
   };
 
+  const startFinalRunde = () => {
+    const roundId = rounds.length + 1;
+    const matches = [];
+    let idx = 0;
+
+    const makeMatch = (teamA, teamB, type) => ({
+      id: `r${roundId}m${idx++}`,
+      teamA, teamB, type,
+      scoreA: null, scoreB: null, done: false,
+    });
+
+    const currentStandings = getStandings();
+    const pMap = Object.fromEntries(participants.map((p) => [p.id, p]));
+    const genderOf = (id) => pMap[id]?.gender ?? 'M';
+
+    const matchType = (tA, tB) => {
+      const men = [...tA, ...tB].filter((id) => genderOf(id) === 'M').length;
+      return men === 4 ? 'MM' : men === 0 ? 'FF' : 'MF';
+    };
+    const fixConflict = (tA, tB) => {
+      const aF = tA.every((id) => genderOf(id) === 'F');
+      const bM = tB.every((id) => genderOf(id) === 'M');
+      const aM = tA.every((id) => genderOf(id) === 'M');
+      const bF = tB.every((id) => genderOf(id) === 'F');
+      if ((aF && bM) || (aM && bF)) return [[tA[0], tB[1]], [tB[0], tA[1]]];
+      return [tA, tB];
+    };
+
+    // Finale: Gruppen von 4 — Platz 1+4 vs 2+3, Platz 5+8 vs 6+7, usw.
+    const ranked = currentStandings.map((p) => p.id);
+    const pool = [...ranked];
+    while (pool.length >= 4) {
+      const g = pool.splice(0, 4);
+      const [a, b] = fixConflict([g[0], g[3]], [g[1], g[2]]);
+      matches.push(makeMatch(a, b, matchType(a, b)));
+    }
+    const sittingOut = [...pool];
+
+    // D1/D2 und Feldzuweisung identisch zur normalen Runde
+    const standingIndex = Object.fromEntries(currentStandings.map((p, i) => [p.id, i]));
+    const matchScore = (m) => {
+      const ids = [...m.teamA, ...m.teamB];
+      return Math.min(...ids.map((id) => standingIndex[id] ?? currentStandings.length));
+    };
+    const sorted = [...matches].sort((a, b) => matchScore(a) - matchScore(b));
+    const d2Count = Math.floor(matches.length / 2);
+    const d2Ids = new Set(sorted.slice(0, d2Count).map((m) => m.id));
+    const matchesWithD = matches.map((m) => ({ ...m, durchgang: d2Ids.has(m.id) ? 2 : 1 }));
+
+    const assignFields = (dgMatches) => {
+      if (dgMatches.length === 0) return [];
+      const startField = 13 - dgMatches.length;
+      const byScore = [...dgMatches].sort((a, b) => matchScore(b) - matchScore(a));
+      return byScore.map((m, i) => ({ ...m, feld: startField + i }));
+    };
+    const withFields = [
+      ...assignFields(matchesWithD.filter((m) => m.durchgang === 1)),
+      ...assignFields(matchesWithD.filter((m) => m.durchgang === 2)),
+    ];
+
+    setRounds((prev) => [...prev, { id: roundId, matches: withFields, sittingOut, isSchnellrunde: false, isFinalRunde: true, currentDurchgang: 1 }]);
+    setCurrentRound(roundId);
+  };
+
   const advanceDurchgang = () => {
     setRounds((prev) =>
       prev.map((r) => r.id === currentRound ? { ...r, currentDurchgang: 2 } : r)
@@ -458,7 +522,7 @@ export function TournamentProvider({ children }) {
         pauseParticipant, resumeParticipant,
         statAdjustments, setStatAdjustment,
         autoTimerTrigger, triggerAutoTimer,
-        rounds, currentRound, saveResult, startNewRound,
+        rounds, currentRound, saveResult, startNewRound, startFinalRunde,
         getStandings, getCurrentRoundData, allMatchesDone,
         advanceDurchgang, currentDurchgangDone,
         deleteCurrentRound, deleteRound, swapMatchPlayers,
