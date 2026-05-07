@@ -95,20 +95,15 @@ export default function RundeScreen() {
       </div>`;
     }).join('');
     const date = new Date().toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
-    return `<!DOCTYPE html><html><head><meta charset="utf-8">
-      <style>@page{margin:20mm} body{font-family:sans-serif;color:#1a1a2e;margin:0}</style>
-      <script>window.onload=function(){window.focus();setTimeout(function(){window.print();},300);}<\/script>
-    </head><body>
-      <div style="text-align:center;margin-bottom:24px">
+    return `<div style="text-align:center;margin-bottom:24px;font-family:sans-serif;color:#1a1a2e">
         <div style="font-size:26px;font-weight:800;letter-spacing:3px">☽ MOONLIGHT CUP</div>
         <div style="font-size:13px;color:#888;margin-top:4px;letter-spacing:2px">SIEGEREHRUNG · ${date}</div>
         <div style="width:60px;height:3px;background:#B8860B;margin:12px auto 0"></div>
       </div>
-      ${cols}
-    </body></html>`;
+      ${cols}`;
   };
 
-  const printSieger = () => openPrintTab(buildSiegerHtml());
+  const printSieger = () => printHtml(buildSiegerHtml());
 
   const handleConfirmStart = () => {
     setShowConfirm(false);
@@ -166,47 +161,41 @@ export default function RundeScreen() {
       ${sitOut}`;
   };
 
-  const PRINT_CSS = `
-    @page{margin:15mm}
-    *{box-sizing:border-box}
-    body{margin:0;padding:20px 28px;font-family:Arial,sans-serif;color:#222}
-    .pg{page-break-after:always;break-after:page;padding-bottom:20px}
-  `;
-
-  // Auto-print script: druckt automatisch, aber schließt das Tab NICHT (window.close würde
-  // auf iOS Safari das App-Fenster wegnavigieren)
-  const AUTO_PRINT = `window.onload=function(){window.focus();setTimeout(function(){window.print();},300);}`;
-
-  const buildPageHtml = (r, dg) =>
-    `<!DOCTYPE html><html><head><meta charset="utf-8"><style>${PRINT_CSS}</style>` +
-    `<script>${AUTO_PRINT}<\/script></head><body>` +
-    buildPageContent(r, dg) +
-    `</body></html>`;
-
-  // Blob URL in neuem Tab — kein window.close(), Tab bleibt offen und wird manuell geschlossen
-  const openPrintTab = (html) => {
-    if (typeof window === 'undefined') return;
-    const blob = new Blob([html], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    const win = window.open(url, '_blank');
-    if (win) win.addEventListener('load', () => URL.revokeObjectURL(url), { once: true });
-    else URL.revokeObjectURL(url); // Popup blockiert — URL aufräumen
+  // Druckt HTML-Inhalt über window.print() im aktuellen Fenster.
+  // Kein neuer Tab, keine Navigation — funktioniert sicher auf iOS Safari.
+  const printHtml = (innerHtml) => {
+    if (typeof document === 'undefined') return;
+    const div = document.createElement('div');
+    div.id = 'mc-print';
+    div.innerHTML = innerHtml;
+    document.body.appendChild(div);
+    const style = document.createElement('style');
+    style.id = 'mc-print-style';
+    style.textContent =
+      '@media screen{#mc-print{display:none}}' +
+      '@media print{' +
+      '#root{display:none!important}' +
+      '#mc-print{display:block!important;padding:20px 28px;font-family:Arial,sans-serif;color:#222;box-sizing:border-box}' +
+      '.pg{page-break-after:always;break-after:page;padding-bottom:20px}' +
+      '@page{margin:15mm}' +
+      '}';
+    document.head.appendChild(style);
+    window.print();
+    if (div.parentNode) div.parentNode.removeChild(div);
+    if (style.parentNode) style.parentNode.removeChild(style);
   };
 
   const doPrintBoth = (r) => {
-    const html =
-      `<!DOCTYPE html><html><head><meta charset="utf-8"><style>${PRINT_CSS}</style>` +
-      `<script>${AUTO_PRINT}<\/script></head><body>` +
+    printHtml(
       `<div class="pg">${buildPageContent(r, 1)}</div>` +
-      buildPageContent(r, 2) +
-      `</body></html>`;
-    openPrintTab(html);
+      buildPageContent(r, 2)
+    );
     setPrintPreview(null);
     setPreviewDg(null);
   };
 
   const doPrint = () => {
-    openPrintTab(buildPageHtml(printPreview, previewDg));
+    printHtml(buildPageContent(printPreview, previewDg));
     if (previewDg === 1) {
       setPreviewDg(2);
     } else {
