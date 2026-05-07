@@ -479,7 +479,7 @@ export default function RundeScreen() {
                       </View>
                     ))}
                     <View style={s.editVsBox}>
-                      <Text style={s.editVsText}>VS</Text>
+                      <Text style={s.editVsText}>:</Text>
                     </View>
                   </View>
                 </View>
@@ -683,7 +683,7 @@ export default function RundeScreen() {
                       {match.done ? (
                         <Text style={s.scoreText}>{match.scoreA} – {match.scoreB}</Text>
                       ) : (
-                        <Text style={s.vsText}>VS</Text>
+                        <Text style={s.vsText}>:</Text>
                       )}
                     </View>
                     <Text style={s.teamB} numberOfLines={1}>{getTeam(match.teamB)}</Text>
