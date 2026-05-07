@@ -100,6 +100,7 @@ const buildPrintContent = (standings, groupSize) => {
     <tbody>${rows}</tbody>
   </table>
 </div>`;
+};
 
 export default function RanglisteScreen() {
   const { getStandings } = useTournament();
