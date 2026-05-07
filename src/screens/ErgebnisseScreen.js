@@ -45,7 +45,11 @@ export default function ErgebnisseScreen() {
   // Pending first, done at bottom
   const sortMatches = (arr) => [...arr].sort((a, b) => (a.done ? 1 : 0) - (b.done ? 1 : 0));
   const isRoundView = selectedRound !== 'all';
-  const d1 = isRoundView ? sortMatches(filtered.filter((m) => m.durchgang === 1)) : [];
+  const selectedRoundObj = rounds.find((r) => r.id === Number(selectedRound));
+  // Wenn die ausgewählte Runde in D2 ist, D1 ausblenden
+  const activeDurchgang = selectedRoundObj?.currentDurchgang ?? 1;
+  const hideD1 = isRoundView && activeDurchgang === 2;
+  const d1 = isRoundView && !hideD1 ? sortMatches(filtered.filter((m) => m.durchgang === 1)) : [];
   const d2 = isRoundView ? sortMatches(filtered.filter((m) => m.durchgang === 2)) : [];
 
   const isEditSchnellrunde = editMatch?.isSchnellrunde ?? false;
