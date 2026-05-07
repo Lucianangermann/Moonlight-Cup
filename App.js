@@ -1,7 +1,9 @@
+import { useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
+import { handleCallback } from './src/services/spotify';
 
 import { TournamentProvider } from './src/store/tournament';
 import { colors } from './src/theme/colors';
@@ -23,6 +25,8 @@ const TAB_ICONS = {
 };
 
 export default function App() {
+  useEffect(() => { handleCallback(); }, []);
+
   return (
     <TournamentProvider>
       <NavigationContainer>

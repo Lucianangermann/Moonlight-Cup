@@ -1,17 +1,20 @@
 import { useState, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Vibration } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Vibration, TextInput, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 import { shared, goldGlowShadow, cardShadow } from '../theme/styles';
 import { useTournament } from '../store/tournament';
+import {
+  initiateLogin, isConnected, disconnect, spotifyPlay, spotifyPause, getClientId,
+} from '../services/spotify';
 
 const WARMUP_SECONDS = 3 * 60;
 const DEFAULT_SECONDS = 20 * 60;
-const WARNING_SECONDS = 5 * 60;
+const WARNING_SECONDS = 60; // letzte Minute
 
 export default function TimerScreen() {
   const { autoTimerTrigger } = useTournament();
-  const [phase, setPhaseState] = useState('idle'); // 'idle' | 'warmup' | 'game'
+  const [phase, setPhaseState] = useState('idle');
   const [timerDurchgang, setTimerDurchgang] = useState(null);
   const [secondsLeft, setSecondsLeft] = useState(DEFAULT_SECONDS);
   const [running, setRunning] = useState(false);
@@ -20,8 +23,19 @@ export default function TimerScreen() {
   const intervalRef = useRef(null);
   const phaseRef = useRef('idle');
 
-  const setPhase = (p) => { phaseRef.current = p; setPhaseState(p); };
+  // Spotify
+  const [spConnected, setSpConnected] = useState(false);
+  const [clientIdInput, setClientIdInput] = useState('');
+  const [showSpotify, setShowSpotify] = useState(false);
 
+  useEffect(() => {
+    setSpConnected(isConnected());
+    setClientIdInput(getClientId());
+  }, []);
+
+  const sp = (fn) => { if (isConnected()) fn(); };
+
+  const setPhase = (p) => { phaseRef.current = p; setPhaseState(p); };
 
   // Auto-start from RundeScreen print trigger
   useEffect(() => {
@@ -34,20 +48,30 @@ export default function TimerScreen() {
     setWarned(false);
     setPhaseComplete(null);
     setRunning(true);
+    sp(spotifyPlay); // Musik an während Einspielen
   }, [autoTimerTrigger]);
 
-  // Auto-advance warmup → game
+  // Warmup → Game transition + Spotify
   useEffect(() => {
     if (phaseComplete === 'warmup') {
+      sp(spotifyPause); // Musik aus = Signal: Spiel beginnt!
       setPhase('game');
       setSecondsLeft(DEFAULT_SECONDS);
       setWarned(false);
       setPhaseComplete(null);
       setRunning(true);
     } else if (phaseComplete === 'game') {
+      sp(spotifyPause); // Musik aus = Spiel vorbei
       setPhaseComplete(null);
     }
   }, [phaseComplete]);
+
+  // Letzte Minute → Musik an
+  useEffect(() => {
+    if (warned && phaseRef.current === 'game') {
+      sp(spotifyPlay);
+    }
+  }, [warned]);
 
   useEffect(() => {
     if (running) {
@@ -84,9 +108,11 @@ export default function TimerScreen() {
     setRunning(false);
     if (phaseRef.current === 'warmup') {
       Vibration.vibrate([0, 300, 100, 300, 100, 300]);
+      sp(spotifyPause);
       setPhaseComplete('warmup');
     } else if (phaseRef.current === 'game') {
       Vibration.vibrate([0, 400, 100, 400]);
+      sp(spotifyPause);
       setSecondsLeft(0);
       setPhaseComplete('game');
     }
@@ -94,11 +120,23 @@ export default function TimerScreen() {
 
   const reset = () => {
     setRunning(false);
+    sp(spotifyPause);
     setPhase('idle');
     setTimerDurchgang(null);
     setSecondsLeft(DEFAULT_SECONDS);
     setWarned(false);
     setPhaseComplete(null);
+  };
+
+  const handleConnectSpotify = () => {
+    if (!clientIdInput.trim()) return;
+    initiateLogin(clientIdInput.trim());
+  };
+
+  const handleDisconnect = () => {
+    disconnect();
+    setSpConnected(false);
+    setClientIdInput('');
   };
 
   const mins = Math.floor(secondsLeft / 60).toString().padStart(2, '0');
@@ -130,7 +168,7 @@ export default function TimerScreen() {
     : 'Warte auf Rundenstart';
 
   return (
-    <View style={[shared.screen, s.screen]}>
+    <ScrollView style={{ flex: 1 }} contentContainerStyle={[shared.screen, s.screen]} showsVerticalScrollIndicator={false}>
       <Text style={s.title}>Timer</Text>
 
       {/* Phase banner */}
@@ -162,7 +200,7 @@ export default function TimerScreen() {
             {isFinished ? 'ZEIT!' : running ? phaseLabel : phase === 'idle' ? 'BEREIT' : 'PAUSE'}
           </Text>
           {isWarning && !isFinished && (
-            <Text style={s.warningText}>5 Min. Rest</Text>
+            <Text style={s.warningText}>1 Min. Rest</Text>
           )}
           {phase === 'warmup' && !isFinished && (
             <Text style={[s.phaseHintText, { color: colors.success + 'AA' }]}>→ danach 20 Min.</Text>
@@ -186,11 +224,7 @@ export default function TimerScreen() {
           }}
           activeOpacity={0.75}
         >
-          <Ionicons
-            name={running ? 'pause' : 'play'}
-            size={24}
-            color={running ? colors.bg : colors.gold}
-          />
+          <Ionicons name={running ? 'pause' : 'play'} size={24} color={running ? colors.bg : colors.gold} />
           <Text style={[s.ctrlLabel, running && s.ctrlLabelActive]}>
             {running ? 'Pause' : 'Start'}
           </Text>
@@ -203,7 +237,7 @@ export default function TimerScreen() {
 
         <TouchableOpacity
           style={[s.ctrlBtn, s.ctrlBtnStop]}
-          onPress={() => { setRunning(false); setSecondsLeft(0); }}
+          onPress={() => { setRunning(false); sp(spotifyPause); setSecondsLeft(0); }}
           activeOpacity={0.75}
         >
           <Ionicons name="stop" size={22} color={colors.error} />
@@ -211,7 +245,7 @@ export default function TimerScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Skip button — only visible during active phase */}
+      {/* Skip button */}
       {phase !== 'idle' && !isFinished && (
         <TouchableOpacity style={s.skipBtn} onPress={skipCurrent} activeOpacity={0.75}>
           <Ionicons name="play-skip-forward" size={15} color={colors.textMuted} />
@@ -224,9 +258,82 @@ export default function TimerScreen() {
       <Text style={s.hint}>
         {phase === 'idle'
           ? 'Startet automatisch nach dem Drucken der Durchgänge'
-          : 'Vibration bei Phasenwechsel, 5 Min. Rest & Ende'}
+          : 'Vibration bei Phasenwechsel, 1 Min. Rest & Ende'}
       </Text>
-    </View>
+
+      {/* ── Spotify Card ── */}
+      <TouchableOpacity
+        style={s.spHeader}
+        onPress={() => setShowSpotify((v) => !v)}
+        activeOpacity={0.8}
+      >
+        <Ionicons name="musical-notes" size={14} color={spConnected ? '#1DB954' : colors.textMuted} />
+        <Text style={[s.spHeaderText, spConnected && { color: '#1DB954' }]}>
+          {spConnected ? 'Spotify verbunden' : 'Spotify verbinden'}
+        </Text>
+        {spConnected && <View style={s.spDot} />}
+        <Ionicons
+          name={showSpotify ? 'chevron-up' : 'chevron-down'}
+          size={13}
+          color={colors.textMuted}
+        />
+      </TouchableOpacity>
+
+      {showSpotify && (
+        <View style={s.spCard}>
+          {spConnected ? (
+            <>
+              <Text style={s.spInfoText}>
+                Spotify steuert Musik automatisch:{'\n'}
+                • Einspielen → Musik startet{'\n'}
+                • Einspielen endet → Musik stoppt (Signal: Spiel beginnt){'\n'}
+                • Letzte Minute → Musik startet erneut{'\n'}
+                • Spiel endet → Musik stoppt
+              </Text>
+              <Text style={s.spInfoHint}>
+                Starte Spotify auf deinem Gerät und wähle einen Song/Playlist — die App übernimmt die Steuerung.
+              </Text>
+              <TouchableOpacity style={s.spDisconnectBtn} onPress={handleDisconnect} activeOpacity={0.8}>
+                <Ionicons name="unlink-outline" size={13} color={colors.error} />
+                <Text style={s.spDisconnectText}>Trennen</Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <>
+              <Text style={s.spSetupText}>
+                1. Gehe zu{' '}
+                <Text style={s.spLink}>developer.spotify.com</Text>
+                {' '}→ „Create App"{'\n'}
+                2. Redirect URI eintragen:{' '}
+                <Text style={s.spLink}>{typeof window !== 'undefined' ? window.location.origin : ''}</Text>
+                {'\n'}
+                3. Client ID hier einfügen:
+              </Text>
+              <TextInput
+                style={s.spInput}
+                value={clientIdInput}
+                onChangeText={setClientIdInput}
+                placeholder="Spotify Client ID"
+                placeholderTextColor={colors.textMuted}
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+              <TouchableOpacity
+                style={[s.spConnectBtn, !clientIdInput.trim() && { opacity: 0.4 }]}
+                onPress={handleConnectSpotify}
+                activeOpacity={0.8}
+                disabled={!clientIdInput.trim()}
+              >
+                <Ionicons name="logo-google-playstore" size={14} color="#fff" />
+                <Text style={s.spConnectText}>Mit Spotify verbinden</Text>
+              </TouchableOpacity>
+            </>
+          )}
+        </View>
+      )}
+
+      <View style={{ height: 24 }} />
+    </ScrollView>
   );
 }
 
@@ -389,5 +496,110 @@ const s = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 18,
     paddingHorizontal: 16,
+    marginBottom: 24,
+  },
+
+  // Spotify
+  spHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    width: '100%',
+    backgroundColor: colors.panel,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+    marginBottom: 2,
+  },
+  spHeaderText: {
+    flex: 1,
+    color: colors.textMuted,
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+  },
+  spDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: '#1DB954',
+  },
+  spCard: {
+    width: '100%',
+    backgroundColor: colors.panel,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderTopWidth: 0,
+    borderTopLeftRadius: 0,
+    borderTopRightRadius: 0,
+    padding: 14,
+    gap: 10,
+  },
+  spInfoText: {
+    color: colors.silver,
+    fontSize: 12,
+    lineHeight: 20,
+    fontWeight: '500',
+  },
+  spInfoHint: {
+    color: colors.textMuted,
+    fontSize: 11,
+    lineHeight: 17,
+    fontStyle: 'italic',
+  },
+  spDisconnectBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    alignSelf: 'flex-start',
+    backgroundColor: colors.error + '18',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.error + '35',
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+  },
+  spDisconnectText: {
+    color: colors.error,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  spSetupText: {
+    color: colors.silver,
+    fontSize: 12,
+    lineHeight: 20,
+  },
+  spLink: {
+    color: colors.gold,
+    fontWeight: '700',
+  },
+  spInput: {
+    backgroundColor: colors.bg,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+    color: colors.white,
+    fontSize: 13,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontFamily: 'monospace',
+  },
+  spConnectBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#1DB954',
+    borderRadius: 10,
+    paddingVertical: 12,
+  },
+  spConnectText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '800',
+    letterSpacing: 0.3,
   },
 });
