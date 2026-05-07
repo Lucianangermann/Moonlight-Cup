@@ -328,9 +328,18 @@ export function TournamentProvider({ children }) {
       sittingOut = [...pool];
     }
 
-    // Erste Hälfte = Durchgang 1, zweite Hälfte = Durchgang 2
-    const half = Math.ceil(matches.length / 2);
-    const matchesWithD = matches.map((m, i) => ({ ...m, durchgang: i < half ? 1 : 2 }));
+    // Schlechtere Spieler (Neumond/untere Halbmond) → D1, bessere (Vollmond/obere Halbmond) → D2
+    // Dazu jedes Spiel nach dem Durchschnitt der Ranglistenposition seiner 4 Spieler bewerten.
+    const standingIndex = Object.fromEntries(currentStandings.map((p, i) => [p.id, i]));
+    const matchScore = (m) => {
+      const ids = [...m.teamA, ...m.teamB];
+      return ids.reduce((sum, id) => sum + (standingIndex[id] ?? currentStandings.length), 0) / ids.length;
+    };
+    // Aufsteigend sortieren: niedrigster Score = beste Spieler → kommen in D2
+    const sorted = [...matches].sort((a, b) => matchScore(a) - matchScore(b));
+    const d2Count = Math.floor(matches.length / 2);
+    const d2Ids = new Set(sorted.slice(0, d2Count).map((m) => m.id));
+    const matchesWithD = matches.map((m) => ({ ...m, durchgang: d2Ids.has(m.id) ? 2 : 1 }));
 
     setRounds((prev) => [...prev, { id: roundId, matches: matchesWithD, sittingOut, isSchnellrunde, currentDurchgang: 1 }]);
     setCurrentRound(roundId);
