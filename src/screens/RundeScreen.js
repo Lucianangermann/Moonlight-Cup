@@ -98,6 +98,7 @@ export default function RundeScreen() {
     const date = new Date().toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
     return `<!DOCTYPE html><html><head><meta charset="utf-8">
       <style>@page{margin:20mm} body{font-family:sans-serif;color:#1a1a2e;margin:0}</style>
+      <script>window.onload = function() { window.focus(); window.print(); window.onafterprint = function() { window.close(); }; }<\/script>
     </head><body>
       <div style="text-align:center;margin-bottom:24px">
         <div style="font-size:26px;font-weight:800;letter-spacing:3px">☽ MOONLIGHT CUP</div>
@@ -108,8 +109,12 @@ export default function RundeScreen() {
     </body></html>`;
   };
 
-  const printSieger = async () => {
-    try { await Print.printAsync({ html: buildSiegerHtml() }); } catch (_) {}
+  const printSieger = () => {
+    const html = buildSiegerHtml();
+    const blob = new Blob([html], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const win = window.open(url, '_blank');
+    if (win) win.addEventListener('load', () => URL.revokeObjectURL(url), { once: true });
   };
 
   const handleConfirmStart = () => {
