@@ -8,6 +8,7 @@ import {
   initiateLogin, isConnected, disconnect, spotifyPlay, spotifyPause, getClientId, getRedirectUriDisplay,
 } from '../services/spotify';
 
+const PREP_SECONDS = 60;          // 1 Min. Blätter anschauen, keine Musik
 const WARMUP_SECONDS = 3 * 60;
 const FIRST_ROUND_WARMUP_SECONDS = 5 * 60;
 const DEFAULT_SECONDS = 20 * 60;
@@ -55,21 +56,29 @@ export default function TimerScreen() {
     const warmup = autoTimerTrigger.isFirstRound ? FIRST_ROUND_WARMUP_SECONDS : WARMUP_SECONDS;
     setRunning(false);
     clearInterval(intervalRef.current);
-    setPhase('warmup');
+    setPhase('prep'); // 1 Min. Blätter anschauen, bevor Einspielen beginnt
     setTimerDurchgang(autoTimerTrigger.durchgang);
     setWarmupSeconds(warmup);
-    setSecondsLeft(warmup);
+    setSecondsLeft(PREP_SECONDS);
     setWarned(false);
     setPhaseComplete(null);
     speedRef.current = 1;
     setSpeed(1);
     setRunning(true);
-    sp(spotifyPlay); // Musik an während Einspielen
+    // Keine Musik während Vorbereitung
   }, [autoTimerTrigger]);
 
-  // Warmup → Game transition + Spotify
+  // Phase transitions + Spotify
   useEffect(() => {
-    if (phaseComplete === 'warmup') {
+    if (phaseComplete === 'prep') {
+      // 1 Min. vorbei → Einspielen starten + Musik an
+      Vibration.vibrate(200);
+      setPhase('warmup');
+      setSecondsLeft(warmupSeconds);
+      setPhaseComplete(null);
+      setRunning(true);
+      sp(spotifyPlay);
+    } else if (phaseComplete === 'warmup') {
       sp(spotifyPause); // Musik aus = Signal: Spiel beginnt!
       setPhase('game');
       setSecondsLeft(DEFAULT_SECONDS);
@@ -100,7 +109,9 @@ export default function TimerScreen() {
             clearInterval(intervalRef.current);
             setRunning(false);
             const currentPhase = phaseRef.current;
-            if (currentPhase === 'warmup') {
+            if (currentPhase === 'prep') {
+              setPhaseComplete('prep');
+            } else if (currentPhase === 'warmup') {
               Vibration.vibrate([0, 300, 100, 300, 100, 300]);
               setPhaseComplete('warmup');
             } else {
@@ -121,7 +132,9 @@ export default function TimerScreen() {
   const skipCurrent = () => {
     clearInterval(intervalRef.current);
     setRunning(false);
-    if (phaseRef.current === 'warmup') {
+    if (phaseRef.current === 'prep') {
+      setPhaseComplete('prep');
+    } else if (phaseRef.current === 'warmup') {
       Vibration.vibrate([0, 300, 100, 300, 100, 300]);
       sp(spotifyPause);
       setPhaseComplete('warmup');
@@ -161,26 +174,30 @@ export default function TimerScreen() {
   const isWarning = phase === 'game' && secondsLeft <= WARNING_SECONDS && secondsLeft > 0;
   const isFinished = secondsLeft === 0 && phase !== 'idle';
 
-  const phaseColor = phase === 'warmup' ? colors.success
+  const phaseColor = phase === 'prep' ? colors.silver
+    : phase === 'warmup' ? colors.success
     : isFinished ? colors.error
     : isWarning ? colors.warning
     : phase === 'game' ? colors.gold
     : colors.gold;
 
-  const ringColor = phase === 'warmup' ? colors.success + '60'
+  const ringColor = phase === 'prep' ? colors.silver + '40'
+    : phase === 'warmup' ? colors.success + '60'
     : isFinished ? colors.error + '60'
     : isWarning ? colors.warning + '60'
     : colors.borderGoldGlow;
 
-  const totalSeconds = phase === 'warmup' ? warmupSeconds : DEFAULT_SECONDS;
+  const totalSeconds = phase === 'prep' ? PREP_SECONDS : phase === 'warmup' ? warmupSeconds : DEFAULT_SECONDS;
   const progress = phase === 'idle' ? 1 : secondsLeft / totalSeconds;
   const progressPct = Math.round(progress * 100);
 
-  const phaseLabel = phase === 'warmup' ? 'EINSPIELEN'
+  const phaseLabel = phase === 'prep' ? 'VORBEREITUNG'
+    : phase === 'warmup' ? 'EINSPIELEN'
     : phase === 'game' ? 'SPIELZEIT'
     : 'BEREIT';
 
-  const phaseHint = phase === 'warmup' ? `${warmupSeconds / 60} Min. Einspielen`
+  const phaseHint = phase === 'prep' ? '1 Min. Blätter anschauen'
+    : phase === 'warmup' ? `${warmupSeconds / 60} Min. Einspielen`
     : phase === 'game' ? '20 Min. Spielzeit'
     : 'Warte auf Rundenstart';
 
@@ -192,7 +209,7 @@ export default function TimerScreen() {
       {phase !== 'idle' && (
         <View style={[s.phaseBanner, { borderColor: phaseColor + '50', backgroundColor: phaseColor + '15' }]}>
           <Ionicons
-            name={phase === 'warmup' ? 'fitness-outline' : 'tennisball-outline'}
+            name={phase === 'prep' ? 'document-text-outline' : phase === 'warmup' ? 'fitness-outline' : 'tennisball-outline'}
             size={14}
             color={phaseColor}
           />
@@ -218,6 +235,11 @@ export default function TimerScreen() {
           </Text>
           {isWarning && !isFinished && (
             <Text style={s.warningText}>1 Min. Rest</Text>
+          )}
+          {phase === 'prep' && !isFinished && (
+            <Text style={[s.phaseHintText, { color: colors.silver + 'AA' }]}>
+              Dann {warmupSeconds / 60} Min. Einspielen
+            </Text>
           )}
           {phase === 'warmup' && !isFinished && (
             <Text style={[s.phaseHintText, { color: colors.success + 'AA' }]}>
@@ -269,7 +291,9 @@ export default function TimerScreen() {
         <TouchableOpacity style={s.skipBtn} onPress={skipCurrent} activeOpacity={0.75}>
           <Ionicons name="play-skip-forward" size={15} color={colors.textMuted} />
           <Text style={s.skipBtnText}>
-            {phase === 'warmup' ? 'Einspielen überspringen → Spielzeit starten' : 'Spielzeit überspringen'}
+            {phase === 'prep' ? 'Vorbereitung überspringen → Einspielen starten'
+              : phase === 'warmup' ? 'Einspielen überspringen → Spielzeit starten'
+              : 'Spielzeit überspringen'}
           </Text>
         </TouchableOpacity>
       )}
@@ -286,6 +310,8 @@ export default function TimerScreen() {
       <Text style={s.hint}>
         {phase === 'idle'
           ? 'Startet automatisch nach dem Drucken der Durchgänge'
+          : phase === 'prep'
+          ? 'Blätter anschauen — Einspielen startet danach automatisch'
           : 'Vibration bei Phasenwechsel, 1 Min. Rest & Ende'}
       </Text>
 
