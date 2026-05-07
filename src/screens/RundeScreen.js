@@ -141,7 +141,7 @@ export default function RundeScreen() {
       <tr style="background:${i % 2 === 0 ? '#f5f5f5' : '#fff'}">
         <td style="padding:9px 10px;font-size:12px;font-weight:800;color:#1a1a2e;white-space:nowrap;text-align:center">${m.feld != null ? `Feld ${m.feld}` : ''}</td>
         <td style="padding:9px 12px;font-size:11px;color:#555;font-weight:700;white-space:nowrap">${TYPE_LABELS[m.type] ?? m.type}</td>
-        <td style="padding:9px 12px;font-size:14px;font-weight:700">${m.teamA.map(getName).join(' &amp; ')}</td>
+        <td style="padding:9px 12px;font-size:14px;font-weight:700;text-align:right">${m.teamA.map(getName).join(' &amp; ')}</td>
         <td style="padding:9px 8px;text-align:center;color:#222;font-size:16px;font-weight:800">:</td>
         <td style="padding:9px 12px;font-size:14px;font-weight:700">${m.teamB.map(getName).join(' &amp; ')}</td>
       </tr>`).join('');
@@ -157,11 +157,11 @@ export default function RundeScreen() {
       <table style="width:100%;border-collapse:collapse;font-size:14px;table-layout:fixed">
         <thead>
           <tr style="background:#1a1a2e;color:#fff">
-            <th style="padding:8px 10px;text-align:center;font-size:10px;letter-spacing:1px;width:7%">FELD</th>
-            <th style="padding:8px 12px;text-align:left;font-size:10px;letter-spacing:1px;width:11%">TYP</th>
-            <th style="padding:8px 12px;text-align:left;width:38%">TEAM A</th>
+            <th style="padding:8px 10px;text-align:center;font-size:10px;letter-spacing:1px;width:6%">FELD</th>
+            <th style="padding:8px 12px;text-align:left;font-size:10px;letter-spacing:1px;width:10%">TYP</th>
+            <th style="padding:8px 12px;text-align:right;width:39%">TEAM A</th>
             <th style="padding:8px 8px;width:6%;text-align:center"></th>
-            <th style="padding:8px 12px;text-align:left;width:38%">TEAM B</th>
+            <th style="padding:8px 12px;text-align:left;width:39%">TEAM B</th>
           </tr>
         </thead>
         <tbody>${rows}</tbody>
