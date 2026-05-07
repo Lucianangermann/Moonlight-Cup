@@ -91,7 +91,7 @@ export default function RundeScreen() {
       ? `<p style="margin-top:14px;font-size:12px;color:#888"><b>Freilos:</b> ${r.sittingOut.map(getName).join(', ')}</p>` : '';
     const rows = matches.map((m, i) => `
       <tr style="background:${i % 2 === 0 ? '#f5f5f5' : '#fff'}">
-        <td style="padding:9px 10px;font-size:12px;font-weight:800;color:#1a1a2e;white-space:nowrap;text-align:center">${m.feld != null ? `F${m.feld}` : ''}</td>
+        <td style="padding:9px 10px;font-size:12px;font-weight:800;color:#1a1a2e;white-space:nowrap;text-align:center">${m.feld != null ? `Feld ${m.feld}` : ''}</td>
         <td style="padding:9px 12px;font-size:11px;color:#555;font-weight:700;white-space:nowrap">${TYPE_LABELS[m.type] ?? m.type}</td>
         <td style="padding:9px 12px;font-size:14px;font-weight:700">${m.teamA.map(getName).join(' &amp; ')}</td>
         <td style="padding:9px 8px;text-align:center;color:#bbb;font-size:12px;font-weight:700">VS</td>
@@ -1380,7 +1380,7 @@ const s = StyleSheet.create({
     fontSize: 11,
     fontWeight: '800',
     color: '#1a1a2e',
-    width: 28,
+    width: 46,
   },
   previewType: {
     fontSize: 10,
