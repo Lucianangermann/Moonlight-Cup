@@ -97,6 +97,7 @@ export default function RundeScreen() {
     const date = new Date().toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
     return `<!DOCTYPE html><html><head><meta charset="utf-8">
       <style>@page{margin:20mm} body{font-family:sans-serif;color:#1a1a2e;margin:0}</style>
+      <script>window.onload=function(){window.focus();setTimeout(function(){window.print();},300);}<\/script>
     </head><body>
       <div style="text-align:center;margin-bottom:24px">
         <div style="font-size:26px;font-weight:800;letter-spacing:3px">☽ MOONLIGHT CUP</div>
@@ -114,12 +115,15 @@ export default function RundeScreen() {
     startNewRound();
   };
 
-  // Auto-print both Durchgänge when a new round starts
+  // Wenn eine neue Runde startet: Timer starten + automatisch drucken
   useEffect(() => {
     if (currentRound > prevRoundRef.current) {
       prevRoundRef.current = currentRound;
       const newRound = rounds.find((r) => r.id === currentRound);
-      if (newRound) doPrintBoth(newRound);
+      if (newRound) {
+        triggerAutoTimer(1, currentRound === 1); // Timer sofort starten, unabhängig vom Druck
+        doPrintBoth(newRound);
+      }
     }
   }, [currentRound, rounds]);
 
@@ -169,24 +173,24 @@ export default function RundeScreen() {
     .pg{page-break-after:always;break-after:page;padding-bottom:20px}
   `;
 
+  // Auto-print script: druckt automatisch, aber schließt das Tab NICHT (window.close würde
+  // auf iOS Safari das App-Fenster wegnavigieren)
+  const AUTO_PRINT = `window.onload=function(){window.focus();setTimeout(function(){window.print();},300);}`;
+
   const buildPageHtml = (r, dg) =>
-    `<!DOCTYPE html><html><head><meta charset="utf-8"><style>${PRINT_CSS}</style></head><body>` +
+    `<!DOCTYPE html><html><head><meta charset="utf-8"><style>${PRINT_CSS}</style>` +
+    `<script>${AUTO_PRINT}<\/script></head><body>` +
     buildPageContent(r, dg) +
     `</body></html>`;
 
-  // Print via hidden iframe — avoids iOS Safari navigation issues with blob URLs
+  // Blob URL in neuem Tab — kein window.close(), Tab bleibt offen und wird manuell geschlossen
   const openPrintTab = (html) => {
-    if (typeof document === 'undefined') return;
-    const iframe = document.createElement('iframe');
-    iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;border:none';
-    document.body.appendChild(iframe);
-    iframe.srcdoc = html;
-    iframe.onload = () => {
-      setTimeout(() => {
-        try { iframe.contentWindow.focus(); iframe.contentWindow.print(); } catch (_) {}
-        setTimeout(() => { if (iframe.parentNode) iframe.parentNode.removeChild(iframe); }, 3000);
-      }, 150);
-    };
+    if (typeof window === 'undefined') return;
+    const blob = new Blob([html], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const win = window.open(url, '_blank');
+    if (win) win.addEventListener('load', () => URL.revokeObjectURL(url), { once: true });
+    else URL.revokeObjectURL(url); // Popup blockiert — URL aufräumen
   };
 
   const doPrintBoth = (r) => {
@@ -197,7 +201,6 @@ export default function RundeScreen() {
       buildPageContent(r, 2) +
       `</body></html>`;
     openPrintTab(html);
-    triggerAutoTimer(1, currentRound === 1);
     setPrintPreview(null);
     setPreviewDg(null);
   };
@@ -205,7 +208,6 @@ export default function RundeScreen() {
   const doPrint = () => {
     openPrintTab(buildPageHtml(printPreview, previewDg));
     if (previewDg === 1) {
-      triggerAutoTimer(1, currentRound === 1);
       setPreviewDg(2);
     } else {
       setPreviewDg(null);
