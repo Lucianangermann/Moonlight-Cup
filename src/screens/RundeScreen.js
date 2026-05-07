@@ -97,7 +97,7 @@ export default function RundeScreen() {
     const date = new Date().toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
     return `<!DOCTYPE html><html><head><meta charset="utf-8">
       <style>@page{margin:20mm} body{font-family:sans-serif;color:#1a1a2e;margin:0}</style>
-      <script>window.onload = function() { window.focus(); window.print(); window.onafterprint = function() { window.close(); }; }<\/script>
+      <script>window.onload = function() { window.focus(); setTimeout(function(){ window.print(); }, 250); window.onafterprint = function() { window.close(); }; }<\/script>
     </head><body>
       <div style="text-align:center;margin-bottom:24px">
         <div style="font-size:26px;font-weight:800;letter-spacing:3px">☽ MOONLIGHT CUP</div>
@@ -149,8 +149,8 @@ export default function RundeScreen() {
         <td style="padding:9px 12px;font-size:14px;font-weight:700">${m.teamB.map(getName).join(' &amp; ')}</td>
       </tr>`).join('');
     return `<!DOCTYPE html><html><head><meta charset="utf-8">
-      <style>@page{size:A4 landscape;margin:15mm} body{font-family:Arial,sans-serif;padding:28px 32px;color:#222;margin:0}</style>
-      <script>window.onload = function() { window.focus(); window.print(); window.onafterprint = function() { window.close(); }; }<\/script>
+      <style>@page{size:297mm 210mm;margin:15mm} body{font-family:Arial,sans-serif;padding:28px 32px;color:#222;margin:0}</style>
+      <script>window.onload = function() { window.focus(); setTimeout(function(){ window.print(); }, 250); window.onafterprint = function() { window.close(); }; }<\/script>
     </head><body>
       <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:6px">
         <div>
@@ -188,8 +188,8 @@ export default function RundeScreen() {
     const d2 = buildPageHtml(r, 2).replace(/<script[\s\S]*?<\/script>/gi, '');
     const stripWrap = (s) => s.replace(/<!DOCTYPE html>|<\/?html[^>]*>|<head[\s\S]*?<\/head>|<\/?body[^>]*>/gi, '');
     const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
-      <style>@page{size:A4 landscape;margin:15mm} body{font-family:Arial,sans-serif;padding:28px 32px;color:#222;margin:0} .pg{page-break-after:always;break-after:page}</style>
-      <script>window.onload = function() { window.focus(); window.print(); window.onafterprint = function() { window.close(); }; }<\/script>
+      <style>@page{size:297mm 210mm;margin:15mm} body{font-family:Arial,sans-serif;padding:28px 32px;color:#222;margin:0} .pg{page-break-after:always;break-after:page}</style>
+      <script>window.onload = function() { window.focus(); setTimeout(function(){ window.print(); }, 250); window.onafterprint = function() { window.close(); }; }<\/script>
     </head><body>
       <div class="pg">${stripWrap(d1)}</div>
       <div>${stripWrap(d2)}</div>
