@@ -1,7 +1,6 @@
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Modal } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
-import * as Print from 'expo-print';
 import { colors } from '../theme/colors';
 import { shared, cardShadow } from '../theme/styles';
 import { useTournament } from '../store/tournament';
@@ -110,6 +109,7 @@ const buildPrintHtml = (groups, groupSize) => {
     .subtitle { font-size: 11px; color: #888; margin-bottom: 16px; letter-spacing: 1px; }
     .cols { display: flex; gap: 12px; align-items: flex-start; }
   </style>
+  <script>window.onload=function(){window.focus();setTimeout(function(){window.print();window.onafterprint=function(){window.close();};},250);}<\/script>
 </head>
 <body>
   <h1>☽ MOONLIGHT CUP</h1>
@@ -119,52 +119,21 @@ const buildPrintHtml = (groups, groupSize) => {
 </html>`;
 };
 
-const CHUNK = 16; // max players per print page
-
 export default function RanglisteScreen() {
   const { getStandings } = useTournament();
   const [selected, setSelected] = useState(null);
-  const [printPreview, setPrintPreview] = useState(false);
-  const [pageIdx, setPageIdx] = useState(0); // index into printPages array
   const standings = getStandings();
 
   const groupSize = Math.ceil(standings.length / 3);
   const groups = GROUPS.map((g, i) => standings.slice(i * groupSize, (i + 1) * groupSize));
 
-  // Build flat list of print pages: each group split into chunks of CHUNK players
-  const printPages = [];
-  groups.forEach((players, gIdx) => {
-    for (let start = 0; start < players.length; start += CHUNK) {
-      const chunk = players.slice(start, start + CHUNK);
-      printPages.push({ group: GROUPS[gIdx], players: chunk, startRank: gIdx * groupSize + start + 1 });
-    }
-  });
-
-  const openPrintPreview = () => {
+  const doPrint = () => {
     if (standings.length === 0) return;
-    setPageIdx(0);
-    setPrintPreview(true);
-  };
-
-  const doPrintPage = async () => {
-    try {
-      await Print.printAsync({ html: buildPrintHtml(groups, groupSize) });
-      if (pageIdx < printPages.length - 1) {
-        setPageIdx(pageIdx + 1);
-      } else {
-        setPrintPreview(false);
-      }
-    } catch (_) {}
-  };
-
-  const closePrintPreview = () => setPrintPreview(false);
-
-  // Try printing the full HTML in one job — works if expo-print renders HTML
-  const doPrintAll = async () => {
-    try {
-      await Print.printAsync({ html: buildPrintHtml(groups, groupSize) });
-      setPrintPreview(false);
-    } catch (_) {}
+    const html = buildPrintHtml(groups, groupSize);
+    const blob = new Blob([html], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const win = window.open(url, '_blank');
+    if (win) win.addEventListener('load', () => URL.revokeObjectURL(url), { once: true });
   };
 
   const selectedPlayer = selected ? standings.find((p) => p.id === selected) : null;
@@ -179,7 +148,7 @@ export default function RanglisteScreen() {
       <View style={s.header}>
         <Text style={shared.screenTitle}>Rangliste</Text>
         <View style={s.headerRight}>
-          <TouchableOpacity style={s.printBtn} onPress={openPrintPreview} activeOpacity={0.75}>
+          <TouchableOpacity style={s.printBtn} onPress={doPrint} activeOpacity={0.75}>
             <Ionicons name="print-outline" size={15} color={colors.silver} />
             <Text style={s.printBtnText}>Drucken</Text>
           </TouchableOpacity>
@@ -332,77 +301,6 @@ export default function RanglisteScreen() {
           )}
         </>
       )}
-      {/* ── Druckvorschau Modal ── */}
-      <Modal visible={printPreview} animationType="slide" transparent={false}>
-        {printPreview && pageIdx < printPages.length && (() => {
-          const page = printPages[pageIdx];
-          const gc = GROUP_COLORS[page.group.key];
-          const isLast = pageIdx === printPages.length - 1;
-          return (
-            <View style={s.previewScreen}>
-              <View style={s.previewHeader}>
-                <View style={{ flex: 1 }}>
-                  <Text style={s.previewTitle}>☽ Rangliste drucken</Text>
-                  <Text style={s.previewSub}>
-                    Seite {pageIdx + 1}/{printPages.length} — {page.group.fullLabel}
-                    {' '}(Platz {page.startRank}–{page.startRank + page.players.length - 1})
-                  </Text>
-                </View>
-                <TouchableOpacity onPress={closePrintPreview} activeOpacity={0.7}>
-                  <Ionicons name="close-circle" size={26} color="#999" />
-                </TouchableOpacity>
-              </View>
-
-              {/* Alle-drucken Button — versucht vollständiges HTML-Rendering */}
-              <TouchableOpacity style={s.previewBtnAll} onPress={doPrintAll} activeOpacity={0.8}>
-                <Ionicons name="print-outline" size={14} color="#1a1a2e" />
-                <Text style={s.previewBtnAllText}>Alle {printPages.length} Seiten auf einmal drucken</Text>
-              </TouchableOpacity>
-
-              <View style={[s.previewGrpHeader, { backgroundColor: gc.header }]}>
-                <Text style={s.previewGrpLabel}>{page.group.fullLabel.toUpperCase()}</Text>
-                <Text style={s.previewGrpSub}>
-                  Platz {page.startRank}–{page.startRank + page.players.length - 1}
-                </Text>
-              </View>
-
-              {/* Spieler — kein ScrollView, alles sichtbar für Screen-Capture */}
-              <View style={{ flex: 1 }}>
-                {page.players.map((p, i) => {
-                  const parts = p.name.split(',');
-                  const name = parts.length > 1 ? `${parts[1].trim()} ${parts[0].trim()}` : p.name.trim();
-                  return (
-                    <View key={p.id} style={[s.previewRow, i % 2 === 0 && s.previewRowAlt]}>
-                      <Text style={s.previewRank}>{page.startRank + i}</Text>
-                      <Text style={s.previewName} numberOfLines={1}>{name}</Text>
-                      {p.league ? <Text style={s.previewLeague}>{p.league}</Text> : null}
-                      <Text style={s.previewStats}>{p.wins}S · {p.games}Sp</Text>
-                      <Text style={[s.previewDiff, { color: p.diff >= 0 ? '#2e7d32' : '#c62828' }]}>
-                        {p.diff > 0 ? '+' : ''}{p.diff}
-                      </Text>
-                    </View>
-                  );
-                })}
-              </View>
-
-              <View style={s.previewActions}>
-                {pageIdx > 0 && (
-                  <TouchableOpacity style={s.previewBtnBack} onPress={() => setPageIdx(pageIdx - 1)} activeOpacity={0.8}>
-                    <Ionicons name="arrow-back" size={15} color="#555" />
-                    <Text style={s.previewBtnBackText}>Zurück</Text>
-                  </TouchableOpacity>
-                )}
-                <TouchableOpacity style={[s.previewBtnPrint, { flex: 2 }]} onPress={doPrintPage} activeOpacity={0.8}>
-                  <Ionicons name="print-outline" size={15} color="#fff" />
-                  <Text style={s.previewBtnPrintText}>
-                    Drucken{isLast ? '' : ' →'}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          );
-        })()}
-      </Modal>
     </View>
   );
 }
@@ -643,26 +541,4 @@ const s = StyleSheet.create({
     letterSpacing: 0.5,
   },
 
-  // Print preview
-  previewScreen: { flex: 1, backgroundColor: '#fff', paddingTop: 56, paddingHorizontal: 16, paddingBottom: 16 },
-  previewHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 14 },
-  previewTitle: { fontSize: 18, fontWeight: '800', color: '#111' },
-  previewSub: { fontSize: 12, color: '#666', marginTop: 2 },
-  previewGrpHeader: { padding: 12, borderRadius: 8, marginBottom: 8 },
-  previewGrpLabel: { color: '#fff', fontSize: 14, fontWeight: '800', letterSpacing: 1 },
-  previewGrpSub: { color: '#ffffffaa', fontSize: 11, marginTop: 2 },
-  previewRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, paddingHorizontal: 6, gap: 6 },
-  previewRowAlt: { backgroundColor: '#f5f5f5' },
-  previewRank: { width: 26, fontSize: 12, fontWeight: '700', color: '#555', textAlign: 'center' },
-  previewName: { flex: 1, fontSize: 13, fontWeight: '700', color: '#111' },
-  previewLeague: { fontSize: 10, fontWeight: '700', color: '#888' },
-  previewStats: { fontSize: 11, color: '#555', fontWeight: '600' },
-  previewDiff: { fontSize: 11, fontWeight: '700', width: 36, textAlign: 'right' },
-  previewActions: { flexDirection: 'row', gap: 10, marginTop: 12 },
-  previewBtnPrint: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#1a1a2e', borderRadius: 12, paddingVertical: 14 },
-  previewBtnPrintText: { color: '#fff', fontSize: 14, fontWeight: '800' },
-  previewBtnBack: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#f0f0f0', borderRadius: 12, paddingVertical: 14, paddingHorizontal: 16 },
-  previewBtnBackText: { color: '#333', fontSize: 13, fontWeight: '700' },
-  previewBtnAll: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#e8f0fe', borderRadius: 10, borderWidth: 1, borderColor: '#1a1a2e40', paddingVertical: 10, marginBottom: 12 },
-  previewBtnAllText: { color: '#1a1a2e', fontSize: 13, fontWeight: '800' },
 });
