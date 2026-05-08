@@ -1,6 +1,26 @@
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Modal, Share } from 'react-native';
 import { useState, useEffect, useRef } from 'react';
 import { Ionicons } from '@expo/vector-icons';
+import Svg, { Circle, Line, Path, Ellipse } from 'react-native-svg';
+
+function ShuttlecockIcon({ size = 40, color = '#F0C040' }) {
+  const s = size;
+  return (
+    <Svg width={s} height={s} viewBox="0 0 40 40">
+      {/* Cork base */}
+      <Ellipse cx="20" cy="30" rx="5" ry="4" fill={color} opacity="0.95" />
+      {/* Feather strands */}
+      <Line x1="20" y1="27" x2="10" y2="6"  stroke={color} strokeWidth="1.5" strokeLinecap="round" opacity="0.85" />
+      <Line x1="20" y1="27" x2="14" y2="4"  stroke={color} strokeWidth="1.5" strokeLinecap="round" opacity="0.85" />
+      <Line x1="20" y1="27" x2="20" y2="4"  stroke={color} strokeWidth="1.5" strokeLinecap="round" opacity="0.85" />
+      <Line x1="20" y1="27" x2="26" y2="4"  stroke={color} strokeWidth="1.5" strokeLinecap="round" opacity="0.85" />
+      <Line x1="20" y1="27" x2="30" y2="6"  stroke={color} strokeWidth="1.5" strokeLinecap="round" opacity="0.85" />
+      {/* Feather crown (connecting arc at top) */}
+      <Path d="M10 6 Q14 10 20 10 Q26 10 30 6" stroke={color} strokeWidth="1.3" fill="none" strokeLinecap="round" opacity="0.7" />
+      <Path d="M10 6 Q14 13 20 13 Q26 13 30 6" stroke={color} strokeWidth="1" fill="none" strokeLinecap="round" opacity="0.45" />
+    </Svg>
+  );
+}
 import { colors } from '../theme/colors';
 import { shared, cardShadow } from '../theme/styles';
 import { useTournament } from '../store/tournament';
@@ -690,7 +710,7 @@ export default function RundeScreen() {
       ) : (
         <View style={s.emptyState}>
           <View style={s.emptyIcon}>
-            <Ionicons name="tennisball-outline" size={40} color={colors.gold} />
+            <ShuttlecockIcon size={44} color={colors.gold} />
           </View>
           <Text style={s.emptyTitle}>Noch keine Runde</Text>
           <Text style={s.emptyHint}>Tippe unten auf "Neue Runde starten" um die Auslosung zu beginnen.</Text>
