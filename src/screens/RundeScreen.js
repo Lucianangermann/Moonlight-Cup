@@ -601,7 +601,7 @@ export default function RundeScreen() {
               <Ionicons name="create-outline" size={12} color={colors.silver} />
               <Text style={s.editRoundBtnText}>Bearbeiten</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={s.editRoundBtn} onPress={() => printHtml(buildPageContent(round, 1))} activeOpacity={0.75}>
+            <TouchableOpacity style={s.editRoundBtn} onPress={() => doPrintBoth(round)} activeOpacity={0.75}>
               <Ionicons name="print-outline" size={12} color={colors.silver} />
               <Text style={s.editRoundBtnText}>Drucken</Text>
             </TouchableOpacity>
