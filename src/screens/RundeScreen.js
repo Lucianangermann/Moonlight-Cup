@@ -203,7 +203,7 @@ export default function RundeScreen() {
       '#root{display:none!important}' +
       '#mc-print{display:block!important;padding:20px 28px;font-family:Arial,sans-serif;color:#222;box-sizing:border-box}' +
       '.pg{page-break-after:always;break-after:page;padding-bottom:20px}' +
-      '@page{margin:15mm}' +
+      '@page{margin:15mm;size:landscape}' +
       '}';
     document.head.appendChild(style);
     window.print();
