@@ -3,21 +3,27 @@ import { useState, useEffect, useRef } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Circle, Line, Path, Ellipse } from 'react-native-svg';
 
-function ShuttlecockIcon({ size = 40, color = '#F0C040' }) {
-  const s = size;
+function BadmintonRacketIcon({ size = 40, color = '#F0C040' }) {
   return (
-    <Svg width={s} height={s} viewBox="0 0 40 40">
-      {/* Cork base */}
-      <Ellipse cx="20" cy="30" rx="5" ry="4" fill={color} opacity="0.95" />
-      {/* Feather strands */}
-      <Line x1="20" y1="27" x2="10" y2="6"  stroke={color} strokeWidth="1.5" strokeLinecap="round" opacity="0.85" />
-      <Line x1="20" y1="27" x2="14" y2="4"  stroke={color} strokeWidth="1.5" strokeLinecap="round" opacity="0.85" />
-      <Line x1="20" y1="27" x2="20" y2="4"  stroke={color} strokeWidth="1.5" strokeLinecap="round" opacity="0.85" />
-      <Line x1="20" y1="27" x2="26" y2="4"  stroke={color} strokeWidth="1.5" strokeLinecap="round" opacity="0.85" />
-      <Line x1="20" y1="27" x2="30" y2="6"  stroke={color} strokeWidth="1.5" strokeLinecap="round" opacity="0.85" />
-      {/* Feather crown (connecting arc at top) */}
-      <Path d="M10 6 Q14 10 20 10 Q26 10 30 6" stroke={color} strokeWidth="1.3" fill="none" strokeLinecap="round" opacity="0.7" />
-      <Path d="M10 6 Q14 13 20 13 Q26 13 30 6" stroke={color} strokeWidth="1" fill="none" strokeLinecap="round" opacity="0.45" />
+    <Svg width={size} height={size} viewBox="0 0 40 40">
+      {/* Head outline */}
+      <Ellipse cx="20" cy="14" rx="10" ry="12" stroke={color} strokeWidth="1.8" fill="none" />
+      {/* String grid — vertical */}
+      <Line x1="16" y1="2.5"  x2="16" y2="25.5" stroke={color} strokeWidth="0.8" opacity="0.55" />
+      <Line x1="20" y1="2"    x2="20" y2="26"   stroke={color} strokeWidth="0.8" opacity="0.55" />
+      <Line x1="24" y1="2.5"  x2="24" y2="25.5" stroke={color} strokeWidth="0.8" opacity="0.55" />
+      {/* String grid — horizontal */}
+      <Line x1="10.2" y1="8"  x2="29.8" y2="8"  stroke={color} strokeWidth="0.8" opacity="0.55" />
+      <Line x1="10"   y1="12" x2="30"   y2="12" stroke={color} strokeWidth="0.8" opacity="0.55" />
+      <Line x1="10"   y1="16" x2="30"   y2="16" stroke={color} strokeWidth="0.8" opacity="0.55" />
+      <Line x1="10.5" y1="20" x2="29.5" y2="20" stroke={color} strokeWidth="0.8" opacity="0.55" />
+      {/* Throat */}
+      <Path d="M16 26 L18 30 L22 30 L24 26" stroke={color} strokeWidth="1.6" fill="none" strokeLinejoin="round" />
+      {/* Shaft */}
+      <Line x1="18" y1="30" x2="17" y2="36" stroke={color} strokeWidth="1.8" strokeLinecap="round" />
+      <Line x1="22" y1="30" x2="23" y2="36" stroke={color} strokeWidth="1.8" strokeLinecap="round" />
+      {/* Grip */}
+      <Path d="M17 36 Q20 38.5 23 36" stroke={color} strokeWidth="2" fill="none" strokeLinecap="round" />
     </Svg>
   );
 }
@@ -710,7 +716,7 @@ export default function RundeScreen() {
       ) : (
         <View style={s.emptyState}>
           <View style={s.emptyIcon}>
-            <ShuttlecockIcon size={44} color={colors.gold} />
+            <BadmintonRacketIcon size={44} color={colors.gold} />
           </View>
           <Text style={s.emptyTitle}>Noch keine Runde</Text>
           <Text style={s.emptyHint}>Tippe unten auf "Neue Runde starten" um die Auslosung zu beginnen.</Text>
