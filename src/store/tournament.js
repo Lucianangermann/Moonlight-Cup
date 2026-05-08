@@ -528,6 +528,13 @@ export function TournamentProvider({ children }) {
     return r.matches.every((m) => m.done);
   };
 
+  const resetTournament = () => {
+    setRounds([]);
+    setCurrentRound(0);
+    setStatAdjustments({});
+    setPausedParticipants([]);
+  };
+
   // Persist core tournament state to localStorage on every change
   useEffect(() => {
     try {
@@ -552,7 +559,7 @@ export function TournamentProvider({ children }) {
         rounds, currentRound, saveResult, startNewRound, startFinalRunde,
         getStandings, getCurrentRoundData, allMatchesDone,
         advanceDurchgang, currentDurchgangDone,
-        deleteCurrentRound, deleteRound, swapMatchPlayers,
+        deleteCurrentRound, deleteRound, swapMatchPlayers, resetTournament,
       }}
     >
       {children}

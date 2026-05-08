@@ -42,9 +42,10 @@ export default function RundeScreen() {
     getCurrentRoundData, currentRound, rounds, allMatchesDone, startNewRound, startFinalRunde,
     participants, advanceDurchgang, currentDurchgangDone,
     deleteCurrentRound, deleteRound, swapMatchPlayers,
-    triggerAutoTimer, getStandings,
+    triggerAutoTimer, getStandings, resetTournament,
   } = useTournament();
   const [showConfirm, setShowConfirm] = useState(false);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [showFinalConfirm, setShowFinalConfirm] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState(null);
@@ -870,6 +871,46 @@ export default function RundeScreen() {
         </TouchableOpacity>
       )}
 
+      {/* Turnier neu starten */}
+      {currentRound > 0 && (
+        <TouchableOpacity style={s.resetBtn} onPress={() => setShowResetConfirm(true)} activeOpacity={0.8}>
+          <View style={s.btnInner}>
+            <Ionicons name="refresh-outline" size={14} color={colors.error} style={{ marginRight: 8 }} />
+            <Text style={s.resetBtnText}>TURNIER NEU STARTEN</Text>
+          </View>
+        </TouchableOpacity>
+      )}
+
+      {/* Bestätigung Turnier-Reset */}
+      <Modal visible={showResetConfirm} transparent animationType="fade">
+        <View style={s.modalOverlay}>
+          <View style={s.modalCard}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+              <Ionicons name="refresh-outline" size={20} color={colors.error} />
+              <Text style={s.modalTitle}>Turnier neu starten?</Text>
+            </View>
+            <Text style={s.modalBody}>
+              Alle Runden und Ergebnisse werden unwiderruflich gelöscht.{'\n'}
+              Die Rangliste wird zurückgesetzt.{'\n\n'}
+              Die Teilnehmerliste bleibt erhalten.
+            </Text>
+            <View style={s.modalButtons}>
+              <TouchableOpacity style={s.modalBtnCancel} onPress={() => setShowResetConfirm(false)} activeOpacity={0.8}>
+                <Text style={s.modalBtnCancelText}>Abbrechen</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={s.modalBtnRed}
+                onPress={() => { setShowResetConfirm(false); resetTournament(); }}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="refresh" size={13} color={colors.white} style={{ marginRight: 5 }} />
+                <Text style={s.modalBtnRedText}>Neu starten</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       {/* Bestätigung Finale */}
       <Modal visible={showFinalConfirm} transparent animationType="fade">
         <View style={s.modalOverlay}>
@@ -975,6 +1016,22 @@ const s = StyleSheet.create({
   },
   finalBtnText: {
     color: colors.gold,
+    fontSize: 14,
+    fontWeight: '800',
+    letterSpacing: 1,
+  },
+  resetBtn: {
+    marginTop: 10,
+    backgroundColor: 'rgba(220,50,50,0.08)',
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(220,50,50,0.25)',
+    alignItems: 'center',
+  },
+  resetBtnText: {
+    color: colors.error,
     fontSize: 14,
     fontWeight: '800',
     letterSpacing: 1,
