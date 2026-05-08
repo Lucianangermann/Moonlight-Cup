@@ -43,6 +43,8 @@ export function TournamentProvider({ children }) {
   // { durchgang: 1|2, at: number } — signal for TimerScreen to auto-start
   const [autoTimerTrigger, setAutoTimerTrigger] = useState(null);
   const triggerAutoTimer = (durchgang, isFirstRound = false) => setAutoTimerTrigger({ durchgang, isFirstRound, at: Date.now() });
+  // timestamp — signal for TimerScreen to reset to idle
+  const [timerResetTrigger, setTimerResetTrigger] = useState(null);
 
   const [participants, setParticipants] = useState(() => saved?.participants ?? [
     { id: '1',  name: 'Müller, Max',          gender: 'M', league: 'FZ'  },
@@ -533,6 +535,7 @@ export function TournamentProvider({ children }) {
     setCurrentRound(0);
     setStatAdjustments({});
     setPausedParticipants([]);
+    setTimerResetTrigger(Date.now());
   };
 
   // Persist core tournament state to localStorage on every change
@@ -555,7 +558,7 @@ export function TournamentProvider({ children }) {
         addParticipant, removeParticipant, updateParticipant,
         pauseParticipant, resumeParticipant,
         statAdjustments, setStatAdjustment,
-        autoTimerTrigger, triggerAutoTimer,
+        autoTimerTrigger, triggerAutoTimer, timerResetTrigger,
         rounds, currentRound, saveResult, startNewRound, startFinalRunde,
         getStandings, getCurrentRoundData, allMatchesDone,
         advanceDurchgang, currentDurchgangDone,

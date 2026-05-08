@@ -15,7 +15,7 @@ const DEFAULT_SECONDS = 20 * 60;
 const WARNING_SECONDS = 60; // letzte Minute
 
 export default function TimerScreen() {
-  const { autoTimerTrigger } = useTournament();
+  const { autoTimerTrigger, timerResetTrigger } = useTournament();
   const [phase, setPhaseState] = useState('idle');
   const [timerDurchgang, setTimerDurchgang] = useState(null);
   const [secondsLeft, setSecondsLeft] = useState(DEFAULT_SECONDS);
@@ -67,6 +67,21 @@ export default function TimerScreen() {
     setRunning(true);
     // Keine Musik während Vorbereitung
   }, [autoTimerTrigger]);
+
+  // Reset timer to idle when tournament is reset
+  useEffect(() => {
+    if (!timerResetTrigger) return;
+    clearInterval(intervalRef.current);
+    setRunning(false);
+    setPhase('idle');
+    setTimerDurchgang(null);
+    setSecondsLeft(DEFAULT_SECONDS);
+    setWarned(false);
+    setPhaseComplete(null);
+    speedRef.current = 1;
+    setSpeed(1);
+    sp(spotifyPause);
+  }, [timerResetTrigger]);
 
   // Phase transitions + Spotify
   useEffect(() => {
