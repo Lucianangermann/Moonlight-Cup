@@ -54,18 +54,26 @@ export default function TimerScreen() {
   useEffect(() => {
     if (!autoTimerTrigger) return;
     const warmup = autoTimerTrigger.isFirstRound ? FIRST_ROUND_WARMUP_SECONDS : WARMUP_SECONDS;
+    const isDurchgang2 = autoTimerTrigger.durchgang === 2;
     setRunning(false);
     clearInterval(intervalRef.current);
-    setPhase('prep'); // 1 Min. Blätter anschauen, bevor Einspielen beginnt
     setTimerDurchgang(autoTimerTrigger.durchgang);
     setWarmupSeconds(warmup);
-    setSecondsLeft(PREP_SECONDS);
     setWarned(false);
     setPhaseComplete(null);
     speedRef.current = 1;
     setSpeed(1);
+    if (isDurchgang2) {
+      // Auslosung bereits gedruckt — direkt Einspielzeit starten
+      setPhase('warmup');
+      setSecondsLeft(warmup);
+      sp(spotifyPlay);
+    } else {
+      setPhase('prep'); // 1 Min. Blätter anschauen, bevor Einspielen beginnt
+      setSecondsLeft(PREP_SECONDS);
+      // Keine Musik während Vorbereitung
+    }
     setRunning(true);
-    // Keine Musik während Vorbereitung
   }, [autoTimerTrigger]);
 
   // Reset timer to idle when tournament is reset
