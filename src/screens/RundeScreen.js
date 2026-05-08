@@ -139,11 +139,15 @@ export default function RundeScreen() {
 
   // Wenn eine neue Runde startet: Timer starten + automatisch drucken
   useEffect(() => {
+    if (currentRound === 0) {
+      prevRoundRef.current = 0;
+      return;
+    }
     if (currentRound > prevRoundRef.current) {
       prevRoundRef.current = currentRound;
       const newRound = rounds.find((r) => r.id === currentRound);
       if (newRound) {
-        triggerAutoTimer(1, currentRound === 1); // Timer sofort starten, unabhängig vom Druck
+        triggerAutoTimer(1, currentRound === 1);
         doPrintBoth(newRound);
       }
     }
