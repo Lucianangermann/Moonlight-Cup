@@ -172,12 +172,10 @@ export default function RundeScreen() {
         <td style="padding:6px 10px;font-size:13px;font-weight:700">${m.teamB.map(getName).join(' &amp; ')}</td>
       </tr>`).join('');
     return `
-      <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:5px">
-        <div>
-          <div style="font-size:18px;font-weight:800">☽ Moonlight Cup — Runde ${r.id}</div>
-          <div style="font-size:11px;color:#666;margin-top:1px">${r.isSchnellrunde ? 'Schnellrunde' : 'Normale Runde'}</div>
-        </div>
-        <div style="background:#1a1a2e;color:#fff;padding:5px 12px;border-radius:6px;font-size:12px;font-weight:800;letter-spacing:1px">DURCHGANG ${dg}</div>
+      <div style="overflow:hidden;margin-bottom:5px">
+        <div style="float:right;background:#1a1a2e;color:#fff;padding:5px 12px;border-radius:6px;font-size:12px;font-weight:800;letter-spacing:1px;margin-left:10px">DURCHGANG ${dg}</div>
+        <div style="font-size:18px;font-weight:800">☽ Moonlight Cup — Runde ${r.id}</div>
+        <div style="font-size:11px;color:#666;margin-top:2px">${r.isSchnellrunde ? 'Schnellrunde' : 'Normale Runde'}</div>
       </div>
       <hr style="border:none;border-top:2px solid #1a1a2e;margin:8px 0 12px"/>
       <table style="width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed">
@@ -210,7 +208,7 @@ export default function RundeScreen() {
       '@media print{' +
       '#root{display:none!important}' +
       '#mc-print{display:block!important;padding:14px 22px;font-family:Arial,sans-serif;color:#222;box-sizing:border-box}' +
-      '.pg{page-break-after:always;break-after:page}' +
+      '.pg{display:block;height:0;margin:0;padding:0;page-break-after:always;break-after:page}' +
       'thead{display:table-header-group}' +
       '@page{margin:10mm;size:landscape}' +
       '}';
@@ -222,7 +220,8 @@ export default function RundeScreen() {
 
   const doPrintBoth = (r) => {
     printHtml(
-      `<div class="pg">${buildPageContent(r, 1)}</div>` +
+      buildPageContent(r, 1) +
+      '<div class="pg"></div>' +
       buildPageContent(r, 2)
     );
     setPrintPreview(null);

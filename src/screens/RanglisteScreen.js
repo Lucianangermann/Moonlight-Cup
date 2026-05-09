@@ -85,9 +85,10 @@ const buildPrintContent = (standings, groupSize) => {
 
   const date = new Date().toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
-  return `<div style="font-family:sans-serif;color:#1a1a2e">
-  <div style="font-size:15px;font-weight:800;letter-spacing:3px;margin-bottom:2px">☽ MOONLIGHT CUP</div>
-  <div style="font-size:8px;color:#888;margin-bottom:8px;letter-spacing:1px">RANGLISTE · Badminton Turniermanager · ${date}</div>
+  return `<div style="font-family:Arial,sans-serif;color:#1a1a2e">
+  <div style="font-size:22px;font-weight:900;letter-spacing:2px;margin-bottom:3px">☽ MOONLIGHT CUP</div>
+  <div style="font-size:12px;color:#555;margin-bottom:10px;letter-spacing:1px">RANGLISTE · Badminton Turniermanager · ${date}</div>
+  <div style="border-top:2px solid #1a1a2e;margin-bottom:8px"></div>
   <table style="width:100%;border-collapse:collapse;font-size:9px">
     <thead>
       <tr style="background:#1a1a2e;color:#fff">
@@ -126,7 +127,7 @@ export default function RanglisteScreen() {
     const style = document.createElement('style');
     style.textContent =
       '@media screen{#mc-print{display:none}}' +
-      '@media print{#root{display:none!important}#mc-print{display:block!important}@page{margin:10mm}}';
+      '@media print{#root{display:none!important}#mc-print{display:block!important;padding:14px 20px;font-family:Arial,sans-serif;color:#222;box-sizing:border-box}thead{display:table-header-group}@page{margin:10mm}}';
     document.head.appendChild(style);
     window.print();
     if (div.parentNode) div.parentNode.removeChild(div);
