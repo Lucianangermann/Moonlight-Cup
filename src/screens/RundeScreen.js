@@ -193,29 +193,23 @@ export default function RundeScreen() {
       ${sitOut}`;
   };
 
-  // Druckt HTML-Inhalt über window.print() im aktuellen Fenster.
-  // Kein neuer Tab, keine Navigation — funktioniert sicher auf iOS Safari.
   const printHtml = (innerHtml) => {
-    if (typeof document === 'undefined') return;
-    const div = document.createElement('div');
-    div.id = 'mc-print';
-    div.innerHTML = innerHtml;
-    document.body.appendChild(div);
-    const style = document.createElement('style');
-    style.id = 'mc-print-style';
-    style.textContent =
-      '@media screen{#mc-print{display:none}}' +
-      '@media print{' +
-      '#root{display:none!important}' +
-      '#mc-print{display:block!important;padding:14px 22px;font-family:Arial,sans-serif;color:#222;box-sizing:border-box}' +
-      '.pg{display:block;height:0;margin:0;padding:0;page-break-after:always;break-after:page}' +
+    if (typeof window === 'undefined') return;
+    const css =
+      '*{box-sizing:border-box}' +
+      'body{margin:0;padding:14px 22px;font-family:Arial,sans-serif;color:#222}' +
+      '.pg{display:block;height:0;page-break-after:always;break-after:page}' +
       'thead{display:table-header-group}' +
-      '@page{margin:10mm;size:landscape}' +
-      '}';
-    document.head.appendChild(style);
-    window.print();
-    if (div.parentNode) div.parentNode.removeChild(div);
-    if (style.parentNode) style.parentNode.removeChild(style);
+      '@page{margin:10mm;size:A4 landscape}';
+    const w = window.open('', '_blank');
+    if (!w) return;
+    w.document.write(
+      '<!DOCTYPE html><html><head><meta charset="utf-8"><style>' + css + '</style></head>' +
+      '<body>' + innerHtml +
+      '<script>setTimeout(function(){window.print();window.addEventListener("afterprint",function(){window.close()})},200);<\/script>' +
+      '</body></html>'
+    );
+    w.document.close();
   };
 
   const doPrintBoth = (r) => {

@@ -118,20 +118,22 @@ export default function RanglisteScreen() {
   const groups = GROUPS.map((g, i) => standings.slice(i * groupSize, (i + 1) * groupSize));
 
   const doPrint = () => {
-    if (standings.length === 0 || typeof document === 'undefined') return;
+    if (standings.length === 0 || typeof window === 'undefined') return;
     const content = buildPrintContent(standings, groupSize);
-    const div = document.createElement('div');
-    div.id = 'mc-print';
-    div.innerHTML = content;
-    document.body.appendChild(div);
-    const style = document.createElement('style');
-    style.textContent =
-      '@media screen{#mc-print{display:none}}' +
-      '@media print{#root{display:none!important}#mc-print{display:block!important;padding:14px 20px;font-family:Arial,sans-serif;color:#222;box-sizing:border-box}thead{display:table-header-group}@page{margin:10mm}}';
-    document.head.appendChild(style);
-    window.print();
-    if (div.parentNode) div.parentNode.removeChild(div);
-    if (style.parentNode) style.parentNode.removeChild(style);
+    const css =
+      '*{box-sizing:border-box}' +
+      'body{margin:0;padding:14px 20px;font-family:Arial,sans-serif;color:#222}' +
+      'thead{display:table-header-group}' +
+      '@page{margin:10mm}';
+    const w = window.open('', '_blank');
+    if (!w) return;
+    w.document.write(
+      '<!DOCTYPE html><html><head><meta charset="utf-8"><style>' + css + '</style></head>' +
+      '<body>' + content +
+      '<script>setTimeout(function(){window.print();window.addEventListener("afterprint",function(){window.close()})},200);<\/script>' +
+      '</body></html>'
+    );
+    w.document.close();
   };
 
   const selectedPlayer = selected ? standings.find((p) => p.id === selected) : null;
