@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
-import { shared, cardShadow } from '../theme/styles';
+import { shared, cardShadow, fonts } from '../theme/styles';
 import { useTournament, LEAGUES } from '../store/tournament';
 
 export default function TeilnehmerScreen() {
@@ -531,14 +531,14 @@ const s = StyleSheet.create({
   },
   statValue: {
     color: colors.silver,
-    fontSize: 20,
-    fontWeight: '800',
+    fontSize: 22,
+    fontFamily: fonts.heading,
     letterSpacing: -0.5,
   },
   statLabel: {
     color: colors.textMuted,
     fontSize: 10,
-    fontWeight: '500',
+    fontFamily: fonts.body,
     letterSpacing: 0.5,
   },
   searchBox: {
@@ -591,7 +591,7 @@ const s = StyleSheet.create({
   },
   avatarText: {
     fontSize: 17,
-    fontWeight: '700',
+    fontFamily: fonts.heading,
   },
   cardBody: {
     flex: 1,
@@ -605,7 +605,7 @@ const s = StyleSheet.create({
   cardName: {
     color: colors.white,
     fontSize: 15,
-    fontWeight: '600',
+    fontFamily: fonts.bodySemi,
   },
   genderBadge: {
     borderRadius: 4,
@@ -639,7 +639,7 @@ const s = StyleSheet.create({
   sectionLabel: {
     color: colors.textDim,
     fontSize: 10,
-    fontWeight: '700',
+    fontFamily: fonts.headingSemi,
     letterSpacing: 1.5,
   },
   pausedActions: {

@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Vibration, TextInput, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Vibration, TextInput, ScrollView, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import Svg, { Circle, Defs, RadialGradient, Stop } from 'react-native-svg';
+import { useEntranceAnimation } from '../hooks/useEntranceAnimation';
 import { colors } from '../theme/colors';
 import { shared, goldGlowShadow, cardShadow } from '../theme/styles';
 import { useTournament } from '../store/tournament';
@@ -224,61 +226,94 @@ export default function TimerScreen() {
     : phase === 'game' ? '20 Min. Spielzeit'
     : 'Warte auf Rundenstart';
 
+  const entranceStyle = useEntranceAnimation();
+
+  const RING_SIZE = 240;
+  const RING_CENTER = RING_SIZE / 2;
+  const RING_RADIUS = 98;
+  const TRACK_RADIUS = 98;
+  const CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
+  const dashOffset = CIRCUMFERENCE * (1 - progress);
+
   return (
+    <Animated.View style={[{ flex: 1 }, entranceStyle]}>
     <ScrollView style={{ flex: 1 }} contentContainerStyle={[shared.screen, s.screen]} showsVerticalScrollIndicator={false}>
       <Text style={s.title}>Timer</Text>
 
       {/* Phase banner */}
       {phase !== 'idle' && (
-        <View style={[s.phaseBanner, { borderColor: phaseColor + '50', backgroundColor: phaseColor + '15' }]}>
+        <View style={[s.phaseBanner, { borderColor: phaseColor + '40', backgroundColor: phaseColor + '12' }]}>
           <Ionicons
             name={phase === 'prep' ? 'document-text-outline' : phase === 'warmup' ? 'fitness-outline' : 'tennisball-outline'}
-            size={14}
+            size={13}
             color={phaseColor}
           />
           <Text style={[s.phaseBannerText, { color: phaseColor }]}>
             {phaseLabel}{timerDurchgang ? ` — Durchgang ${timerDurchgang}` : ''}
           </Text>
           {isFinished && (
-            <View style={s.finishedBadge}>
+            <View style={[s.finishedBadge, { backgroundColor: colors.error }]}>
               <Text style={s.finishedBadgeText}>FERTIG</Text>
             </View>
           )}
         </View>
       )}
 
-      {/* Timer Ring */}
-      <View style={[s.ringOuter, { borderColor: ringColor }, isFinished && s.ringFinished]}>
+      {/* ── SVG Timer Ring ── */}
+      <View style={s.ringContainer}>
+        <Svg width={RING_SIZE} height={RING_SIZE} style={{ position: 'absolute' }}>
+          <Defs>
+            <RadialGradient id="timerGlow" cx="50%" cy="50%" r="50%">
+              <Stop offset="0%"   stopColor={phaseColor} stopOpacity={isFinished ? '0.2' : running ? '0.12' : '0.06'} />
+              <Stop offset="100%" stopColor={phaseColor} stopOpacity="0" />
+            </RadialGradient>
+          </Defs>
+          {/* Ambient glow */}
+          <Circle cx={RING_CENTER} cy={RING_CENTER} r={RING_RADIUS + 28} fill="url(#timerGlow)" />
+          {/* Background track */}
+          <Circle
+            cx={RING_CENTER} cy={RING_CENTER} r={TRACK_RADIUS}
+            stroke={phaseColor + '18'} strokeWidth={7} fill="none"
+          />
+          {/* Progress arc — counterclockwise from top */}
+          <Circle
+            cx={RING_CENTER} cy={RING_CENTER} r={RING_RADIUS}
+            stroke={phaseColor}
+            strokeWidth={7}
+            fill="none"
+            strokeLinecap="round"
+            strokeDasharray={`${CIRCUMFERENCE} ${CIRCUMFERENCE}`}
+            strokeDashoffset={dashOffset}
+            transform={`rotate(-90 ${RING_CENTER} ${RING_CENTER})`}
+            opacity={phase === 'idle' ? 0.25 : 1}
+          />
+        </Svg>
+
+        {/* Center content */}
         <View style={s.ringInner}>
-          <Text style={[s.timerText, { color: phaseColor }]}>
-            {mins}:{secs}
-          </Text>
+          <Text style={[s.timerText, { color: phaseColor }]}>{mins}:{secs}</Text>
           <Text style={[s.statusText, { color: running ? phaseColor : isFinished ? colors.error : colors.textMuted }]}>
             {isFinished ? 'ZEIT!' : running ? phaseLabel : phase === 'idle' ? 'BEREIT' : 'PAUSE'}
           </Text>
           {isWarning && !isFinished && (
-            <Text style={s.warningText}>1 Min. Rest</Text>
+            <Text style={s.warningText}>⚡ 1 Min. Rest</Text>
           )}
           {phase === 'prep' && !isFinished && (
-            <Text style={[s.phaseHintText, { color: colors.silver + 'AA' }]}>
-              Dann {warmupSeconds / 60} Min. Einspielen
+            <Text style={[s.phaseHintText, { color: colors.textMuted }]}>
+              dann {warmupSeconds / 60} Min. einspielen
             </Text>
           )}
           {phase === 'warmup' && !isFinished && (
-            <Text style={[s.phaseHintText, { color: colors.success + 'AA' }]}>
-              {warmupSeconds / 60} Min. → danach 20 Min.
+            <Text style={[s.phaseHintText, { color: colors.textMuted }]}>
+              danach 20 Min. Spielzeit
             </Text>
           )}
         </View>
       </View>
 
-      {/* Progress Bar */}
-      <View style={s.progressBar}>
-        <View style={[s.progressFill, { width: `${progressPct}%`, backgroundColor: phaseColor }]} />
-      </View>
       <Text style={s.progressLabel}>{phaseHint}  ·  {progressPct}%</Text>
 
-      {/* Controls */}
+      {/* ── Controls ── */}
       <View style={s.controls}>
         <TouchableOpacity
           style={[s.ctrlBtn, running && s.ctrlBtnActive]}
@@ -286,26 +321,26 @@ export default function TimerScreen() {
             if (phase === 'idle') setPhase('game');
             setRunning((r) => !r);
           }}
-          activeOpacity={0.75}
+          activeOpacity={0.8}
         >
-          <Ionicons name={running ? 'pause' : 'play'} size={24} color={running ? colors.bg : colors.gold} />
+          <Ionicons name={running ? 'pause' : 'play'} size={22} color={running ? colors.bg : colors.gold} />
           <Text style={[s.ctrlLabel, running && s.ctrlLabelActive]}>
             {running ? 'Pause' : 'Start'}
           </Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={s.ctrlBtn} onPress={reset} activeOpacity={0.75}>
-          <Ionicons name="refresh" size={22} color={colors.silver} />
+        <TouchableOpacity style={s.ctrlBtn} onPress={reset} activeOpacity={0.8}>
+          <Ionicons name="refresh" size={20} color={colors.silver} />
           <Text style={s.ctrlLabel}>Reset</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           style={[s.ctrlBtn, s.ctrlBtnStop]}
           onPress={() => { setRunning(false); sp(spotifyPause); setSecondsLeft(0); }}
-          activeOpacity={0.75}
+          activeOpacity={0.8}
         >
-          <Ionicons name="stop" size={22} color={colors.error} />
-          <Text style={[s.ctrlLabel, { color: colors.error + 'AA' }]}>Stop</Text>
+          <Ionicons name="stop" size={20} color={colors.error} />
+          <Text style={[s.ctrlLabel, { color: colors.error + 'BB' }]}>Stop</Text>
         </TouchableOpacity>
       </View>
 
@@ -412,6 +447,7 @@ export default function TimerScreen() {
 
       <View style={{ height: 24 }} />
     </ScrollView>
+    </Animated.View>
   );
 }
 
@@ -456,34 +492,31 @@ const s = StyleSheet.create({
     fontWeight: '800',
     letterSpacing: 1,
   },
-  ringOuter: {
-    width: 220,
-    height: 220,
-    borderRadius: 110,
-    borderWidth: 3,
-    backgroundColor: colors.panel,
+  ringContainer: {
+    width: 240,
+    height: 240,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 20,
-    ...goldGlowShadow,
-  },
-  ringFinished: {
-    borderColor: colors.error + '80',
+    marginBottom: 14,
   },
   ringInner: {
+    width: 240,
+    height: 240,
     alignItems: 'center',
     justifyContent: 'center',
+    position: 'absolute',
   },
   timerText: {
-    fontSize: 50,
-    fontWeight: '800',
-    letterSpacing: 2,
+    fontSize: 54,
+    fontFamily: 'BarlowCondensed_700Bold',
+    letterSpacing: 3,
   },
   statusText: {
-    fontSize: 13,
-    fontWeight: '700',
-    letterSpacing: 2,
-    marginTop: 4,
+    fontSize: 11,
+    fontFamily: 'BarlowCondensed_600SemiBold',
+    letterSpacing: 2.5,
+    marginTop: 2,
+    textTransform: 'uppercase',
   },
   warningText: {
     color: colors.warning,
@@ -493,29 +526,17 @@ const s = StyleSheet.create({
     letterSpacing: 0.5,
   },
   phaseHintText: {
-    fontSize: 11,
-    fontWeight: '500',
-    marginTop: 6,
+    fontSize: 10,
+    fontWeight: '400',
+    marginTop: 5,
     letterSpacing: 0.3,
-  },
-  progressBar: {
-    width: '80%',
-    height: 3,
-    backgroundColor: colors.border,
-    borderRadius: 2,
-    overflow: 'hidden',
-    marginBottom: 6,
-  },
-  progressFill: {
-    height: '100%',
-    borderRadius: 2,
   },
   progressLabel: {
     color: colors.textDim,
     fontSize: 10,
-    fontWeight: '600',
-    letterSpacing: 0.5,
-    marginBottom: 28,
+    fontFamily: 'BarlowCondensed_600SemiBold',
+    letterSpacing: 1,
+    marginBottom: 24,
   },
   controls: {
     flexDirection: 'row',

@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { useEntranceAnimation } from '../hooks/useEntranceAnimation';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
-import { shared, cardShadow } from '../theme/styles';
+import { shared, cardShadow, fonts } from '../theme/styles';
 import { useTournament } from '../store/tournament';
 
 const MEDAL_ICONS = ['trophy', 'medal', 'ribbon'];
@@ -476,7 +476,7 @@ const s = StyleSheet.create({
   liveText: {
     color: colors.error,
     fontSize: 11,
-    fontWeight: '800',
+    fontFamily: fonts.headingSemi,
     letterSpacing: 1,
   },
   emptyState: {
@@ -498,13 +498,14 @@ const s = StyleSheet.create({
   },
   emptyTitle: {
     color: colors.white,
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: 20,
+    fontFamily: fonts.heading,
     marginBottom: 8,
   },
   emptyHint: {
     color: colors.textMuted,
     fontSize: 13,
+    fontFamily: fonts.body,
     textAlign: 'center',
   },
 
@@ -528,14 +529,14 @@ const s = StyleSheet.create({
     marginBottom: 3,
   },
   colHeaderText: {
-    fontSize: 11,
-    fontWeight: '800',
+    fontSize: 12,
+    fontFamily: fonts.heading,
     letterSpacing: 0.5,
     flex: 1,
   },
   colRange: {
     fontSize: 9,
-    fontWeight: '600',
+    fontFamily: fonts.bodySemi,
     letterSpacing: 0.3,
     textAlign: 'center',
     marginBottom: 6,
@@ -586,19 +587,19 @@ const s = StyleSheet.create({
   colName: {
     color: colors.silver,
     fontSize: 11,
-    fontWeight: '600',
+    fontFamily: fonts.bodySemi,
     flexShrink: 1,
   },
   colLeague: {
     fontSize: 8,
-    fontWeight: '800',
+    fontFamily: fonts.headingSemi,
     letterSpacing: 0.3,
     flexShrink: 0,
   },
   colStats: {
     color: colors.textDim,
     fontSize: 8,
-    fontWeight: '600',
+    fontFamily: fonts.body,
     textAlign: 'right',
   },
   colStatsBox: {
@@ -606,8 +607,8 @@ const s = StyleSheet.create({
     alignItems: 'flex-end',
   },
   colPts: {
-    fontSize: 11,
-    fontWeight: '700',
+    fontSize: 12,
+    fontFamily: fonts.heading,
     textAlign: 'right',
   },
 
@@ -628,13 +629,14 @@ const s = StyleSheet.create({
     gap: 10,
   },
   detailName: {
-    fontSize: 14,
-    fontWeight: '700',
+    fontSize: 15,
+    fontFamily: fonts.heading,
     marginBottom: 2,
   },
   detailMeta: {
     color: colors.textMuted,
     fontSize: 11,
+    fontFamily: fonts.body,
   },
   detailStats: {
     flexDirection: 'row',

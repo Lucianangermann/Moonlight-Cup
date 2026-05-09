@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
-import { shared, cardShadow } from '../theme/styles';
+import { shared, cardShadow, fonts } from '../theme/styles';
 import { useTournament } from '../store/tournament';
 
 const TYPE_CONFIG = {
@@ -463,13 +463,13 @@ const s = StyleSheet.create({
   dgHeaderText: {
     color: colors.textMuted,
     fontSize: 11,
-    fontWeight: '800',
+    fontFamily: fonts.heading,
     letterSpacing: 1.5,
   },
   dgHeaderCount: {
     color: colors.textDim,
     fontSize: 11,
-    fontWeight: '600',
+    fontFamily: fonts.body,
   },
   cardTop: {
     flexDirection: 'row',
@@ -499,7 +499,7 @@ const s = StyleSheet.create({
   feldTagText: {
     color: colors.gold,
     fontSize: 10,
-    fontWeight: '800',
+    fontFamily: fonts.headingSemi,
     letterSpacing: 0.5,
   },
   durchgangTag: {
@@ -542,7 +542,7 @@ const s = StyleSheet.create({
     flex: 1,
     color: colors.silverDim,
     fontSize: 13,
-    fontWeight: '600',
+    fontFamily: fonts.bodySemi,
   },
   teamRight: {
     textAlign: 'right',
@@ -557,8 +557,8 @@ const s = StyleSheet.create({
   },
   scoreText: {
     color: colors.white,
-    fontSize: 16,
-    fontWeight: '800',
+    fontSize: 18,
+    fontFamily: fonts.heading,
     letterSpacing: 1,
   },
   editHintBox: {
@@ -589,13 +589,13 @@ const s = StyleSheet.create({
   previewTeam: {
     color: colors.gold,
     fontSize: 14,
-    fontWeight: '700',
+    fontFamily: fonts.bodySemi,
     textAlign: 'center',
   },
   previewVs: {
     color: colors.textDim,
     fontSize: 11,
-    fontWeight: '700',
+    fontFamily: fonts.headingSemi,
     letterSpacing: 1,
   },
   scoreRow: {

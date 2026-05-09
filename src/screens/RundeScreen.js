@@ -29,7 +29,7 @@ function BadmintonRacketIcon({ size = 40, color = '#F0C040' }) {
   );
 }
 import { colors } from '../theme/colors';
-import { shared, cardShadow } from '../theme/styles';
+import { shared, cardShadow, fonts } from '../theme/styles';
 import { useTournament } from '../store/tournament';
 
 const TYPE_CONFIG = {
@@ -681,6 +681,8 @@ export default function RundeScreen() {
               const cfg = TYPE_CONFIG[match.type] ?? TYPE_CONFIG.MF;
               return (
                 <View key={match.id} style={[s.matchCard, match.done && s.matchCardDone]}>
+                  {/* Top accent line — type color */}
+                  <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, backgroundColor: match.done ? colors.success : cfg.color, opacity: 0.7, borderTopLeftRadius: 14, borderTopRightRadius: 14 }} />
                   <View style={s.matchCardHeader}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                       <View style={[s.typePill, { borderColor: cfg.color + '60' }]}>
@@ -962,13 +964,14 @@ const s = StyleSheet.create({
   },
   logoText: {
     color: colors.silver,
-    fontSize: 15,
-    fontWeight: '800',
-    letterSpacing: 2,
+    fontSize: 16,
+    fontFamily: fonts.heading,
+    letterSpacing: 3,
   },
   logoSub: {
     color: colors.textMuted,
     fontSize: 11,
+    fontFamily: fonts.body,
     letterSpacing: 0.5,
     marginTop: 2,
   },
@@ -983,7 +986,7 @@ const s = StyleSheet.create({
   roundPillText: {
     color: colors.gold,
     fontSize: 11,
-    fontWeight: '800',
+    fontFamily: fonts.headingSemi,
     letterSpacing: 1.5,
   },
   finalPill: {
@@ -1164,15 +1167,16 @@ const s = StyleSheet.create({
   },
   matchCard: {
     backgroundColor: colors.panel,
-    borderRadius: 16,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: colors.border,
     padding: 14,
-    marginBottom: 10,
+    marginBottom: 8,
+    overflow: 'hidden',
     ...cardShadow,
   },
   matchCardDone: {
-    borderColor: colors.success + '30',
+    borderColor: colors.success + '35',
     backgroundColor: colors.panel,
   },
   matchCardHeader: {
@@ -1203,12 +1207,13 @@ const s = StyleSheet.create({
   doneText: {
     color: colors.success,
     fontSize: 11,
-    fontWeight: '600',
+    fontFamily: fonts.bodySemi,
   },
   pendingBadge: {},
   pendingText: {
     color: colors.textMuted,
     fontSize: 11,
+    fontFamily: fonts.body,
   },
   feldPill: {
     backgroundColor: colors.goldGlow,
@@ -1220,8 +1225,8 @@ const s = StyleSheet.create({
   },
   feldText: {
     color: colors.gold,
-    fontSize: 10,
-    fontWeight: '800',
+    fontSize: 11,
+    fontFamily: fonts.headingSemi,
     letterSpacing: 0.5,
   },
   teamsRow: {
@@ -1232,14 +1237,14 @@ const s = StyleSheet.create({
   teamA: {
     flex: 1,
     color: colors.white,
-    fontSize: 13,
-    fontWeight: '600',
+    fontSize: 14,
+    fontFamily: fonts.bodySemi,
   },
   teamB: {
     flex: 1,
     color: colors.white,
-    fontSize: 13,
-    fontWeight: '600',
+    fontSize: 14,
+    fontFamily: fonts.bodySemi,
     textAlign: 'right',
   },
   vsBox: {
@@ -1248,14 +1253,14 @@ const s = StyleSheet.create({
   },
   vsText: {
     color: colors.textDim,
-    fontSize: 11,
-    fontWeight: '700',
+    fontSize: 12,
+    fontFamily: fonts.headingSemi,
     letterSpacing: 1,
   },
   scoreText: {
     color: colors.gold,
-    fontSize: 16,
-    fontWeight: '800',
+    fontSize: 18,
+    fontFamily: fonts.heading,
     letterSpacing: 1,
   },
   emptyState: {
@@ -1277,13 +1282,14 @@ const s = StyleSheet.create({
   },
   emptyTitle: {
     color: colors.white,
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: 20,
+    fontFamily: fonts.heading,
     marginBottom: 8,
   },
   emptyHint: {
     color: colors.textMuted,
     fontSize: 13,
+    fontFamily: fonts.body,
     textAlign: 'center',
     lineHeight: 20,
     paddingHorizontal: 24,
