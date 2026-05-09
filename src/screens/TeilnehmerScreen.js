@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity, StyleSheet,
+  View, Text, ScrollView, TouchableOpacity, StyleSheet, Animated,
   Modal, TextInput, KeyboardAvoidingView, Platform, Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 import { shared, cardShadow, fonts } from '../theme/styles';
 import { useTournament, LEAGUES } from '../store/tournament';
+import AnimatedPressable from '../components/AnimatedPressable';
 
 export default function TeilnehmerScreen() {
   const {
@@ -135,16 +136,16 @@ export default function TeilnehmerScreen() {
       {/* Header */}
       <View style={s.header}>
         <Text style={shared.screenTitle}>Teilnehmer</Text>
-        <TouchableOpacity
+        <AnimatedPressable
           style={[s.addBtn, maxReached && s.addBtnDisabled]}
           onPress={() => !maxReached && setShowAdd(true)}
-          activeOpacity={0.7}
+          disabled={maxReached}
         >
           <Ionicons name="add" size={18} color={maxReached ? colors.textMuted : colors.gold} />
           <Text style={[s.addBtnText, maxReached && s.addBtnTextDisabled]}>
             {maxReached ? 'Max 99' : 'Neu'}
           </Text>
-        </TouchableOpacity>
+        </AnimatedPressable>
       </View>
 
       {/* Stats */}
@@ -196,11 +197,10 @@ export default function TeilnehmerScreen() {
           const isFemale = p.gender === 'F';
           const accentColor = isFemale ? '#E879A0' : colors.info;
           return (
-            <TouchableOpacity
+            <AnimatedPressable
               key={p.id}
               style={s.card}
               onPress={() => openEdit(p)}
-              activeOpacity={0.75}
             >
               <View style={[s.avatar, { backgroundColor: accentColor + '20', borderColor: accentColor + '40' }]}>
                 <Text style={[s.avatarText, { color: accentColor }]}>
@@ -220,7 +220,7 @@ export default function TeilnehmerScreen() {
                 <Text style={s.cardSub}>{getRank(p.id)}  ·  {getWins(p.id)} Siege</Text>
               </View>
               <Ionicons name="chevron-forward" size={16} color={colors.textDim} />
-            </TouchableOpacity>
+            </AnimatedPressable>
           );
         })}
 

@@ -1,4 +1,5 @@
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Modal, Share, Animated } from 'react-native';
+import AnimatedPressable from '../components/AnimatedPressable';
 import { useState, useEffect, useRef } from 'react';
 import { useEntranceAnimation } from '../hooks/useEntranceAnimation';
 import { Ionicons } from '@expo/vector-icons';
@@ -602,18 +603,18 @@ export default function RundeScreen() {
         </View>
         {currentRound > 0 && (
           <View style={s.headerBtnGroup}>
-            <TouchableOpacity style={s.editRoundBtn} onPress={() => setRoundsMenuOpen(true)} activeOpacity={0.75}>
+            <AnimatedPressable style={s.editRoundBtn} onPress={() => setRoundsMenuOpen(true)}>
               <Ionicons name="layers-outline" size={12} color={colors.silver} />
               <Text style={s.editRoundBtnText}>Runden</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={s.editRoundBtn} onPress={() => setEditOpen(true)} activeOpacity={0.75}>
+            </AnimatedPressable>
+            <AnimatedPressable style={s.editRoundBtn} onPress={() => setEditOpen(true)}>
               <Ionicons name="create-outline" size={12} color={colors.silver} />
               <Text style={s.editRoundBtnText}>Bearbeiten</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={s.editRoundBtn} onPress={() => doPrintBoth(round)} activeOpacity={0.75}>
+            </AnimatedPressable>
+            <AnimatedPressable style={s.editRoundBtn} onPress={() => doPrintBoth(round)}>
               <Ionicons name="print-outline" size={12} color={colors.silver} />
               <Text style={s.editRoundBtnText}>Drucken</Text>
-            </TouchableOpacity>
+            </AnimatedPressable>
           </View>
         )}
         <View style={{ flex: 1, flexDirection: 'row', gap: 8, alignItems: 'center', justifyContent: 'flex-end' }}>
@@ -838,11 +839,10 @@ export default function RundeScreen() {
         )}
       </Modal>
 
-      <TouchableOpacity
+      <AnimatedPressable
         style={[shared.goldBtn, !primaryEnabled && shared.disabledBtn]}
         onPress={handlePrimaryPress}
         disabled={!primaryEnabled}
-        activeOpacity={0.8}
       >
         <View style={s.btnInner}>
           <Ionicons
@@ -855,40 +855,39 @@ export default function RundeScreen() {
             {primaryLabel}
           </Text>
         </View>
-      </TouchableOpacity>
+      </AnimatedPressable>
 
       {/* Sieger drucken — sichtbar wenn Finale abgeschlossen */}
       {isFinalRunde && allDone && (
-        <TouchableOpacity style={s.siegerBtn} onPress={printSieger} activeOpacity={0.8}>
+        <AnimatedPressable style={s.siegerBtn} onPress={printSieger}>
           <View style={s.btnInner}>
             <Ionicons name="print-outline" size={14} color={colors.gold} style={{ marginRight: 8 }} />
             <Text style={s.finalBtnText}>SIEGER DRUCKEN</Text>
           </View>
-        </TouchableOpacity>
+        </AnimatedPressable>
       )}
 
       {/* Finale starten — nur sichtbar wenn mind. 1 Runde gespielt, nicht bereits in Finale und keine Schnellrunde aktiv */}
       {currentRound > 0 && !round?.isFinalRunde && !isSchnellrunde && (
-        <TouchableOpacity
+        <AnimatedPressable
           style={s.finalBtn}
           onPress={() => setShowFinalConfirm(true)}
-          activeOpacity={0.8}
         >
           <View style={s.btnInner}>
             <Ionicons name="trophy" size={14} color={colors.gold} style={{ marginRight: 8 }} />
             <Text style={s.finalBtnText}>FINALE AUSLOSUNG</Text>
           </View>
-        </TouchableOpacity>
+        </AnimatedPressable>
       )}
 
       {/* Turnier neu starten */}
       {currentRound > 0 && (
-        <TouchableOpacity style={s.resetBtn} onPress={() => setShowResetConfirm(true)} activeOpacity={0.8}>
+        <AnimatedPressable style={s.resetBtn} onPress={() => setShowResetConfirm(true)}>
           <View style={s.btnInner}>
             <Ionicons name="refresh-outline" size={14} color={colors.error} style={{ marginRight: 8 }} />
             <Text style={s.resetBtnText}>TURNIER NEU STARTEN</Text>
           </View>
-        </TouchableOpacity>
+        </AnimatedPressable>
       )}
 
       {/* Bestätigung Turnier-Reset */}

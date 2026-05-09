@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity, StyleSheet,
+  View, Text, ScrollView, TouchableOpacity, StyleSheet, Animated,
   Modal, TextInput, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 import { shared, cardShadow, fonts } from '../theme/styles';
 import { useTournament } from '../store/tournament';
+import AnimatedPressable from '../components/AnimatedPressable';
 
 const TYPE_CONFIG = {
   MM: { label: 'HERRENDOPPEL', color: colors.info },
@@ -95,11 +96,10 @@ export default function ErgebnisseScreen() {
     const aWins = match.done && match.winnerTeam === 'A';
     const bWins = match.done && match.winnerTeam === 'B';
     return (
-      <TouchableOpacity
+      <AnimatedPressable
         key={match.id}
         style={[s.matchCard, match.done && s.matchCardDone]}
         onPress={() => openEdit(match)}
-        activeOpacity={0.75}
       >
         <View style={s.cardTop}>
           <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
@@ -158,7 +158,7 @@ export default function ErgebnisseScreen() {
             {getTeam(match.teamB)}
           </Text>
         </View>
-      </TouchableOpacity>
+      </AnimatedPressable>
     );
   };
 
@@ -328,15 +328,15 @@ export default function ErgebnisseScreen() {
                 ) : null}
               </View>
             </View>
-            <TouchableOpacity
+            <AnimatedPressable
               style={[shared.saveBtn, !isFormValid && s.saveBtnDisabled]}
               onPress={handleSave}
-              activeOpacity={isFormValid ? 0.8 : 1}
+              disabled={!isFormValid}
             >
               <Text style={[shared.saveBtnText, !isFormValid && s.saveBtnTextDisabled]}>
                 SPEICHERN
               </Text>
-            </TouchableOpacity>
+            </AnimatedPressable>
             <TouchableOpacity onPress={() => setEditMatch(null)} activeOpacity={0.7}>
               <Text style={shared.cancelText}>Abbrechen</Text>
             </TouchableOpacity>

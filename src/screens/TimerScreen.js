@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Vibration, TextInput, ScrollView, Animated } from 'react-native';
+import AnimatedPressable from '../components/AnimatedPressable';
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Circle, Defs, RadialGradient, Stop } from 'react-native-svg';
 import { useEntranceAnimation } from '../hooks/useEntranceAnimation';
@@ -315,55 +316,53 @@ export default function TimerScreen() {
 
       {/* ── Controls ── */}
       <View style={s.controls}>
-        <TouchableOpacity
+        <AnimatedPressable
           style={[s.ctrlBtn, running && s.ctrlBtnActive]}
           onPress={() => {
             if (phase === 'idle') setPhase('game');
             setRunning((r) => !r);
           }}
-          activeOpacity={0.8}
         >
           <Ionicons name={running ? 'pause' : 'play'} size={22} color={running ? colors.bg : colors.gold} />
           <Text style={[s.ctrlLabel, running && s.ctrlLabelActive]}>
             {running ? 'Pause' : 'Start'}
           </Text>
-        </TouchableOpacity>
+        </AnimatedPressable>
 
-        <TouchableOpacity style={s.ctrlBtn} onPress={reset} activeOpacity={0.8}>
+        <AnimatedPressable style={s.ctrlBtn} onPress={reset}>
           <Ionicons name="refresh" size={20} color={colors.silver} />
           <Text style={s.ctrlLabel}>Reset</Text>
-        </TouchableOpacity>
+        </AnimatedPressable>
 
-        <TouchableOpacity
+        <AnimatedPressable
           style={[s.ctrlBtn, s.ctrlBtnStop]}
           onPress={() => { setRunning(false); sp(spotifyPause); setSecondsLeft(0); }}
-          activeOpacity={0.8}
         >
           <Ionicons name="stop" size={20} color={colors.error} />
           <Text style={[s.ctrlLabel, { color: colors.error + 'BB' }]}>Stop</Text>
-        </TouchableOpacity>
+        </AnimatedPressable>
       </View>
 
       {/* Skip button */}
       {phase !== 'idle' && !isFinished && (
-        <TouchableOpacity style={s.skipBtn} onPress={skipCurrent} activeOpacity={0.75}>
+        <AnimatedPressable style={s.skipBtn} onPress={skipCurrent}>
           <Ionicons name="play-skip-forward" size={15} color={colors.textMuted} />
           <Text style={s.skipBtnText}>
             {phase === 'prep' ? 'Vorbereitung überspringen → Einspielen starten'
               : phase === 'warmup' ? 'Einspielen überspringen → Spielzeit starten'
               : 'Spielzeit überspringen'}
           </Text>
-        </TouchableOpacity>
+        </AnimatedPressable>
       )}
 
       {/* Speed button */}
-      <TouchableOpacity style={s.speedBtn} onPress={cycleSpeed} activeOpacity={0.75}>
+      <AnimatedPressable style={s.speedBtn} onPress={cycleSpeed}>
         <Ionicons name="speedometer-outline" size={14} color={speed > 1 ? colors.warning : colors.textMuted} />
         <Text style={[s.speedBtnText, speed > 1 && { color: colors.warning }]}>
           {speed}×
         </Text>
         <Text style={s.speedBtnHint}>Geschwindigkeit</Text>
-      </TouchableOpacity>
+      </AnimatedPressable>
 
       <Text style={s.hint}>
         {phase === 'idle'

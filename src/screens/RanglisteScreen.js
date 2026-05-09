@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 import { shared, cardShadow, fonts } from '../theme/styles';
 import { useTournament } from '../store/tournament';
+import AnimatedPressable from '../components/AnimatedPressable';
 
 const MEDAL_ICONS = ['trophy', 'medal', 'ribbon'];
 
@@ -205,7 +206,7 @@ export default function RanglisteScreen() {
                       const parts = p.name.split(','); const firstName = parts.length > 1 ? `${parts[1].trim()} ${parts[0].trim()}` : p.name.trim();
 
                       return (
-                        <TouchableOpacity
+                        <AnimatedPressable
                           key={p.id}
                           style={[
                             s.colRow,
@@ -214,7 +215,6 @@ export default function RanglisteScreen() {
                             isSelected && s.colRowSelected,
                           ]}
                           onPress={() => setSelected(isSelected ? null : p.id)}
-                          activeOpacity={0.7}
                         >
                           {/* Rang */}
                           <View style={{ width: 22, alignItems: 'center' }}>
@@ -249,7 +249,7 @@ export default function RanglisteScreen() {
                               {p.diff > 0 ? '+' : ''}{p.diff}
                             </Text>
                           </View>
-                        </TouchableOpacity>
+                        </AnimatedPressable>
                       );
                     })}
                   </View>
@@ -291,13 +291,13 @@ export default function RanglisteScreen() {
             const StatControl = ({ value, field, label, color }) => (
               <View style={s.detailStat}>
                 <View style={s.statControlRow}>
-                  <TouchableOpacity style={s.statBtn} onPress={() => adjust(field, -1)} activeOpacity={0.7}>
+                  <AnimatedPressable style={s.statBtn} onPress={() => adjust(field, -1)}>
                     <Ionicons name="remove" size={14} color={colors.textMuted} />
-                  </TouchableOpacity>
+                  </AnimatedPressable>
                   <Text style={[s.detailStatNum, color && { color }]}>{value}</Text>
-                  <TouchableOpacity style={s.statBtn} onPress={() => adjust(field, +1)} activeOpacity={0.7}>
+                  <AnimatedPressable style={s.statBtn} onPress={() => adjust(field, +1)}>
                     <Ionicons name="add" size={14} color={colors.textMuted} />
-                  </TouchableOpacity>
+                  </AnimatedPressable>
                 </View>
                 <Text style={s.detailStatLbl}>{label}</Text>
               </View>
@@ -323,13 +323,13 @@ export default function RanglisteScreen() {
                   <StatControl value={selectedPlayer.games + delta.games} field="games" label="Spiele" />
                   <View style={[s.detailStat, s.detailStatMid]}>
                     <View style={s.statControlRow}>
-                      <TouchableOpacity style={s.statBtn} onPress={() => adjust('wins', -1)} activeOpacity={0.7}>
+                      <AnimatedPressable style={s.statBtn} onPress={() => adjust('wins', -1)}>
                         <Ionicons name="remove" size={14} color={colors.textMuted} />
-                      </TouchableOpacity>
+                      </AnimatedPressable>
                       <Text style={[s.detailStatNum, { color: colors.success }]}>{selectedPlayer.wins + delta.wins}</Text>
-                      <TouchableOpacity style={s.statBtn} onPress={() => adjust('wins', +1)} activeOpacity={0.7}>
+                      <AnimatedPressable style={s.statBtn} onPress={() => adjust('wins', +1)}>
                         <Ionicons name="add" size={14} color={colors.textMuted} />
-                      </TouchableOpacity>
+                      </AnimatedPressable>
                     </View>
                     <Text style={s.detailStatLbl}>Siege</Text>
                   </View>
