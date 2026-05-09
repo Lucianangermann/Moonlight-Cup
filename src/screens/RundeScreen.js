@@ -1,5 +1,6 @@
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Modal, Share } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Modal, Share, Animated } from 'react-native';
 import { useState, useEffect, useRef } from 'react';
+import { useEntranceAnimation } from '../hooks/useEntranceAnimation';
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Circle, Line, Path, Ellipse } from 'react-native-svg';
 
@@ -44,6 +45,7 @@ export default function RundeScreen() {
     deleteCurrentRound, deleteRound, swapMatchPlayers,
     triggerAutoTimer, getStandings, resetTournament,
   } = useTournament();
+  const entranceStyle = useEntranceAnimation();
   const [showConfirm, setShowConfirm] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [showFinalConfirm, setShowFinalConfirm] = useState(false);
@@ -287,6 +289,7 @@ export default function RundeScreen() {
   };
 
   return (
+    <Animated.View style={[{ flex: 1 }, entranceStyle]}>
     <View style={shared.screen}>
 
       {/* ── Runden-Übersicht Modal ── */}
@@ -945,6 +948,7 @@ export default function RundeScreen() {
         </View>
       </Modal>
     </View>
+    </Animated.View>
   );
 }
 

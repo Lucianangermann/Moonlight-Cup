@@ -1,6 +1,13 @@
 import { StyleSheet, Platform } from 'react-native';
 import { colors } from './colors';
 
+export const fonts = {
+  heading: 'BarlowCondensed_700Bold',
+  headingSemi: 'BarlowCondensed_600SemiBold',
+  body: 'Barlow_400Regular',
+  bodySemi: 'Barlow_600SemiBold',
+};
+
 export const cardShadow = Platform.select({
   ios: {
     shadowColor: '#000',
@@ -26,7 +33,7 @@ export const goldGlowShadow = Platform.select({
 export const shared = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: colors.bg,
+    backgroundColor: 'rgba(6, 9, 18, 0.88)',
     paddingHorizontal: 18,
     paddingTop: 58,
   },
@@ -51,7 +58,7 @@ export const shared = StyleSheet.create({
   sectionLabel: {
     color: colors.textMuted,
     fontSize: 11,
-    fontWeight: '600',
+    fontFamily: fonts.headingSemi,
     letterSpacing: 1.5,
     textTransform: 'uppercase',
     marginBottom: 12,
@@ -59,9 +66,9 @@ export const shared = StyleSheet.create({
   },
   screenTitle: {
     color: colors.white,
-    fontSize: 24,
-    fontWeight: '800',
-    letterSpacing: -0.3,
+    fontSize: 26,
+    fontFamily: fonts.heading,
+    letterSpacing: 1,
   },
   goldBtn: {
     backgroundColor: colors.gold,
@@ -74,8 +81,8 @@ export const shared = StyleSheet.create({
   goldBtnText: {
     color: colors.bg,
     fontSize: 14,
-    fontWeight: '800',
-    letterSpacing: 1.2,
+    fontFamily: fonts.heading,
+    letterSpacing: 1.5,
   },
   disabledBtn: {
     backgroundColor: colors.panel,
@@ -101,10 +108,10 @@ export const shared = StyleSheet.create({
   },
   sheetTitle: {
     color: colors.white,
-    fontSize: 18,
-    fontWeight: '800',
+    fontSize: 20,
+    fontFamily: fonts.heading,
     marginBottom: 20,
-    letterSpacing: -0.2,
+    letterSpacing: 0.5,
   },
   input: {
     backgroundColor: colors.bg,
@@ -127,8 +134,8 @@ export const shared = StyleSheet.create({
   saveBtnText: {
     color: colors.bg,
     fontSize: 15,
-    fontWeight: '800',
-    letterSpacing: 1,
+    fontFamily: fonts.heading,
+    letterSpacing: 1.2,
   },
   cancelText: {
     color: colors.textMuted,

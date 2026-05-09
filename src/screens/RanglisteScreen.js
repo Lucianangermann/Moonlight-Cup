@@ -1,5 +1,6 @@
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Animated } from 'react-native';
 import { useState, useEffect } from 'react';
+import { useEntranceAnimation } from '../hooks/useEntranceAnimation';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 import { shared, cardShadow } from '../theme/styles';
@@ -137,7 +138,10 @@ export default function RanglisteScreen() {
   const selectedGroup = selectedGroupIdx >= 0 ? GROUPS[selectedGroupIdx] : null;
   const selectedGroupRank = selectedOverallIdx >= 0 ? (selectedOverallIdx % groupSize) + 1 : -1;
 
+  const entranceStyle = useEntranceAnimation();
+
   return (
+    <Animated.View style={[{ flex: 1 }, entranceStyle]}>
     <View style={shared.screen}>
       {/* Header */}
       <View style={s.header}>
@@ -419,6 +423,7 @@ export default function RanglisteScreen() {
         </>
       )}
     </View>
+    </Animated.View>
   );
 }
 

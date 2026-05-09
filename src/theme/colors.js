@@ -13,6 +13,13 @@ export const colors = {
   silver:     '#C8D4E8',
   silverDim:  '#8A9AB8',
 
+  // Extended palette
+  cyan:       '#00D4FF',
+  cyanGlow:   '#00D4FF20',
+  cyanDim:    '#007A99',
+  ember:      '#FF6B35',
+  emberGlow:  '#FF6B3520',
+
   // Text
   white:      '#EEF2FF',
   textMuted:  '#5A6A8A',
