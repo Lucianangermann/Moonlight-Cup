@@ -210,7 +210,7 @@ export default function RundeScreen() {
       '@media print{' +
       '#root{display:none!important}' +
       '#mc-print{display:block!important;padding:14px 22px;font-family:Arial,sans-serif;color:#222;box-sizing:border-box}' +
-      '.pg{page-break-after:always;break-after:page;page-break-inside:avoid;break-inside:avoid}' +
+      '.pg{page-break-after:always;break-after:page}' +
       'thead{display:table-header-group}' +
       '@page{margin:10mm;size:landscape}' +
       '}';

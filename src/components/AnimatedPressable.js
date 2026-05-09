@@ -1,5 +1,24 @@
 import { useRef } from 'react';
-import { Animated, TouchableOpacity, Easing, Platform } from 'react-native';
+import { Animated, TouchableOpacity, Easing, Platform, StyleSheet } from 'react-native';
+
+const LAYOUT_KEYS = new Set([
+  'flex', 'flexGrow', 'flexShrink', 'flexBasis',
+  'width', 'minWidth', 'maxWidth', 'height', 'minHeight', 'maxHeight',
+  'margin', 'marginTop', 'marginBottom', 'marginLeft', 'marginRight',
+  'marginHorizontal', 'marginVertical',
+  'alignSelf', 'position', 'top', 'left', 'right', 'bottom', 'zIndex',
+]);
+
+function splitStyle(style) {
+  const flat = StyleSheet.flatten(style) ?? {};
+  const outer = {};
+  const inner = {};
+  for (const [key, val] of Object.entries(flat)) {
+    if (LAYOUT_KEYS.has(key)) outer[key] = val;
+    else inner[key] = val;
+  }
+  return [outer, inner];
+}
 
 const EASE_OUT = Easing.bezier(0.23, 1, 0.32, 1);
 
@@ -17,6 +36,7 @@ export default function AnimatedPressable({
 }) {
   const scale = useRef(new Animated.Value(1)).current;
   const hovering = useRef(false);
+  const [outerStyle, innerStyle] = splitStyle(style);
 
   const animateTo = (toValue, duration) => {
     Animated.timing(scale, {
@@ -61,10 +81,11 @@ export default function AnimatedPressable({
       onPressOut={handlePressOut}
       disabled={disabled}
       activeOpacity={1}
+      style={outerStyle}
       {...hoverProps}
       {...props}
     >
-      <Animated.View style={[style, { transform: [{ scale }] }]}>
+      <Animated.View style={[innerStyle, { transform: [{ scale }] }]}>
         {children}
       </Animated.View>
     </TouchableOpacity>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet, Animated,
   Modal, TextInput, KeyboardAvoidingView, Platform,
@@ -22,6 +22,8 @@ export default function ErgebnisseScreen() {
   useEffect(() => {
     if (currentRound > 0) setSelectedRound(String(currentRound));
   }, [currentRound]);
+  const scrollRef = useRef(null);
+  const scrollOffsetRef = useRef(0);
   const [editMatch, setEditMatch] = useState(null);
   const [scoreA, setScoreA] = useState('');
   const [scoreB, setScoreB] = useState('');
@@ -85,8 +87,12 @@ export default function ErgebnisseScreen() {
 
   const handleSave = () => {
     if (!editMatch || !isFormValid) return;
+    const savedOffset = scrollOffsetRef.current;
     saveResult(editMatch.id, Number(scoreA), Number(scoreB));
     setEditMatch(null);
+    setTimeout(() => {
+      scrollRef.current?.scrollTo({ y: savedOffset, animated: false });
+    }, 0);
   };
 
   const doneCount = filtered.filter((m) => m.done).length;
@@ -224,7 +230,13 @@ export default function ErgebnisseScreen() {
       </ScrollView>
 
       {/* Match List */}
-      <ScrollView style={s.list} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        ref={scrollRef}
+        style={s.list}
+        showsVerticalScrollIndicator={false}
+        onScroll={(e) => { scrollOffsetRef.current = e.nativeEvent.contentOffset.y; }}
+        scrollEventThrottle={16}
+      >
         {filtered.length === 0 ? (
           <View style={s.empty}>
             <Ionicons name="bar-chart-outline" size={36} color={colors.textDim} />
