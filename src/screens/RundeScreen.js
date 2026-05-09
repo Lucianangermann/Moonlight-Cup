@@ -164,29 +164,29 @@ export default function RundeScreen() {
       ? `<p style="margin-top:14px;font-size:12px;color:#888"><b>Freilos:</b> ${r.sittingOut.map(getName).join(', ')}</p>` : '';
     const rows = matches.map((m, i) => `
       <tr style="background:${i % 2 === 0 ? '#f5f5f5' : '#fff'}">
-        <td style="padding:9px 10px;font-size:12px;font-weight:800;color:#1a1a2e;white-space:nowrap;text-align:center">${m.feld != null ? `Feld ${m.feld}` : ''}</td>
-        <td style="padding:9px 12px;font-size:11px;color:#555;font-weight:700;white-space:nowrap">${TYPE_LABELS[m.type] ?? m.type}</td>
-        <td style="padding:9px 12px;font-size:14px;font-weight:700;text-align:right">${m.teamA.map(getName).join(' &amp; ')}</td>
-        <td style="padding:9px 8px;text-align:center;color:#222;font-size:16px;font-weight:800">:</td>
-        <td style="padding:9px 12px;font-size:14px;font-weight:700">${m.teamB.map(getName).join(' &amp; ')}</td>
+        <td style="padding:6px 8px;font-size:11px;font-weight:800;color:#1a1a2e;white-space:nowrap;text-align:center">${m.feld != null ? `Feld ${m.feld}` : ''}</td>
+        <td style="padding:6px 10px;font-size:10px;color:#555;font-weight:700;white-space:nowrap">${TYPE_LABELS[m.type] ?? m.type}</td>
+        <td style="padding:6px 10px;font-size:13px;font-weight:700;text-align:right">${m.teamA.map(getName).join(' &amp; ')}</td>
+        <td style="padding:6px 6px;text-align:center;color:#222;font-size:15px;font-weight:800">:</td>
+        <td style="padding:6px 10px;font-size:13px;font-weight:700">${m.teamB.map(getName).join(' &amp; ')}</td>
       </tr>`).join('');
     return `
-      <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:6px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:5px">
         <div>
-          <div style="font-size:20px;font-weight:800">☽ Moonlight Cup — Runde ${r.id}</div>
-          <div style="font-size:12px;color:#666;margin-top:2px">${r.isSchnellrunde ? 'Schnellrunde' : 'Normale Runde'}</div>
+          <div style="font-size:18px;font-weight:800">☽ Moonlight Cup — Runde ${r.id}</div>
+          <div style="font-size:11px;color:#666;margin-top:1px">${r.isSchnellrunde ? 'Schnellrunde' : 'Normale Runde'}</div>
         </div>
-        <div style="background:#1a1a2e;color:#fff;padding:6px 14px;border-radius:6px;font-size:13px;font-weight:800;letter-spacing:1px">DURCHGANG ${dg}</div>
+        <div style="background:#1a1a2e;color:#fff;padding:5px 12px;border-radius:6px;font-size:12px;font-weight:800;letter-spacing:1px">DURCHGANG ${dg}</div>
       </div>
-      <hr style="border:none;border-top:2px solid #1a1a2e;margin:10px 0 16px"/>
-      <table style="width:100%;border-collapse:collapse;font-size:14px;table-layout:fixed">
+      <hr style="border:none;border-top:2px solid #1a1a2e;margin:8px 0 12px"/>
+      <table style="width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed">
         <thead>
           <tr style="background:#1a1a2e;color:#fff">
-            <th style="padding:8px 10px;text-align:center;font-size:10px;letter-spacing:1px;width:6%">FELD</th>
-            <th style="padding:8px 12px;text-align:left;font-size:10px;letter-spacing:1px;width:10%">TYP</th>
-            <th style="padding:8px 12px;text-align:right;width:39%">TEAM A</th>
-            <th style="padding:8px 8px;width:6%;text-align:center"></th>
-            <th style="padding:8px 12px;text-align:left;width:39%">TEAM B</th>
+            <th style="padding:6px 8px;text-align:center;font-size:9px;letter-spacing:1px;width:6%">FELD</th>
+            <th style="padding:6px 10px;text-align:left;font-size:9px;letter-spacing:1px;width:11%">TYP</th>
+            <th style="padding:6px 10px;text-align:right;width:38%">TEAM A</th>
+            <th style="padding:6px 6px;width:6%;text-align:center"></th>
+            <th style="padding:6px 10px;text-align:left;width:39%">TEAM B</th>
           </tr>
         </thead>
         <tbody>${rows}</tbody>
@@ -208,9 +208,10 @@ export default function RundeScreen() {
       '@media screen{#mc-print{display:none}}' +
       '@media print{' +
       '#root{display:none!important}' +
-      '#mc-print{display:block!important;padding:20px 28px;font-family:Arial,sans-serif;color:#222;box-sizing:border-box}' +
-      '.pg{page-break-after:always;break-after:page;padding-bottom:20px}' +
-      '@page{margin:15mm;size:landscape}' +
+      '#mc-print{display:block!important;padding:14px 22px;font-family:Arial,sans-serif;color:#222;box-sizing:border-box}' +
+      '.pg{page-break-after:always;break-after:page;page-break-inside:avoid;break-inside:avoid}' +
+      'thead{display:table-header-group}' +
+      '@page{margin:10mm;size:landscape}' +
       '}';
     document.head.appendChild(style);
     window.print();
