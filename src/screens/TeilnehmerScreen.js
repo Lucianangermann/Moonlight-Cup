@@ -178,9 +178,9 @@ export default function TeilnehmerScreen() {
           onChangeText={setSearch}
         />
         {search.length > 0 && (
-          <TouchableOpacity onPress={() => setSearch('')} activeOpacity={0.7}>
+          <AnimatedPressable onPress={() => setSearch('')} activeOpacity={0.7}>
             <Ionicons name="close-circle" size={16} color={colors.textMuted} />
-          </TouchableOpacity>
+          </AnimatedPressable>
         )}
       </View>
 
@@ -252,14 +252,14 @@ export default function TeilnehmerScreen() {
                     <Text style={s.cardSub}>Pausiert</Text>
                   </View>
                   <View style={s.pausedActions}>
-                    <TouchableOpacity
+                    <AnimatedPressable
                       style={s.resumeBtn}
                       onPress={() => handleResume(p)}
                       activeOpacity={0.7}
                     >
                       <Ionicons name="enter-outline" size={14} color={colors.success} />
                       <Text style={s.resumeBtnText}>Einsteigen</Text>
-                    </TouchableOpacity>
+                    </AnimatedPressable>
                   </View>
                 </View>
               );
@@ -272,7 +272,7 @@ export default function TeilnehmerScreen() {
       </ScrollView>
 
       {/* FAB */}
-      <TouchableOpacity
+      <AnimatedPressable
         style={[shared.goldBtn, maxReached && shared.disabledBtn]}
         onPress={() => !maxReached && setShowAdd(true)}
         disabled={maxReached}
@@ -288,7 +288,7 @@ export default function TeilnehmerScreen() {
             {maxReached ? 'MAXIMUM ERREICHT (99)' : 'TEILNEHMER HINZUFÜGEN'}
           </Text>
         </View>
-      </TouchableOpacity>
+      </AnimatedPressable>
 
       {/* Add Modal */}
       <Modal visible={showAdd} transparent animationType="slide">
@@ -296,9 +296,9 @@ export default function TeilnehmerScreen() {
           <View style={shared.sheet}>
             <View style={s.sheetHeader}>
               <Text style={shared.sheetTitle}>Neuer Teilnehmer</Text>
-              <TouchableOpacity onPress={closeSheet} activeOpacity={0.7}>
+              <AnimatedPressable onPress={closeSheet} activeOpacity={0.7}>
                 <Ionicons name="close" size={22} color={colors.textMuted} />
-              </TouchableOpacity>
+              </AnimatedPressable>
             </View>
 
             <TextInput
@@ -312,28 +312,28 @@ export default function TeilnehmerScreen() {
 
             <Text style={s.genderLabel}>GESCHLECHT</Text>
             <View style={s.genderRow}>
-              <TouchableOpacity
+              <AnimatedPressable
                 style={[s.genderBtn, newGender === 'M' && s.genderBtnActiveM]}
                 onPress={() => setNewGender('M')}
                 activeOpacity={0.7}
               >
                 <Ionicons name="male" size={18} color={newGender === 'M' ? colors.info : colors.textMuted} />
                 <Text style={[s.genderBtnText, newGender === 'M' && { color: colors.white }]}>Herr</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
+              </AnimatedPressable>
+              <AnimatedPressable
                 style={[s.genderBtn, newGender === 'F' && s.genderBtnActiveF]}
                 onPress={() => setNewGender('F')}
                 activeOpacity={0.7}
               >
                 <Ionicons name="female" size={18} color={newGender === 'F' ? '#E879A0' : colors.textMuted} />
                 <Text style={[s.genderBtnText, newGender === 'F' && { color: colors.white }]}>Dame</Text>
-              </TouchableOpacity>
+              </AnimatedPressable>
             </View>
 
             <Text style={s.genderLabel}>LIGA</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.leagueScroll} contentContainerStyle={s.leagueScrollContent}>
               {LEAGUES.map((lg) => (
-                <TouchableOpacity
+                <AnimatedPressable
                   key={lg.key}
                   style={[s.leagueBtn, newLeague === lg.key && s.leagueBtnActive]}
                   onPress={() => setNewLeague(lg.key)}
@@ -341,16 +341,16 @@ export default function TeilnehmerScreen() {
                 >
                   <Text style={[s.leagueBtnKey, newLeague === lg.key && s.leagueBtnKeyActive]}>{lg.key}</Text>
                   <Text style={[s.leagueBtnLabel, newLeague === lg.key && s.leagueBtnLabelActive]} numberOfLines={1}>{lg.label}</Text>
-                </TouchableOpacity>
+                </AnimatedPressable>
               ))}
             </ScrollView>
 
-            <TouchableOpacity style={shared.saveBtn} onPress={handleAdd} activeOpacity={0.8}>
+            <AnimatedPressable style={shared.saveBtn} onPress={handleAdd} activeOpacity={0.8}>
               <Text style={shared.saveBtnText}>SPEICHERN</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={closeSheet} activeOpacity={0.7}>
+            </AnimatedPressable>
+            <AnimatedPressable onPress={closeSheet} activeOpacity={0.7}>
               <Text style={shared.cancelText}>Abbrechen</Text>
-            </TouchableOpacity>
+            </AnimatedPressable>
           </View>
         </KeyboardAvoidingView>
       </Modal>
@@ -361,9 +361,9 @@ export default function TeilnehmerScreen() {
           <View style={shared.sheet}>
             <View style={s.sheetHeader}>
               <Text style={shared.sheetTitle}>Teilnehmer bearbeiten</Text>
-              <TouchableOpacity onPress={closeEdit} activeOpacity={0.7}>
+              <AnimatedPressable onPress={closeEdit} activeOpacity={0.7}>
                 <Ionicons name="close" size={22} color={colors.textMuted} />
-              </TouchableOpacity>
+              </AnimatedPressable>
             </View>
 
             <TextInput
@@ -377,28 +377,28 @@ export default function TeilnehmerScreen() {
 
             <Text style={s.genderLabel}>GESCHLECHT</Text>
             <View style={s.genderRow}>
-              <TouchableOpacity
+              <AnimatedPressable
                 style={[s.genderBtn, editGender === 'M' && s.genderBtnActiveM]}
                 onPress={() => setEditGender('M')}
                 activeOpacity={0.7}
               >
                 <Ionicons name="male" size={18} color={editGender === 'M' ? colors.info : colors.textMuted} />
                 <Text style={[s.genderBtnText, editGender === 'M' && { color: colors.white }]}>Herr</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
+              </AnimatedPressable>
+              <AnimatedPressable
                 style={[s.genderBtn, editGender === 'F' && s.genderBtnActiveF]}
                 onPress={() => setEditGender('F')}
                 activeOpacity={0.7}
               >
                 <Ionicons name="female" size={18} color={editGender === 'F' ? '#E879A0' : colors.textMuted} />
                 <Text style={[s.genderBtnText, editGender === 'F' && { color: colors.white }]}>Dame</Text>
-              </TouchableOpacity>
+              </AnimatedPressable>
             </View>
 
             <Text style={s.genderLabel}>LIGA</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.leagueScroll} contentContainerStyle={s.leagueScrollContent}>
               {LEAGUES.map((lg) => (
-                <TouchableOpacity
+                <AnimatedPressable
                   key={lg.key}
                   style={[s.leagueBtn, editLeague === lg.key && s.leagueBtnActive]}
                   onPress={() => setEditLeague(lg.key)}
@@ -406,7 +406,7 @@ export default function TeilnehmerScreen() {
                 >
                   <Text style={[s.leagueBtnKey, editLeague === lg.key && s.leagueBtnKeyActive]}>{lg.key}</Text>
                   <Text style={[s.leagueBtnLabel, editLeague === lg.key && s.leagueBtnLabelActive]} numberOfLines={1}>{lg.label}</Text>
-                </TouchableOpacity>
+                </AnimatedPressable>
               ))}
             </ScrollView>
 
@@ -450,28 +450,28 @@ export default function TeilnehmerScreen() {
               </View>
             )}
 
-            <TouchableOpacity style={shared.saveBtn} onPress={handleSaveEdit} activeOpacity={0.8}>
+            <AnimatedPressable style={shared.saveBtn} onPress={handleSaveEdit} activeOpacity={0.8}>
               <Text style={shared.saveBtnText}>SPEICHERN</Text>
-            </TouchableOpacity>
+            </AnimatedPressable>
 
             {/* Pause / exit button */}
-            <TouchableOpacity style={s.pauseBtn} onPress={handlePause} activeOpacity={0.8}>
+            <AnimatedPressable style={s.pauseBtn} onPress={handlePause} activeOpacity={0.8}>
               <Ionicons name="exit-outline" size={16} color={colors.warning} />
               <Text style={s.pauseBtnText}>AUSSTEIGEN (vorerst pausieren)</Text>
-            </TouchableOpacity>
+            </AnimatedPressable>
 
             {/* Permanent remove */}
-            <TouchableOpacity
+            <AnimatedPressable
               onPress={() => editTarget && handleRemove(editTarget)}
               activeOpacity={0.7}
               style={s.removeLink}
             >
               <Text style={s.removeLinkText}>Dauerhaft entfernen</Text>
-            </TouchableOpacity>
+            </AnimatedPressable>
 
-            <TouchableOpacity onPress={closeEdit} activeOpacity={0.7}>
+            <AnimatedPressable onPress={closeEdit} activeOpacity={0.7}>
               <Text style={shared.cancelText}>Abbrechen</Text>
-            </TouchableOpacity>
+            </AnimatedPressable>
           </View>
         </KeyboardAvoidingView>
       </Modal>

@@ -194,10 +194,10 @@ export default function ErgebnisseScreen() {
             </View>
           )}
           {hasPending && currentRoundData && (
-            <TouchableOpacity style={s.simulateBtn} onPress={simulateAll} activeOpacity={0.75}>
+            <AnimatedPressable style={s.simulateBtn} onPress={simulateAll} activeOpacity={0.75}>
               <Ionicons name="dice-outline" size={14} color={colors.warning} />
               <Text style={s.simulateBtnText}>Simulieren</Text>
-            </TouchableOpacity>
+            </AnimatedPressable>
           )}
         </View>
       </View>
@@ -210,7 +210,7 @@ export default function ErgebnisseScreen() {
         contentContainerStyle={{ paddingRight: 8 }}
       >
         {[{ key: 'all', label: 'Alle' }, ...rounds.map((r) => ({ key: String(r.id), label: `Runde ${r.id}` }))].map((f) => (
-          <TouchableOpacity
+          <AnimatedPressable
             key={f.key}
             style={[s.filterChip, selectedRound === f.key && s.filterChipActive]}
             onPress={() => setSelectedRound(f.key)}
@@ -219,7 +219,7 @@ export default function ErgebnisseScreen() {
             <Text style={[s.filterText, selectedRound === f.key && s.filterTextActive]}>
               {f.label}
             </Text>
-          </TouchableOpacity>
+          </AnimatedPressable>
         ))}
       </ScrollView>
 
@@ -263,9 +263,9 @@ export default function ErgebnisseScreen() {
           <View style={shared.sheet}>
             <View style={s.sheetHeader}>
               <Text style={shared.sheetTitle}>Ergebnis eingeben</Text>
-              <TouchableOpacity onPress={() => setEditMatch(null)} activeOpacity={0.7}>
+              <AnimatedPressable onPress={() => setEditMatch(null)} activeOpacity={0.7}>
                 <Ionicons name="close" size={22} color={colors.textMuted} />
-              </TouchableOpacity>
+              </AnimatedPressable>
             </View>
             {editMatch && (
               <View style={s.matchPreview}>
@@ -337,9 +337,9 @@ export default function ErgebnisseScreen() {
                 SPEICHERN
               </Text>
             </AnimatedPressable>
-            <TouchableOpacity onPress={() => setEditMatch(null)} activeOpacity={0.7}>
+            <AnimatedPressable onPress={() => setEditMatch(null)} activeOpacity={0.7}>
               <Text style={shared.cancelText}>Abbrechen</Text>
-            </TouchableOpacity>
+            </AnimatedPressable>
           </View>
         </KeyboardAvoidingView>
       </Modal>

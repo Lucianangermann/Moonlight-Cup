@@ -373,7 +373,7 @@ export default function TimerScreen() {
       </Text>
 
       {/* ── Spotify Card ── */}
-      <TouchableOpacity
+      <AnimatedPressable
         style={s.spHeader}
         onPress={() => setShowSpotify((v) => !v)}
         activeOpacity={0.8}
@@ -388,7 +388,7 @@ export default function TimerScreen() {
           size={13}
           color={colors.textMuted}
         />
-      </TouchableOpacity>
+      </AnimatedPressable>
 
       {showSpotify && (
         <View style={s.spCard}>
@@ -404,10 +404,10 @@ export default function TimerScreen() {
               <Text style={s.spInfoHint}>
                 Starte Spotify auf deinem Gerät und wähle einen Song/Playlist — die App übernimmt die Steuerung.
               </Text>
-              <TouchableOpacity style={s.spDisconnectBtn} onPress={handleDisconnect} activeOpacity={0.8}>
+              <AnimatedPressable style={s.spDisconnectBtn} onPress={handleDisconnect} activeOpacity={0.8}>
                 <Ionicons name="unlink-outline" size={13} color={colors.error} />
                 <Text style={s.spDisconnectText}>Trennen</Text>
-              </TouchableOpacity>
+              </AnimatedPressable>
             </>
           ) : (
             <>
@@ -430,7 +430,7 @@ export default function TimerScreen() {
                 autoCapitalize="none"
                 autoCorrect={false}
               />
-              <TouchableOpacity
+              <AnimatedPressable
                 style={[s.spConnectBtn, !clientIdInput.trim() && { opacity: 0.4 }]}
                 onPress={handleConnectSpotify}
                 activeOpacity={0.8}
@@ -438,7 +438,7 @@ export default function TimerScreen() {
               >
                 <Ionicons name="logo-google-playstore" size={14} color="#fff" />
                 <Text style={s.spConnectText}>Mit Spotify verbinden</Text>
-              </TouchableOpacity>
+              </AnimatedPressable>
             </>
           )}
         </View>

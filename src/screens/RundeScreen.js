@@ -300,9 +300,9 @@ export default function RundeScreen() {
           <View style={[s.modalCard, { maxHeight: '80%' }]}>
             <View style={s.roundsMenuHeader}>
               <Text style={s.modalTitle}>Alle Runden</Text>
-              <TouchableOpacity onPress={() => setRoundsMenuOpen(false)} activeOpacity={0.7}>
+              <AnimatedPressable onPress={() => setRoundsMenuOpen(false)} activeOpacity={0.7}>
                 <Ionicons name="close-circle" size={22} color={colors.textMuted} />
-              </TouchableOpacity>
+              </AnimatedPressable>
             </View>
             {rounds.length === 0 ? (
               <Text style={[s.modalBody, { marginBottom: 0 }]}>Noch keine Runden gespielt.</Text>
@@ -337,13 +337,13 @@ export default function RundeScreen() {
                         </View>
                         <Text style={s.roundRowMeta}>{total} Spiele · {done} fertig · {total - done} offen</Text>
                       </View>
-                      <TouchableOpacity
+                      <AnimatedPressable
                         style={s.roundDeleteBtn}
                         onPress={() => setRoundToDelete(r)}
                         activeOpacity={0.75}
                       >
                         <Ionicons name="trash-outline" size={16} color={colors.error} />
-                      </TouchableOpacity>
+                      </AnimatedPressable>
                     </View>
                   );
                 })}
@@ -363,10 +363,10 @@ export default function RundeScreen() {
                   Die Rangliste wird entsprechend aktualisiert.
                 </Text>
                 <View style={s.modalButtons}>
-                  <TouchableOpacity style={s.modalBtnCancel} onPress={() => setRoundToDelete(null)} activeOpacity={0.8}>
+                  <AnimatedPressable style={s.modalBtnCancel} onPress={() => setRoundToDelete(null)} activeOpacity={0.8}>
                     <Text style={s.modalBtnCancelText}>Abbrechen</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
+                  </AnimatedPressable>
+                  <AnimatedPressable
                     style={s.modalBtnRed}
                     onPress={() => {
                       deleteRound(roundToDelete.id);
@@ -377,7 +377,7 @@ export default function RundeScreen() {
                   >
                     <Ionicons name="trash" size={13} color={colors.white} style={{ marginRight: 5 }} />
                     <Text style={s.modalBtnRedText}>Löschen</Text>
-                  </TouchableOpacity>
+                  </AnimatedPressable>
                 </View>
               </View>
             </View>
@@ -394,9 +394,9 @@ export default function RundeScreen() {
                 <Ionicons name="print-outline" size={18} color={colors.gold} />
                 <Text style={s.modalTitle}>Runde drucken</Text>
               </View>
-              <TouchableOpacity onPress={() => setPrintMenuOpen(false)} activeOpacity={0.7}>
+              <AnimatedPressable onPress={() => setPrintMenuOpen(false)} activeOpacity={0.7}>
                 <Ionicons name="close-circle" size={22} color={colors.textMuted} />
-              </TouchableOpacity>
+              </AnimatedPressable>
             </View>
             {rounds.length === 0 ? (
               <Text style={[s.modalBody, { marginBottom: 0 }]}>Noch keine Runden gespielt.</Text>
@@ -406,7 +406,7 @@ export default function RundeScreen() {
                   const total = r.matches?.length ?? 0;
                   const isCurrent = r.id === currentRound;
                   return (
-                    <TouchableOpacity
+                    <AnimatedPressable
                       key={r.id}
                       style={[s.roundRow, isCurrent && s.roundRowCurrent]}
                       onPress={() => printSelectedRound(r)}
@@ -436,7 +436,7 @@ export default function RundeScreen() {
                         <Text style={s.roundRowMeta}>{total} Spiele · tippen zum Drucken</Text>
                       </View>
                       <Ionicons name="print-outline" size={18} color={colors.gold} />
-                    </TouchableOpacity>
+                    </AnimatedPressable>
                   );
                 })}
               </ScrollView>
@@ -451,9 +451,9 @@ export default function RundeScreen() {
           {/* Edit Header */}
           <View style={s.editHeader}>
             <Text style={s.editTitle}>Runde {currentRound} bearbeiten</Text>
-            <TouchableOpacity onPress={() => { setEditOpen(false); setSelectedSlot(null); }} activeOpacity={0.7}>
+            <AnimatedPressable onPress={() => { setEditOpen(false); setSelectedSlot(null); }} activeOpacity={0.7}>
               <Ionicons name="close-circle" size={26} color={colors.textMuted} />
-            </TouchableOpacity>
+            </AnimatedPressable>
           </View>
 
           {selectedSlot && (
@@ -463,9 +463,9 @@ export default function RundeScreen() {
                 <Text style={{ color: colors.gold }}>{getPlayerName(selectedSlot.pid)}</Text>
                 {' '}ausgewählt — tippe einen anderen Spieler zum Tauschen
               </Text>
-              <TouchableOpacity onPress={() => setSelectedSlot(null)}>
+              <AnimatedPressable onPress={() => setSelectedSlot(null)}>
                 <Ionicons name="close" size={14} color={colors.textMuted} />
-              </TouchableOpacity>
+              </AnimatedPressable>
             </View>
           )}
 
@@ -493,7 +493,7 @@ export default function RundeScreen() {
                         {ids.map((pid, idx) => {
                           const isSelected = selectedSlot?.matchId === match.id && selectedSlot?.team === key && selectedSlot?.idx === idx;
                           return (
-                            <TouchableOpacity
+                            <AnimatedPressable
                               key={pid}
                               style={[s.editPlayerBtn, isSelected && s.editPlayerBtnSelected]}
                               onPress={() => handleSlotPress(match.id, key, idx, pid)}
@@ -502,7 +502,7 @@ export default function RundeScreen() {
                               <Text style={[s.editPlayerName, isSelected && { color: colors.gold }]} numberOfLines={1}>
                                 {getPlayerName(pid)}
                               </Text>
-                            </TouchableOpacity>
+                            </AnimatedPressable>
                           );
                         })}
                       </View>
@@ -518,10 +518,10 @@ export default function RundeScreen() {
           </ScrollView>
 
           {/* Delete round */}
-          <TouchableOpacity style={s.deleteRoundBtn} onPress={() => setConfirmDelete(true)} activeOpacity={0.8}>
+          <AnimatedPressable style={s.deleteRoundBtn} onPress={() => setConfirmDelete(true)} activeOpacity={0.8}>
             <Ionicons name="trash-outline" size={15} color={colors.error} />
             <Text style={s.deleteRoundText}>Runde {currentRound} löschen</Text>
-          </TouchableOpacity>
+          </AnimatedPressable>
         </View>
 
         {/* Swap confirmation */}
@@ -537,13 +537,13 @@ export default function RundeScreen() {
                   {'\n'}werden in der Auslosung getauscht.
                 </Text>
                 <View style={s.modalButtons}>
-                  <TouchableOpacity style={s.modalBtnCancel} onPress={() => setPendingSwap(null)} activeOpacity={0.8}>
+                  <AnimatedPressable style={s.modalBtnCancel} onPress={() => setPendingSwap(null)} activeOpacity={0.8}>
                     <Text style={s.modalBtnCancelText}>Abbrechen</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={s.modalBtnRed} onPress={confirmSwap} activeOpacity={0.8}>
+                  </AnimatedPressable>
+                  <AnimatedPressable style={s.modalBtnRed} onPress={confirmSwap} activeOpacity={0.8}>
                     <Ionicons name="swap-horizontal" size={13} color={colors.white} style={{ marginRight: 5 }} />
                     <Text style={s.modalBtnRedText}>Tauschen</Text>
-                  </TouchableOpacity>
+                  </AnimatedPressable>
                 </View>
               </View>
             </View>
@@ -560,13 +560,13 @@ export default function RundeScreen() {
                   Runde {currentRound} wird unwiderruflich gelöscht.{'\n'}Alle Paarungen und Ergebnisse gehen verloren.
                 </Text>
                 <View style={s.modalButtons}>
-                  <TouchableOpacity style={s.modalBtnCancel} onPress={() => setConfirmDelete(false)} activeOpacity={0.8}>
+                  <AnimatedPressable style={s.modalBtnCancel} onPress={() => setConfirmDelete(false)} activeOpacity={0.8}>
                     <Text style={s.modalBtnCancelText}>Abbrechen</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={s.modalBtnRed} onPress={confirmDeleteRound} activeOpacity={0.8}>
+                  </AnimatedPressable>
+                  <AnimatedPressable style={s.modalBtnRed} onPress={confirmDeleteRound} activeOpacity={0.8}>
                     <Ionicons name="trash" size={13} color={colors.white} style={{ marginRight: 5 }} />
                     <Text style={s.modalBtnRedText}>Löschen</Text>
-                  </TouchableOpacity>
+                  </AnimatedPressable>
                 </View>
               </View>
             </View>
@@ -583,13 +583,13 @@ export default function RundeScreen() {
               Runde {currentRound + 1} wird jetzt ausgelost.{'\n'}Diese Aktion kann nicht rückgängig gemacht werden.
             </Text>
             <View style={s.modalButtons}>
-              <TouchableOpacity style={s.modalBtnCancel} onPress={() => setShowConfirm(false)} activeOpacity={0.8}>
+              <AnimatedPressable style={s.modalBtnCancel} onPress={() => setShowConfirm(false)} activeOpacity={0.8}>
                 <Text style={s.modalBtnCancelText}>Abbrechen</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={s.modalBtnConfirm} onPress={handleConfirmStart} activeOpacity={0.8}>
+              </AnimatedPressable>
+              <AnimatedPressable style={s.modalBtnConfirm} onPress={handleConfirmStart} activeOpacity={0.8}>
                 <Ionicons name="play" size={13} color={colors.bg} style={{ marginRight: 5 }} />
                 <Text style={s.modalBtnConfirmText}>Starten</Text>
-              </TouchableOpacity>
+              </AnimatedPressable>
             </View>
           </View>
         </View>
@@ -743,13 +743,13 @@ export default function RundeScreen() {
               Runde {currentRound + 1} wird jetzt ausgelost.{'\n'}Diese Aktion kann nicht rückgängig gemacht werden.
             </Text>
             <View style={s.modalButtons}>
-              <TouchableOpacity style={s.modalBtnCancel} onPress={() => setShowConfirm(false)} activeOpacity={0.8}>
+              <AnimatedPressable style={s.modalBtnCancel} onPress={() => setShowConfirm(false)} activeOpacity={0.8}>
                 <Text style={s.modalBtnCancelText}>Abbrechen</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={s.modalBtnConfirm} onPress={handleConfirmStart} activeOpacity={0.8}>
+              </AnimatedPressable>
+              <AnimatedPressable style={s.modalBtnConfirm} onPress={handleConfirmStart} activeOpacity={0.8}>
                 <Ionicons name="play" size={13} color={colors.bg} style={{ marginRight: 5 }} />
                 <Text style={s.modalBtnConfirmText}>Starten</Text>
-              </TouchableOpacity>
+              </AnimatedPressable>
             </View>
           </View>
         </View>
@@ -766,9 +766,9 @@ export default function RundeScreen() {
                   {previewDg === 1 ? 'Schritt 1/2 — Durchgang 1 drucken' : previewDg === 2 ? 'Schritt 2/2 — Durchgang 2 drucken' : 'Wähle einen Durchgang'}
                 </Text>
               </View>
-              <TouchableOpacity onPress={() => { setPrintPreview(null); setPreviewDg(null); }} activeOpacity={0.7}>
+              <AnimatedPressable onPress={() => { setPrintPreview(null); setPreviewDg(null); }} activeOpacity={0.7}>
                 <Ionicons name="close-circle" size={26} color="#999" />
-              </TouchableOpacity>
+              </AnimatedPressable>
             </View>
 
             <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
@@ -809,29 +809,29 @@ export default function RundeScreen() {
             <View style={s.previewActions}>
               {!previewDg ? (
                 <>
-                  <TouchableOpacity style={[s.previewBtnShare, { flex: 1 }]} onPress={() => doPrintBoth(printPreview)} activeOpacity={0.8}>
+                  <AnimatedPressable style={[s.previewBtnShare, { flex: 1 }]} onPress={() => doPrintBoth(printPreview)} activeOpacity={0.8}>
                     <Ionicons name="print-outline" size={15} color="#1a1a2e" />
                     <Text style={[s.previewBtnShareText, { color: '#1a1a2e', fontWeight: '800' }]}>Beide auf einmal</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={s.previewBtnPrint} onPress={() => setPreviewDg(1)} activeOpacity={0.8}>
+                  </AnimatedPressable>
+                  <AnimatedPressable style={s.previewBtnPrint} onPress={() => setPreviewDg(1)} activeOpacity={0.8}>
                     <Ionicons name="print-outline" size={15} color="#fff" />
                     <Text style={s.previewBtnPrintText}>D1 drucken</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={s.previewBtnPrint} onPress={() => setPreviewDg(2)} activeOpacity={0.8}>
+                  </AnimatedPressable>
+                  <AnimatedPressable style={s.previewBtnPrint} onPress={() => setPreviewDg(2)} activeOpacity={0.8}>
                     <Ionicons name="print-outline" size={15} color="#fff" />
                     <Text style={s.previewBtnPrintText}>D2 drucken</Text>
-                  </TouchableOpacity>
+                  </AnimatedPressable>
                 </>
               ) : (
                 <>
-                  <TouchableOpacity style={s.previewBtnShare} onPress={() => setPreviewDg(null)} activeOpacity={0.8}>
+                  <AnimatedPressable style={s.previewBtnShare} onPress={() => setPreviewDg(null)} activeOpacity={0.8}>
                     <Ionicons name="arrow-back" size={15} color="#555" />
                     <Text style={s.previewBtnShareText}>Zurück</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={[s.previewBtnPrint, { flex: 2 }]} onPress={doPrint} activeOpacity={0.8}>
+                  </AnimatedPressable>
+                  <AnimatedPressable style={[s.previewBtnPrint, { flex: 2 }]} onPress={doPrint} activeOpacity={0.8}>
                     <Ionicons name="print-outline" size={15} color="#fff" />
                     <Text style={s.previewBtnPrintText}>Durchgang {previewDg} drucken</Text>
-                  </TouchableOpacity>
+                  </AnimatedPressable>
                 </>
               )}
             </View>
@@ -904,17 +904,17 @@ export default function RundeScreen() {
               Die Teilnehmerliste bleibt erhalten.
             </Text>
             <View style={s.modalButtons}>
-              <TouchableOpacity style={s.modalBtnCancel} onPress={() => setShowResetConfirm(false)} activeOpacity={0.8}>
+              <AnimatedPressable style={s.modalBtnCancel} onPress={() => setShowResetConfirm(false)} activeOpacity={0.8}>
                 <Text style={s.modalBtnCancelText}>Abbrechen</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
+              </AnimatedPressable>
+              <AnimatedPressable
                 style={s.modalBtnRed}
                 onPress={() => { setShowResetConfirm(false); resetTournament(); }}
                 activeOpacity={0.8}
               >
                 <Ionicons name="refresh" size={13} color={colors.white} style={{ marginRight: 5 }} />
                 <Text style={s.modalBtnRedText}>Neu starten</Text>
-              </TouchableOpacity>
+              </AnimatedPressable>
             </View>
           </View>
         </View>
@@ -934,17 +934,17 @@ export default function RundeScreen() {
               Diese Aktion kann nicht rückgängig gemacht werden.
             </Text>
             <View style={s.modalButtons}>
-              <TouchableOpacity style={s.modalBtnCancel} onPress={() => setShowFinalConfirm(false)} activeOpacity={0.8}>
+              <AnimatedPressable style={s.modalBtnCancel} onPress={() => setShowFinalConfirm(false)} activeOpacity={0.8}>
                 <Text style={s.modalBtnCancelText}>Abbrechen</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
+              </AnimatedPressable>
+              <AnimatedPressable
                 style={s.modalBtnFinal}
                 onPress={() => { setShowFinalConfirm(false); startFinalRunde(); }}
                 activeOpacity={0.8}
               >
                 <Ionicons name="trophy" size={13} color={colors.bg} style={{ marginRight: 5 }} />
                 <Text style={s.modalBtnConfirmText}>Finale starten</Text>
-              </TouchableOpacity>
+              </AnimatedPressable>
             </View>
           </View>
         </View>

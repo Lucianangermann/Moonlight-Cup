@@ -148,10 +148,10 @@ export default function RanglisteScreen() {
       <View style={s.header}>
         <Text style={shared.screenTitle}>Rangliste</Text>
         <View style={s.headerRight}>
-          <TouchableOpacity style={s.printBtn} onPress={doPrint} activeOpacity={0.75}>
+          <AnimatedPressable style={s.printBtn} onPress={doPrint} activeOpacity={0.75}>
             <Ionicons name="print-outline" size={15} color={colors.silver} />
             <Text style={s.printBtnText}>Drucken</Text>
-          </TouchableOpacity>
+          </AnimatedPressable>
           <View style={s.liveBadge}>
             <View style={s.liveDot} />
             <Text style={s.liveText}>LIVE</Text>
@@ -314,9 +314,9 @@ export default function RanglisteScreen() {
                       {selectedGroup.fullLabel} · Platz {selectedGroupRank} · Gesamt #{selectedOverallIdx + 1}
                     </Text>
                   </View>
-                  <TouchableOpacity onPress={() => setSelected(null)} activeOpacity={0.7}>
+                  <AnimatedPressable onPress={() => setSelected(null)} activeOpacity={0.7}>
                     <Ionicons name="close-circle" size={20} color={colors.textMuted} />
-                  </TouchableOpacity>
+                  </AnimatedPressable>
                 </View>
 
                 <View style={s.detailStats}>
@@ -339,15 +339,15 @@ export default function RanglisteScreen() {
                   </View>
                   <View style={[s.detailStat, s.detailStatMid]}>
                     <View style={s.statControlRow}>
-                      <TouchableOpacity style={s.statBtn} onPress={() => adjust('diff', -1)} activeOpacity={0.7}>
+                      <AnimatedPressable style={s.statBtn} onPress={() => adjust('diff', -1)} activeOpacity={0.7}>
                         <Ionicons name="remove" size={14} color={colors.textMuted} />
-                      </TouchableOpacity>
+                      </AnimatedPressable>
                       <Text style={[s.detailStatNum, { color: (selectedPlayer.diff + delta.diff) >= 0 ? colors.success : colors.error }]}>
                         {(selectedPlayer.diff + delta.diff) > 0 ? '+' : ''}{selectedPlayer.diff + delta.diff}
                       </Text>
-                      <TouchableOpacity style={s.statBtn} onPress={() => adjust('diff', +1)} activeOpacity={0.7}>
+                      <AnimatedPressable style={s.statBtn} onPress={() => adjust('diff', +1)} activeOpacity={0.7}>
                         <Ionicons name="add" size={14} color={colors.textMuted} />
-                      </TouchableOpacity>
+                      </AnimatedPressable>
                     </View>
                     <Text style={s.detailStatLbl}>Differenz</Text>
                   </View>
@@ -364,18 +364,18 @@ export default function RanglisteScreen() {
 
                 {hasPending && !confirming && (
                   <View style={s.confirmRow}>
-                    <TouchableOpacity style={s.discardBtn} onPress={discardChanges} activeOpacity={0.7}>
+                    <AnimatedPressable style={s.discardBtn} onPress={discardChanges} activeOpacity={0.7}>
                       <Ionicons name="close" size={14} color={colors.error} />
                       <Text style={s.discardBtnText}>Verwerfen</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
+                    </AnimatedPressable>
+                    <AnimatedPressable
                       style={[s.saveBtn, winsError && s.saveBtnDisabled]}
                       onPress={winsError ? undefined : () => setConfirming(true)}
                       activeOpacity={winsError ? 1 : 0.8}
                     >
                       <Ionicons name="checkmark" size={14} color={winsError ? colors.textMuted : colors.bg} />
                       <Text style={[s.saveBtnText, winsError && s.saveBtnTextDisabled]}>Speichern</Text>
-                    </TouchableOpacity>
+                    </AnimatedPressable>
                   </View>
                 )}
 
@@ -406,14 +406,14 @@ export default function RanglisteScreen() {
                       )}
                     </View>
                     <View style={s.confirmRow}>
-                      <TouchableOpacity style={s.discardBtn} onPress={() => setConfirming(false)} activeOpacity={0.7}>
+                      <AnimatedPressable style={s.discardBtn} onPress={() => setConfirming(false)} activeOpacity={0.7}>
                         <Ionicons name="arrow-back" size={14} color={colors.error} />
                         <Text style={s.discardBtnText}>Zurück</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity style={s.saveBtn} onPress={doSave} activeOpacity={0.8}>
+                      </AnimatedPressable>
+                      <AnimatedPressable style={s.saveBtn} onPress={doSave} activeOpacity={0.8}>
                         <Ionicons name="checkmark-circle" size={14} color={colors.bg} />
                         <Text style={s.saveBtnText}>Bestätigen</Text>
-                      </TouchableOpacity>
+                      </AnimatedPressable>
                     </View>
                   </View>
                 )}
