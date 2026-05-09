@@ -66,7 +66,7 @@ export const shared = StyleSheet.create({
   },
   screenTitle: {
     color: colors.white,
-    fontSize: 26,
+    fontSize: 30,
     fontFamily: fonts.heading,
     letterSpacing: 1,
   },

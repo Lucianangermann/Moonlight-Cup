@@ -228,10 +228,10 @@ export default function TimerScreen() {
 
   const entranceStyle = useEntranceAnimation();
 
-  const RING_SIZE = 240;
+  const RING_SIZE = 280;
   const RING_CENTER = RING_SIZE / 2;
-  const RING_RADIUS = 98;
-  const TRACK_RADIUS = 98;
+  const RING_RADIUS = 118;
+  const TRACK_RADIUS = 118;
   const CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
   const dashOffset = CIRCUMFERENCE * (1 - progress);
 
@@ -493,29 +493,30 @@ const s = StyleSheet.create({
     letterSpacing: 1,
   },
   ringContainer: {
-    width: 240,
-    height: 240,
+    width: 280,
+    height: 280,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 14,
   },
   ringInner: {
-    width: 240,
-    height: 240,
+    width: 280,
+    height: 280,
     alignItems: 'center',
     justifyContent: 'center',
     position: 'absolute',
   },
   timerText: {
-    fontSize: 54,
+    fontSize: 68,
     fontFamily: 'BarlowCondensed_700Bold',
-    letterSpacing: 3,
+    letterSpacing: 2,
+    lineHeight: 70,
   },
   statusText: {
-    fontSize: 11,
+    fontSize: 10,
     fontFamily: 'BarlowCondensed_600SemiBold',
-    letterSpacing: 2.5,
-    marginTop: 2,
+    letterSpacing: 3,
+    marginTop: 4,
     textTransform: 'uppercase',
   },
   warningText: {

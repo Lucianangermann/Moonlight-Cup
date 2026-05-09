@@ -210,7 +210,7 @@ export default function RanglisteScreen() {
                           style={[
                             s.colRow,
                             isTop3 && { backgroundColor: colors.panel, borderColor: colors.border },
-                            isFirst && { borderColor: group.borderColor },
+                            isFirst && { borderColor: group.borderColor, paddingVertical: 9 },
                             isSelected && s.colRowSelected,
                           ]}
                           onPress={() => setSelected(isSelected ? null : p.id)}
@@ -230,7 +230,7 @@ export default function RanglisteScreen() {
                           {/* Name + Liga */}
                           <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 3, overflow: 'hidden' }}>
                             <Text
-                              style={[s.colName, isFirst && { color: group.color }]}
+                              style={[s.colName, isFirst && { color: group.color, fontSize: 13 }, isTop3 && !isFirst && { fontSize: 12 }]}
                               numberOfLines={1}
                             >
                               {firstName}
@@ -242,7 +242,7 @@ export default function RanglisteScreen() {
 
                           {/* Stats-Spalte rechts */}
                           <View style={s.colStatsBox}>
-                            <Text style={[s.colPts, { color: isTop3 ? medalColor : colors.silverDim }]}>
+                            <Text style={[s.colPts, { color: isTop3 ? medalColor : colors.silverDim }, isFirst && { fontSize: 15 }]}>
                               {p.games}Sp · {p.wins}S
                             </Text>
                             <Text style={[s.colStats, { color: p.diff >= 0 ? colors.success + 'AA' : colors.error + 'AA' }]}>
