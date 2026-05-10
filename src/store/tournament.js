@@ -15,6 +15,29 @@ export const LEAGUES = [
 
 const STORAGE_KEY = 'mc_state_v3';
 
+// Additional participants injected via one-time migration on app start
+const EXTRA_PARTICIPANTS = [
+  { id: 'x01', name: 'Hauser, Petra',      gender: 'F', league: 'BL'  },
+  { id: 'x02', name: 'Lindemann, Felix',   gender: 'M', league: 'BOL' },
+  { id: 'x03', name: 'Schmitt, Karolin',   gender: 'F', league: 'BK'  },
+  { id: 'x04', name: 'Stahl, Tobias',      gender: 'M', league: 'OL'  },
+  { id: 'x05', name: 'Bergmann, Lena',     gender: 'F', league: 'FZ'  },
+  { id: 'x06', name: 'Möller, Hans',       gender: 'M', league: 'BK'  },
+  { id: 'x07', name: 'Kunze, Sandra',      gender: 'F', league: 'BAY' },
+  { id: 'x08', name: 'Brauer, Patrick',    gender: 'M', league: 'RL'  },
+  { id: 'x09', name: 'Riedel, Annika',     gender: 'F', league: 'BOL' },
+  { id: 'x10', name: 'Zimmermann, Kai',    gender: 'M', league: 'BL'  },
+  { id: 'x11', name: 'Hofmann, Tina',      gender: 'F', league: 'OL'  },
+  { id: 'x12', name: 'Krüger, Stefan',     gender: 'M', league: 'BAY' },
+  { id: 'x13', name: 'Arnold, Celine',     gender: 'F', league: 'BK'  },
+  { id: 'x14', name: 'Böttcher, Lukas',    gender: 'M', league: 'FZ'  },
+  { id: 'x15', name: 'Sander, Marie',      gender: 'F', league: 'RL'  },
+  { id: 'x16', name: 'Ehlers, Nils',       gender: 'M', league: 'BOL' },
+  { id: 'x17', name: 'Lange, Viktoria',    gender: 'F', league: 'BK'  },
+  { id: 'x18', name: 'Heinrich, Robert',   gender: 'M', league: 'BL'  },
+  { id: 'x19', name: 'Brunner, Stefanie',  gender: 'F', league: 'BAY' },
+];
+
 const loadSaved = () => {
   try {
     const raw = typeof window !== 'undefined' ? localStorage.getItem(STORAGE_KEY) : null;
@@ -152,6 +175,18 @@ export function TournamentProvider({ children }) {
   // Round: { id, matches, sittingOut: [id, ...] }
   const [rounds, setRounds] = useState(() => saved?.rounds ?? []);
   const [currentRound, setCurrentRound] = useState(() => saved?.currentRound ?? 0);
+
+  useEffect(() => {
+    setParticipants((prev) => {
+      const existingIds = new Set([
+        ...prev.map((p) => p.id),
+        ...pausedParticipants.map((p) => p.id),
+      ]);
+      const toAdd = EXTRA_PARTICIPANTS.filter((p) => !existingIds.has(p.id));
+      if (toAdd.length === 0) return prev;
+      return [...prev, ...toAdd];
+    });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const addParticipant = (name, gender, league = 'FZ') => {
     const id = Date.now().toString();
