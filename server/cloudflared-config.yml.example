@@ -1,0 +1,14 @@
+# Cloudflare Tunnel config for the Moonlight Cup Pi.
+#
+# Place at ~/.cloudflared/config.yml after running `cloudflared tunnel create moonlight-cup`.
+# The credentials-file path is printed by `cloudflared tunnel create` — copy it in.
+
+tunnel: moonlight-cup
+credentials-file: /home/pi/.cloudflared/REPLACE_WITH_TUNNEL_ID.json
+
+# Ingress rules: first match wins. Anything not matching the public hostname
+# returns 404 — keeps random scanners from probing the Pi.
+ingress:
+  - hostname: badminton.bergerhq.de
+    service: http://127.0.0.1:5000
+  - service: http_status:404
