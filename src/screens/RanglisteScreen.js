@@ -54,12 +54,15 @@ const GROUP_COLORS = {
   neumond:  { header: '#1565C0', light: '#E3F2FD', border: '#90CAF9' },
 };
 
-const buildPrintContent = (standings, groupSize, pausedIds = new Set()) => {
+const FIXED_GROUP_SIZE = 33;
+const getGroupIdx = (rank0) => rank0 < FIXED_GROUP_SIZE ? 0 : rank0 < FIXED_GROUP_SIZE * 2 ? 1 : 2;
+
+const buildPrintContent = (standings, pausedIds = new Set()) => {
   const medalSymbols = ['🥇', '🥈', '🥉'];
   const groupKeys = ['vollmond', 'halbmond', 'neumond'];
 
   const rows = standings.map((p, i) => {
-    const groupIdx = Math.min(Math.floor(i / groupSize), 2);
+    const groupIdx = getGroupIdx(i);
     const gc = GROUP_COLORS[groupKeys[groupIdx]];
     const grp = GROUPS[groupIdx];
     const medal = i < 3 ? `<span style="font-size:11px">${medalSymbols[i]}</span>` : `<b style="color:#555">${i + 1}</b>`;
@@ -67,7 +70,7 @@ const buildPrintContent = (standings, groupSize, pausedIds = new Set()) => {
     const league = p.league ? ` <span style="font-size:8px;color:#888;font-weight:700">[${p.league}]</span>` : '';
     const pausedMark = pausedIds.has(p.id) ? ' <span style="font-size:7px;color:#e67e22;font-weight:700;letter-spacing:0.5px">(PAUSIERT)</span>' : '';
     const bg = i % 2 === 0 ? '#fafafa' : '#fff';
-    const isGroupStart = i % groupSize === 0;
+    const isGroupStart = i === 0 || i === FIXED_GROUP_SIZE || i === FIXED_GROUP_SIZE * 2;
     const groupBar = isGroupStart ? `
       <tr>
         <td colspan="6" style="background:${gc.header};color:#fff;padding:2px 6px;font-size:8px;font-weight:800;letter-spacing:1px">
@@ -118,11 +121,13 @@ export default function RanglisteScreen() {
 
   const pausedIds = new Set(pausedParticipants.map((p) => p.id));
 
-  // standings includes active + paused → groupSize scales with all known players.
-  // Removed players lower standings.length, shrinking Neumond.
-  // Paused players stay in standings at their rank (others overtake them).
-  const groupSize = Math.max(1, Math.ceil(standings.length / 3));
-  const groups = GROUPS.map((g, i) => standings.slice(i * groupSize, (i + 1) * groupSize));
+  // Vollmond and Halbmond always hold 33 places; Neumond gets the remainder.
+  // Removing players only shrinks Neumond, never Vollmond/Halbmond.
+  const groups = [
+    standings.slice(0, FIXED_GROUP_SIZE),
+    standings.slice(FIXED_GROUP_SIZE, FIXED_GROUP_SIZE * 2),
+    standings.slice(FIXED_GROUP_SIZE * 2),
+  ];
 
   // Flat search results when searching
   const searchActive = searchQuery.trim().length > 0;
@@ -137,7 +142,7 @@ export default function RanglisteScreen() {
 
   const doPrint = () => {
     if (standings.length === 0 || typeof window === 'undefined') return;
-    const content = buildPrintContent(standings, groupSize, pausedIds);
+    const content = buildPrintContent(standings, pausedIds);
     const css =
       '*{box-sizing:border-box}' +
       'body{margin:0;padding:14px 20px;font-family:Arial,sans-serif;color:#222}' +
@@ -156,9 +161,11 @@ export default function RanglisteScreen() {
 
   const selectedPlayer = selected ? standings.find((p) => p.id === selected) : null;
   const selectedOverallIdx = selectedPlayer ? standings.indexOf(selectedPlayer) : -1;
-  const selectedGroupIdx = selectedOverallIdx >= 0 ? Math.floor(selectedOverallIdx / groupSize) : -1;
+  const selectedGroupIdx = selectedOverallIdx >= 0 ? getGroupIdx(selectedOverallIdx) : -1;
   const selectedGroup = selectedGroupIdx >= 0 ? GROUPS[selectedGroupIdx] : null;
-  const selectedGroupRank = selectedOverallIdx >= 0 ? (selectedOverallIdx % groupSize) + 1 : -1;
+  const selectedGroupRank = selectedOverallIdx >= 0
+    ? (selectedOverallIdx < FIXED_GROUP_SIZE ? selectedOverallIdx : selectedOverallIdx < FIXED_GROUP_SIZE * 2 ? selectedOverallIdx - FIXED_GROUP_SIZE : selectedOverallIdx - FIXED_GROUP_SIZE * 2) + 1
+    : -1;
 
   const entranceStyle = useEntranceAnimation();
 
@@ -220,9 +227,10 @@ export default function RanglisteScreen() {
                 ) : (
                   searchResults.map((p) => {
                     const overallIdx = standings.indexOf(p);
-                    const groupIdx = Math.min(Math.floor(overallIdx / groupSize), 2);
+                    const groupIdx = getGroupIdx(overallIdx);
                     const group = GROUPS[groupIdx];
-                    const groupRank = overallIdx - groupIdx * groupSize + 1;
+                    const groupOffset = groupIdx === 0 ? 0 : groupIdx === 1 ? FIXED_GROUP_SIZE : FIXED_GROUP_SIZE * 2;
+                    const groupRank = overallIdx - groupOffset + 1;
                     const parts = p.name.split(',');
                     const firstName = parts.length > 1 ? `${parts[1].trim()} ${parts[0].trim()}` : p.name.trim();
                     const isPaused = pausedIds.has(p.id);
@@ -261,7 +269,7 @@ export default function RanglisteScreen() {
                 {groups.map((groupPlayers, gIdx) => {
                   if (groupPlayers.length === 0) return null;
                   const group = GROUPS[gIdx];
-                  const overallStart = gIdx * groupSize + 1;
+                  const overallStart = (gIdx === 0 ? 0 : gIdx === 1 ? FIXED_GROUP_SIZE : FIXED_GROUP_SIZE * 2) + 1;
                   const overallEnd = overallStart + groupPlayers.length - 1;
 
                   return (

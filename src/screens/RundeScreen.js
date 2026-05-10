@@ -102,15 +102,20 @@ export default function RundeScreen() {
 
   const buildSiegerHtml = () => {
     const standings = getStandings();
-    const groupSize = Math.ceil(standings.length / 3);
+    const FIXED_GS = 33;
     const groupDefs = [
       { label: 'Vollmondgruppe', color: '#B8860B', light: '#FFF8E1', border: '#F0C040' },
       { label: 'Halbmondgruppe', color: '#607D8B', light: '#ECEFF1', border: '#B0BEC5' },
       { label: 'Neumondgruppe',  color: '#1565C0', light: '#E3F2FD', border: '#90CAF9' },
     ];
     const medals = ['🥇', '🥈', '🥉'];
+    const groupSlices = [
+      standings.slice(0, FIXED_GS),
+      standings.slice(FIXED_GS, FIXED_GS * 2),
+      standings.slice(FIXED_GS * 2),
+    ];
     const cols = groupDefs.map((g, gi) => {
-      const players = standings.slice(gi * groupSize, (gi + 1) * groupSize);
+      const players = groupSlices[gi];
       if (!players.length) return '';
       const rows = players.slice(0, 3).map((p, i) => {
         const parts = p.name.split(',');
@@ -905,17 +910,26 @@ export default function RundeScreen() {
       )}
 
       {/* Finale starten — nur sichtbar wenn mind. 1 Runde gespielt, nicht bereits in Finale und keine Schnellrunde aktiv */}
-      {currentRound > 0 && !round?.isFinalRunde && !isSchnellrunde && (
-        <AnimatedPressable
-          style={s.finalBtn}
-          onPress={() => setShowFinalConfirm(true)}
-        >
-          <View style={s.btnInner}>
-            <Ionicons name="trophy" size={14} color={colors.gold} style={{ marginRight: 8 }} />
-            <Text style={s.finalBtnText}>FINALE AUSLOSUNG</Text>
-          </View>
-        </AnimatedPressable>
-      )}
+      {currentRound > 0 && !round?.isFinalRunde && !isSchnellrunde && (() => {
+        const finaleBlocked = round && !allDone;
+        return (
+          <AnimatedPressable
+            style={[s.finalBtn, finaleBlocked && { opacity: 0.35 }]}
+            onPress={finaleBlocked ? undefined : () => setShowFinalConfirm(true)}
+            activeOpacity={finaleBlocked ? 1 : 0.75}
+          >
+            <View style={s.btnInner}>
+              <Ionicons name="trophy" size={14} color={colors.gold} style={{ marginRight: 8 }} />
+              <Text style={s.finalBtnText}>FINALE AUSLOSUNG</Text>
+            </View>
+            {finaleBlocked && (
+              <Text style={{ fontSize: 9, color: colors.gold + '80', marginTop: 2, textAlign: 'center', letterSpacing: 0.5 }}>
+                Laufende Runde zuerst abschließen
+              </Text>
+            )}
+          </AnimatedPressable>
+        );
+      })()}
 
       {/* Turnier neu starten */}
       {currentRound > 0 && (
