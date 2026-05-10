@@ -538,10 +538,14 @@ export function TournamentProvider({ children }) {
   };
 
   const resetTournament = () => {
+    setParticipants((prev) => {
+      const pausedNotInActive = pausedParticipants.filter((pp) => !prev.some((p) => p.id === pp.id));
+      return [...prev, ...pausedNotInActive];
+    });
+    setPausedParticipants([]);
     setRounds([]);
     setCurrentRound(0);
     setStatAdjustments({});
-    setPausedParticipants([]);
     setTimerResetTrigger(Date.now());
   };
 

@@ -140,6 +140,7 @@ export default function RundeScreen() {
 
   const handleConfirmStart = () => {
     setShowConfirm(false);
+    setViewingRoundId(null);
     startNewRound();
   };
 
@@ -945,7 +946,7 @@ export default function RundeScreen() {
               </AnimatedPressable>
               <AnimatedPressable
                 style={s.modalBtnRed}
-                onPress={() => { setShowResetConfirm(false); resetTournament(); }}
+                onPress={() => { setShowResetConfirm(false); setViewingRoundId(null); resetTournament(); }}
                 activeOpacity={0.8}
               >
                 <Ionicons name="refresh" size={13} color={colors.white} style={{ marginRight: 5 }} />
@@ -975,7 +976,7 @@ export default function RundeScreen() {
               </AnimatedPressable>
               <AnimatedPressable
                 style={s.modalBtnFinal}
-                onPress={() => { setShowFinalConfirm(false); startFinalRunde(); }}
+                onPress={() => { setShowFinalConfirm(false); setViewingRoundId(null); startFinalRunde(); }}
                 activeOpacity={0.8}
               >
                 <Ionicons name="trophy" size={13} color={colors.bg} style={{ marginRight: 5 }} />

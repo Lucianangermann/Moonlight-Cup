@@ -54,7 +54,7 @@ const GROUP_COLORS = {
   neumond:  { header: '#1565C0', light: '#E3F2FD', border: '#90CAF9' },
 };
 
-const buildPrintContent = (standings, groupSize) => {
+const buildPrintContent = (standings, groupSize, pausedIds = new Set()) => {
   const medalSymbols = ['🥇', '🥈', '🥉'];
   const groupKeys = ['vollmond', 'halbmond', 'neumond'];
 
@@ -65,6 +65,7 @@ const buildPrintContent = (standings, groupSize) => {
     const medal = i < 3 ? `<span style="font-size:11px">${medalSymbols[i]}</span>` : `<b style="color:#555">${i + 1}</b>`;
     const parts = p.name.split(','); const name = parts.length > 1 ? `${parts[1].trim()} ${parts[0].trim()}` : p.name.trim();
     const league = p.league ? ` <span style="font-size:8px;color:#888;font-weight:700">[${p.league}]</span>` : '';
+    const pausedMark = pausedIds.has(p.id) ? ' <span style="font-size:7px;color:#e67e22;font-weight:700;letter-spacing:0.5px">(PAUSIERT)</span>' : '';
     const bg = i % 2 === 0 ? '#fafafa' : '#fff';
     const isGroupStart = i % groupSize === 0;
     const groupBar = isGroupStart ? `
@@ -75,7 +76,7 @@ const buildPrintContent = (standings, groupSize) => {
       </tr>` : '';
     return `${groupBar}<tr style="background:${bg}">
       <td style="text-align:center;padding:2px 4px;width:26px">${medal}</td>
-      <td style="padding:2px 6px;font-size:9px;font-weight:600">${name}${league}</td>
+      <td style="padding:2px 6px;font-size:9px;font-weight:600">${name}${league}${pausedMark}</td>
       <td style="text-align:right;padding:2px 4px;width:40px;font-weight:700;font-size:9px">${p.points} Pkt</td>
       <td style="text-align:right;padding:2px 4px;width:30px;color:#555;font-size:9px">${p.wins}S</td>
       <td style="text-align:right;padding:2px 4px;width:30px;color:#555;font-size:9px">${p.games}Sp</td>
@@ -106,7 +107,7 @@ const buildPrintContent = (standings, groupSize) => {
 };
 
 export default function RanglisteScreen() {
-  const { getStandings, statAdjustments, setStatAdjustment, participants, pausedParticipants } = useTournament();
+  const { getStandings, statAdjustments, setStatAdjustment, pausedParticipants } = useTournament();
   const [selected, setSelected] = useState(null);
   const [pendingDelta, setPendingDelta] = useState(null);
   const [confirming, setConfirming] = useState(false);
@@ -117,8 +118,10 @@ export default function RanglisteScreen() {
 
   const pausedIds = new Set(pausedParticipants.map((p) => p.id));
 
-  // Group size based on active players so Vollmond/Halbmond shrink when players pause
-  const groupSize = Math.max(1, Math.ceil(participants.length / 3));
+  // standings includes active + paused → groupSize scales with all known players.
+  // Removed players lower standings.length, shrinking Neumond.
+  // Paused players stay in standings at their rank (others overtake them).
+  const groupSize = Math.max(1, Math.ceil(standings.length / 3));
   const groups = GROUPS.map((g, i) => standings.slice(i * groupSize, (i + 1) * groupSize));
 
   // Flat search results when searching
@@ -134,7 +137,7 @@ export default function RanglisteScreen() {
 
   const doPrint = () => {
     if (standings.length === 0 || typeof window === 'undefined') return;
-    const content = buildPrintContent(standings, groupSize);
+    const content = buildPrintContent(standings, groupSize, pausedIds);
     const css =
       '*{box-sizing:border-box}' +
       'body{margin:0;padding:14px 20px;font-family:Arial,sans-serif;color:#222}' +
@@ -219,6 +222,7 @@ export default function RanglisteScreen() {
                     const overallIdx = standings.indexOf(p);
                     const groupIdx = Math.min(Math.floor(overallIdx / groupSize), 2);
                     const group = GROUPS[groupIdx];
+                    const groupRank = overallIdx - groupIdx * groupSize + 1;
                     const parts = p.name.split(',');
                     const firstName = parts.length > 1 ? `${parts[1].trim()} ${parts[0].trim()}` : p.name.trim();
                     const isPaused = pausedIds.has(p.id);
@@ -226,14 +230,19 @@ export default function RanglisteScreen() {
                     return (
                       <AnimatedPressable
                         key={p.id}
-                        style={[s.colRow, { backgroundColor: colors.panel, borderColor: colors.border, marginBottom: 4, paddingVertical: 8 }, isSelected && s.colRowSelected]}
+                        style={[s.colRow, { backgroundColor: colors.panel, borderColor: colors.border, marginBottom: 4, paddingVertical: 8 }, isSelected && s.colRowSelected, isPaused && { opacity: 0.65 }]}
                         onPress={() => setSelected(isSelected ? null : p.id)}
                       >
                         <Text style={[s.colRankNum, { width: 28 }]}>#{overallIdx + 1}</Text>
-                        <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 4, overflow: 'hidden' }}>
-                          <Text style={[s.colName, { color: group.color }]} numberOfLines={1}>{firstName}</Text>
-                          {isPaused && <Text style={s.pausedTag}>(pausiert)</Text>}
-                          {p.league ? <Text style={[s.colLeague, { color: group.color + '99' }]}>{p.league}</Text> : null}
+                        <View style={{ flex: 1, overflow: 'hidden' }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                            <Text style={[s.colName, { color: group.color }]} numberOfLines={1}>{firstName}</Text>
+                            {p.league ? <Text style={[s.colLeague, { color: group.color + '99' }]}>{p.league}</Text> : null}
+                            {isPaused && <Text style={s.pausedTag}>(pausiert)</Text>}
+                          </View>
+                          <Text style={[s.colStats, { color: group.color + 'BB', marginTop: 1 }]}>
+                            {group.label} · Platz {groupRank}
+                          </Text>
                         </View>
                         <View style={s.colStatsBox}>
                           <Text style={[s.colPts, { color: colors.silverDim }]}>{p.games}Sp · {p.wins}S</Text>
