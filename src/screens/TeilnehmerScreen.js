@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet, Animated,
-  Modal, TextInput, KeyboardAvoidingView, Platform, Alert,
+  Modal, TextInput, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
@@ -32,6 +32,7 @@ export default function TeilnehmerScreen() {
   const [editWins, setEditWins] = useState('');
   const [editDiff, setEditDiff] = useState('');
   const [statsError, setStatsError] = useState('');
+  const [confirmRemove, setConfirmRemove] = useState(false);
 
   const standings = getStandings();
 
@@ -79,6 +80,7 @@ export default function TeilnehmerScreen() {
     setEditWins('');
     setEditDiff('');
     setStatsError('');
+    setConfirmRemove(false);
   };
 
   const handleSaveEdit = () => {
@@ -119,11 +121,10 @@ export default function TeilnehmerScreen() {
     resumeParticipant(p.id);
   };
 
-  const handleRemove = (p) => {
-    Alert.alert('Entfernen', `${p.name} wirklich dauerhaft entfernen?`, [
-      { text: 'Abbrechen', style: 'cancel' },
-      { text: 'Entfernen', style: 'destructive', onPress: () => { removeParticipant(p.id); closeEdit(); } },
-    ]);
+  const handleRemove = () => {
+    if (!editTarget) return;
+    removeParticipant(editTarget.id);
+    closeEdit();
   };
 
   const closeSheet = () => { setShowAdd(false); setNewName(''); setNewGender('M'); setNewLeague('FZ'); };
@@ -461,17 +462,44 @@ export default function TeilnehmerScreen() {
             </AnimatedPressable>
 
             {/* Permanent remove */}
-            <AnimatedPressable
-              onPress={() => editTarget && handleRemove(editTarget)}
-              activeOpacity={0.7}
-              style={s.removeLink}
-            >
-              <Text style={s.removeLinkText}>Dauerhaft entfernen</Text>
-            </AnimatedPressable>
-
-            <AnimatedPressable onPress={closeEdit} activeOpacity={0.7}>
-              <Text style={shared.cancelText}>Abbrechen</Text>
-            </AnimatedPressable>
+            {confirmRemove ? (
+              <View style={s.confirmPanel}>
+                <Text style={s.confirmText}>
+                  <Text style={{ fontFamily: fonts.bodySemi }}>{editTarget?.name}</Text>
+                  {' '}wirklich dauerhaft entfernen?
+                </Text>
+                <View style={s.confirmRow}>
+                  <AnimatedPressable
+                    style={[s.confirmBtn, s.confirmBtnCancel]}
+                    onPress={() => setConfirmRemove(false)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={s.confirmBtnCancelText}>Abbrechen</Text>
+                  </AnimatedPressable>
+                  <AnimatedPressable
+                    style={[s.confirmBtn, s.confirmBtnDelete]}
+                    onPress={handleRemove}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="trash-outline" size={14} color={colors.white} />
+                    <Text style={s.confirmBtnDeleteText}>Entfernen</Text>
+                  </AnimatedPressable>
+                </View>
+              </View>
+            ) : (
+              <>
+                <AnimatedPressable
+                  onPress={() => setConfirmRemove(true)}
+                  activeOpacity={0.7}
+                  style={s.removeLink}
+                >
+                  <Text style={s.removeLinkText}>Dauerhaft entfernen</Text>
+                </AnimatedPressable>
+                <AnimatedPressable onPress={closeEdit} activeOpacity={0.7}>
+                  <Text style={shared.cancelText}>Abbrechen</Text>
+                </AnimatedPressable>
+              </>
+            )}
           </View>
         </KeyboardAvoidingView>
       </Modal>
@@ -833,5 +861,52 @@ const s = StyleSheet.create({
     color: colors.error + 'AA',
     fontSize: 13,
     fontWeight: '500',
+  },
+  confirmPanel: {
+    backgroundColor: colors.error + '12',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.error + '40',
+    padding: 14,
+    marginTop: 8,
+    gap: 12,
+  },
+  confirmText: {
+    color: colors.silverDim,
+    fontSize: 13,
+    fontFamily: fonts.body,
+    textAlign: 'center',
+  },
+  confirmRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  confirmBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    borderRadius: 10,
+    paddingVertical: 12,
+    borderWidth: 1,
+  },
+  confirmBtnCancel: {
+    backgroundColor: colors.panel,
+    borderColor: colors.border,
+  },
+  confirmBtnCancelText: {
+    color: colors.textMuted,
+    fontSize: 13,
+    fontFamily: fonts.bodySemi,
+  },
+  confirmBtnDelete: {
+    backgroundColor: colors.error,
+    borderColor: colors.error,
+  },
+  confirmBtnDeleteText: {
+    color: colors.white,
+    fontSize: 13,
+    fontFamily: fonts.bodySemi,
   },
 });
