@@ -33,6 +33,7 @@ export default function TeilnehmerScreen() {
   const [editDiff, setEditDiff] = useState('');
   const [statsError, setStatsError] = useState('');
   const [confirmRemove, setConfirmRemove] = useState(false);
+  const [nameError, setNameError] = useState('');
 
   const standings = getStandings();
 
@@ -49,14 +50,17 @@ export default function TeilnehmerScreen() {
 
   const handleAdd = () => {
     if (!newName.trim()) return;
-    if (participants.length >= 99) {
-      Alert.alert('Maximum erreicht', 'Es können maximal 99 Teilnehmer teilnehmen.');
+    const parts = newName.trim().split(',');
+    if (parts.length < 2 || !parts[0].trim() || !parts[1].trim()) {
+      setNameError('Format: Nachname, Vorname (z.B. Müller, Max)');
       return;
     }
+    if (participants.length >= 99) return;
     addParticipant(newName.trim(), newGender, newLeague);
     setNewName('');
     setNewGender('M');
     setNewLeague('FZ');
+    setNameError('');
     setShowAdd(false);
   };
 
@@ -127,7 +131,7 @@ export default function TeilnehmerScreen() {
     closeEdit();
   };
 
-  const closeSheet = () => { setShowAdd(false); setNewName(''); setNewGender('M'); setNewLeague('FZ'); };
+  const closeSheet = () => { setShowAdd(false); setNewName(''); setNewGender('M'); setNewLeague('FZ'); setNameError(''); };
   const maxReached = participants.length >= 99;
   const menCount = participants.filter((p) => p.gender === 'M').length;
   const womenCount = participants.filter((p) => p.gender === 'F').length;
@@ -303,13 +307,19 @@ export default function TeilnehmerScreen() {
             </View>
 
             <TextInput
-              style={shared.input}
-              placeholder="Name (z.B. Müller, Max)"
+              style={[shared.input, nameError ? s.inputError : null]}
+              placeholder="Müller, Max"
               placeholderTextColor={colors.textMuted}
               value={newName}
-              onChangeText={setNewName}
+              onChangeText={(v) => { setNewName(v); setNameError(''); }}
               autoFocus
             />
+            {!!nameError && (
+              <View style={s.nameErrorBox}>
+                <Ionicons name="warning-outline" size={13} color={colors.error} />
+                <Text style={s.nameErrorText}>{nameError}</Text>
+              </View>
+            )}
 
             <Text style={s.genderLabel}>GESCHLECHT</Text>
             <View style={s.genderRow}>
@@ -688,6 +698,28 @@ const s = StyleSheet.create({
     color: colors.success,
     fontSize: 12,
     fontWeight: '700',
+  },
+  inputError: {
+    borderColor: colors.error,
+  },
+  nameErrorBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: colors.error + '15',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.error + '40',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginBottom: 14,
+    marginTop: -6,
+  },
+  nameErrorText: {
+    color: colors.error,
+    fontSize: 12,
+    fontWeight: '500',
+    flex: 1,
   },
   sheetHeader: {
     flexDirection: 'row',
