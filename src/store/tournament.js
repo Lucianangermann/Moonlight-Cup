@@ -228,6 +228,7 @@ export function TournamentProvider({ children }) {
     const currentStandings = getStandings();
     const gsProtect = Math.ceil(currentStandings.length / 3);
     const vollmondIds = new Set(currentStandings.slice(0, gsProtect).map((p) => p.id));
+    const hadFreilos = new Set(rounds.flatMap((r) => r.sittingOut ?? []));
 
     if (isSchnellrunde) {
       // ── Schnellrunden: komplett zufällig, Spieltyp wird pro Spiel zufällig gewählt ──
@@ -251,9 +252,10 @@ export function TournamentProvider({ children }) {
         return { ...match, teamA: best.a, teamB: best.b };
       };
 
-      // Vollmond-Spieler ans Ende → pop() verarbeitet sie zuerst → kein Freilos
+      // Vollmond-Spieler und Spieler mit vorherigem Freilos ans Ende → pop() verarbeitet sie zuerst → kein Freilos
       const prioritize = (arr) => [
-        ...arr.filter((id) => !vollmondIds.has(id)),
+        ...arr.filter((id) => !vollmondIds.has(id) && !hadFreilos.has(id)),
+        ...arr.filter((id) => !vollmondIds.has(id) && hadFreilos.has(id)),
         ...arr.filter((id) => vollmondIds.has(id)),
       ];
 
@@ -305,6 +307,10 @@ export function TournamentProvider({ children }) {
       const ranked = Object.values(stats)
         .sort((a, b) => b.points - a.points || b.diff - a.diff)
         .map((p) => p.id);
+
+      // Spieler mit vorherigem Freilos ans Ende der Leftover-Reihenfolge schieben:
+      // pool.splice(0, 8) nimmt von vorne → Spieler am Ende = Leftover → kein Freilos für sie
+      ranked.sort((a, b) => (hadFreilos.has(a) ? 0 : 1) - (hadFreilos.has(b) ? 0 : 1));
 
       // Spieltyp aus den tatsächlichen Geschlechtern der 4 Spieler
       const matchType = (tA, tB) => {
@@ -456,7 +462,7 @@ export function TournamentProvider({ children }) {
 
   const getStandings = () => {
     const stats = {};
-    participants.forEach((p) => {
+    [...participants, ...pausedParticipants].forEach((p) => {
       stats[p.id] = { id: p.id, name: p.name, gender: p.gender, league: p.league ?? 'FZ', points: 0, wins: 0, games: 0, diff: 0 };
     });
     rounds.forEach((r) =>
