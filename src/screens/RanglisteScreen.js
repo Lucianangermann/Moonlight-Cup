@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Animated } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Animated, TextInput } from 'react-native';
 import { useState, useEffect } from 'react';
 import { useEntranceAnimation } from '../hooks/useEntranceAnimation';
 import { Ionicons } from '@expo/vector-icons';
@@ -106,16 +106,31 @@ const buildPrintContent = (standings, groupSize) => {
 };
 
 export default function RanglisteScreen() {
-  const { getStandings, statAdjustments, setStatAdjustment } = useTournament();
+  const { getStandings, statAdjustments, setStatAdjustment, participants, pausedParticipants } = useTournament();
   const [selected, setSelected] = useState(null);
   const [pendingDelta, setPendingDelta] = useState(null);
   const [confirming, setConfirming] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const standings = getStandings();
 
   useEffect(() => { setPendingDelta(null); setConfirming(false); }, [selected]);
 
-  const groupSize = Math.ceil(standings.length / 3);
+  const pausedIds = new Set(pausedParticipants.map((p) => p.id));
+
+  // Group size based on active players so Vollmond/Halbmond shrink when players pause
+  const groupSize = Math.max(1, Math.ceil(participants.length / 3));
   const groups = GROUPS.map((g, i) => standings.slice(i * groupSize, (i + 1) * groupSize));
+
+  // Flat search results when searching
+  const searchActive = searchQuery.trim().length > 0;
+  const searchResults = searchActive
+    ? standings.filter((p) => {
+        const parts = p.name.split(',');
+        const display = parts.length > 1 ? `${parts[1].trim()} ${parts[0].trim()}` : p.name.trim();
+        return display.toLowerCase().includes(searchQuery.toLowerCase()) ||
+               p.name.toLowerCase().includes(searchQuery.toLowerCase());
+      })
+    : [];
 
   const doPrint = () => {
     if (standings.length === 0 || typeof window === 'undefined') return;
@@ -162,6 +177,23 @@ export default function RanglisteScreen() {
         </View>
       </View>
 
+      {/* Search */}
+      <View style={s.searchBox}>
+        <Ionicons name="search-outline" size={15} color={colors.textMuted} />
+        <TextInput
+          style={s.searchInput}
+          placeholder="Spieler suchen..."
+          placeholderTextColor={colors.textMuted}
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+        />
+        {searchQuery.length > 0 && (
+          <AnimatedPressable onPress={() => setSearchQuery('')} activeOpacity={0.7}>
+            <Ionicons name="close-circle" size={15} color={colors.textMuted} />
+          </AnimatedPressable>
+        )}
+      </View>
+
       {standings.length === 0 ? (
         <View style={s.emptyState}>
           <View style={s.emptyIcon}>
@@ -173,92 +205,141 @@ export default function RanglisteScreen() {
       ) : (
         <>
           <ScrollView showsVerticalScrollIndicator={false}>
-            {/* 3 Spalten nebeneinander */}
-            <View style={s.columnsRow}>
-              {groups.map((groupPlayers, gIdx) => {
-                if (groupPlayers.length === 0) return null;
-                const group = GROUPS[gIdx];
-                const overallStart = gIdx * groupSize + 1;
-                const overallEnd = overallStart + groupPlayers.length - 1;
 
-                return (
-                  <View key={group.key} style={s.column}>
-                    {/* Spalten-Header */}
-                    <View style={[s.colHeader, { backgroundColor: group.bgColor, borderColor: group.borderColor }]}>
-                      <Ionicons name={group.icon} size={13} color={group.color} />
-                      <Text style={[s.colHeaderText, { color: group.color }]}>{group.label}</Text>
-                    </View>
-                    <Text style={[s.colRange, { color: group.color + 'AA' }]}>
-                      Platz {overallStart}–{overallEnd}
-                    </Text>
-
-                    {/* Tabellenköpfe */}
-                    <View style={s.colTableHead}>
-                      <Text style={[s.colHeadCell, { width: 22 }]}>#</Text>
-                      <Text style={[s.colHeadCell, { flex: 1 }]}>Name</Text>
-                      <Text style={[s.colHeadCell, { width: 44, textAlign: 'right' }]}>Sp/S/±</Text>
-                    </View>
-
-                    {/* Spielerzeilen */}
-                    {groupPlayers.map((p, i) => {
-                      const isTop3 = i < 3;
-                      const isFirst = i === 0;
-                      const medalColor = group.medalColors[i] ?? colors.textMuted;
-                      const medalBg    = group.medalBgs[i];
-                      const isSelected = selected === p.id;
-                      const parts = p.name.split(','); const firstName = parts.length > 1 ? `${parts[1].trim()} ${parts[0].trim()}` : p.name.trim();
-
-                      return (
-                        <AnimatedPressable
-                          key={p.id}
-                          style={[
-                            s.colRow,
-                            isTop3 && { backgroundColor: colors.panel, borderColor: colors.border },
-                            isFirst && { borderColor: group.borderColor, paddingVertical: 9 },
-                            isSelected && s.colRowSelected,
-                          ]}
-                          onPress={() => setSelected(isSelected ? null : p.id)}
-                        >
-                          {/* Rang */}
-                          <View style={{ width: 22, alignItems: 'center' }}>
-                            {isTop3 ? (
-                              <View style={[s.medalDot, { backgroundColor: medalBg }]}>
-                                <Ionicons name={MEDAL_ICONS[i]} size={10} color={medalColor} />
-                              </View>
-                            ) : (
-                              <Text style={s.colRankNum}>{i + 1}</Text>
-                            )}
-                          </View>
-
-                          {/* Name + Liga */}
-                          <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 3, overflow: 'hidden' }}>
-                            <Text
-                              style={[s.colName, isFirst && { color: group.color, fontSize: 13 }, isTop3 && !isFirst && { fontSize: 12 }]}
-                              numberOfLines={1}
-                            >
-                              {firstName}
-                            </Text>
-                            {p.league ? (
-                              <Text style={[s.colLeague, { color: group.color + '99' }]}>{p.league}</Text>
-                            ) : null}
-                          </View>
-
-                          {/* Stats-Spalte rechts */}
-                          <View style={s.colStatsBox}>
-                            <Text style={[s.colPts, { color: isTop3 ? medalColor : colors.silverDim }, isFirst && { fontSize: 15 }]}>
-                              {p.games}Sp · {p.wins}S
-                            </Text>
-                            <Text style={[s.colStats, { color: p.diff >= 0 ? colors.success + 'AA' : colors.error + 'AA' }]}>
-                              {p.diff > 0 ? '+' : ''}{p.diff}
-                            </Text>
-                          </View>
-                        </AnimatedPressable>
-                      );
-                    })}
+            {/* ── Suchergebnis-Liste ── */}
+            {searchActive ? (
+              <View style={{ marginBottom: 8 }}>
+                {searchResults.length === 0 ? (
+                  <View style={s.searchEmpty}>
+                    <Ionicons name="search-outline" size={28} color={colors.textDim} />
+                    <Text style={s.searchEmptyText}>Kein Spieler gefunden</Text>
                   </View>
-                );
-              })}
-            </View>
+                ) : (
+                  searchResults.map((p) => {
+                    const overallIdx = standings.indexOf(p);
+                    const groupIdx = Math.min(Math.floor(overallIdx / groupSize), 2);
+                    const group = GROUPS[groupIdx];
+                    const parts = p.name.split(',');
+                    const firstName = parts.length > 1 ? `${parts[1].trim()} ${parts[0].trim()}` : p.name.trim();
+                    const isPaused = pausedIds.has(p.id);
+                    const isSelected = selected === p.id;
+                    return (
+                      <AnimatedPressable
+                        key={p.id}
+                        style={[s.colRow, { backgroundColor: colors.panel, borderColor: colors.border, marginBottom: 4, paddingVertical: 8 }, isSelected && s.colRowSelected]}
+                        onPress={() => setSelected(isSelected ? null : p.id)}
+                      >
+                        <Text style={[s.colRankNum, { width: 28 }]}>#{overallIdx + 1}</Text>
+                        <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 4, overflow: 'hidden' }}>
+                          <Text style={[s.colName, { color: group.color }]} numberOfLines={1}>{firstName}</Text>
+                          {isPaused && <Text style={s.pausedTag}>(pausiert)</Text>}
+                          {p.league ? <Text style={[s.colLeague, { color: group.color + '99' }]}>{p.league}</Text> : null}
+                        </View>
+                        <View style={s.colStatsBox}>
+                          <Text style={[s.colPts, { color: colors.silverDim }]}>{p.games}Sp · {p.wins}S</Text>
+                          <Text style={[s.colStats, { color: p.diff >= 0 ? colors.success + 'AA' : colors.error + 'AA' }]}>
+                            {p.diff > 0 ? '+' : ''}{p.diff}
+                          </Text>
+                        </View>
+                      </AnimatedPressable>
+                    );
+                  })
+                )}
+              </View>
+            ) : (
+              /* ── 3 Spalten nebeneinander ── */
+              <View style={s.columnsRow}>
+                {groups.map((groupPlayers, gIdx) => {
+                  if (groupPlayers.length === 0) return null;
+                  const group = GROUPS[gIdx];
+                  const overallStart = gIdx * groupSize + 1;
+                  const overallEnd = overallStart + groupPlayers.length - 1;
+
+                  return (
+                    <View key={group.key} style={s.column}>
+                      {/* Spalten-Header */}
+                      <View style={[s.colHeader, { backgroundColor: group.bgColor, borderColor: group.borderColor }]}>
+                        <Ionicons name={group.icon} size={13} color={group.color} />
+                        <Text style={[s.colHeaderText, { color: group.color }]}>{group.label}</Text>
+                      </View>
+                      <Text style={[s.colRange, { color: group.color + 'AA' }]}>
+                        Platz {overallStart}–{overallEnd}
+                      </Text>
+
+                      {/* Tabellenköpfe */}
+                      <View style={s.colTableHead}>
+                        <Text style={[s.colHeadCell, { width: 22 }]}>#</Text>
+                        <Text style={[s.colHeadCell, { flex: 1 }]}>Name</Text>
+                        <Text style={[s.colHeadCell, { width: 44, textAlign: 'right' }]}>Sp/S/±</Text>
+                      </View>
+
+                      {/* Spielerzeilen */}
+                      {groupPlayers.map((p, i) => {
+                        const isTop3 = i < 3;
+                        const isFirst = i === 0;
+                        const medalColor = group.medalColors[i] ?? colors.textMuted;
+                        const medalBg    = group.medalBgs[i];
+                        const isSelected = selected === p.id;
+                        const isPaused = pausedIds.has(p.id);
+                        const parts = p.name.split(',');
+                        const firstName = parts.length > 1 ? `${parts[1].trim()} ${parts[0].trim()}` : p.name.trim();
+
+                        return (
+                          <AnimatedPressable
+                            key={p.id}
+                            style={[
+                              s.colRow,
+                              isTop3 && { backgroundColor: colors.panel, borderColor: colors.border },
+                              isFirst && { borderColor: group.borderColor, paddingVertical: 9 },
+                              isSelected && s.colRowSelected,
+                              isPaused && { opacity: 0.6 },
+                            ]}
+                            onPress={() => setSelected(isSelected ? null : p.id)}
+                          >
+                            {/* Rang */}
+                            <View style={{ width: 22, alignItems: 'center' }}>
+                              {isTop3 ? (
+                                <View style={[s.medalDot, { backgroundColor: medalBg }]}>
+                                  <Ionicons name={MEDAL_ICONS[i]} size={10} color={medalColor} />
+                                </View>
+                              ) : (
+                                <Text style={s.colRankNum}>{i + 1}</Text>
+                              )}
+                            </View>
+
+                            {/* Name + Liga + pausiert-Tag */}
+                            <View style={{ flex: 1, overflow: 'hidden' }}>
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+                                <Text
+                                  style={[s.colName, isFirst && { color: group.color, fontSize: 13 }, isTop3 && !isFirst && { fontSize: 12 }]}
+                                  numberOfLines={1}
+                                >
+                                  {firstName}
+                                </Text>
+                                {p.league ? (
+                                  <Text style={[s.colLeague, { color: group.color + '99' }]}>{p.league}</Text>
+                                ) : null}
+                              </View>
+                              {isPaused && <Text style={s.pausedTag}>(pausiert)</Text>}
+                            </View>
+
+                            {/* Stats-Spalte rechts */}
+                            <View style={s.colStatsBox}>
+                              <Text style={[s.colPts, { color: isTop3 ? medalColor : colors.silverDim }, isFirst && { fontSize: 15 }]}>
+                                {p.games}Sp · {p.wins}S
+                              </Text>
+                              <Text style={[s.colStats, { color: p.diff >= 0 ? colors.success + 'AA' : colors.error + 'AA' }]}>
+                                {p.diff > 0 ? '+' : ''}{p.diff}
+                              </Text>
+                            </View>
+                          </AnimatedPressable>
+                        );
+                      })}
+                    </View>
+                  );
+                })}
+              </View>
+            )}
 
             <View style={{ height: 24 }} />
           </ScrollView>
@@ -510,6 +591,40 @@ const s = StyleSheet.create({
     fontSize: 13,
     fontFamily: fonts.body,
     textAlign: 'center',
+  },
+
+  searchBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: colors.panel,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: 12,
+    marginBottom: 12,
+  },
+  searchInput: {
+    flex: 1,
+    color: colors.white,
+    fontSize: 13,
+    paddingVertical: 10,
+  },
+  searchEmpty: {
+    alignItems: 'center',
+    paddingVertical: 40,
+    gap: 10,
+  },
+  searchEmptyText: {
+    color: colors.textMuted,
+    fontSize: 13,
+  },
+  pausedTag: {
+    color: colors.warning + 'BB',
+    fontSize: 8,
+    fontWeight: '600',
+    letterSpacing: 0.3,
+    flexShrink: 0,
   },
 
   // 3-Spalten-Layout

@@ -360,8 +360,9 @@ export function TournamentProvider({ children }) {
       return Math.min(...ids.map((id) => standingIndex[id] ?? currentStandings.length));
     };
     // Aufsteigend sortieren: niedrigster Score = beste Spieler → kommen in D2
+    // ceil: bei ungerader Anzahl bekommt D2 das Extra-Spiel → D1 verliert Feld 1 zuerst
     const sorted = [...matches].sort((a, b) => matchScore(a) - matchScore(b));
-    const d2Count = Math.floor(matches.length / 2);
+    const d2Count = Math.ceil(matches.length / 2);
     const d2Ids = new Set(sorted.slice(0, d2Count).map((m) => m.id));
     const matchesWithD = matches.map((m) => ({ ...m, durchgang: d2Ids.has(m.id) ? 2 : 1 }));
 
@@ -428,7 +429,7 @@ export function TournamentProvider({ children }) {
       return Math.min(...ids.map((id) => standingIndex[id] ?? currentStandings.length));
     };
     const sorted = [...matches].sort((a, b) => matchScore(a) - matchScore(b));
-    const d2Count = Math.floor(matches.length / 2);
+    const d2Count = Math.ceil(matches.length / 2);
     const d2Ids = new Set(sorted.slice(0, d2Count).map((m) => m.id));
     const matchesWithD = matches.map((m) => ({ ...m, durchgang: d2Ids.has(m.id) ? 2 : 1 }));
 

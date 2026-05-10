@@ -56,11 +56,13 @@ export default function RundeScreen() {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [roundsMenuOpen, setRoundsMenuOpen] = useState(false);
   const [roundToDelete, setRoundToDelete] = useState(null);  // round object
+  const [viewingRoundId, setViewingRoundId] = useState(null);
   const [printMenuOpen, setPrintMenuOpen] = useState(false);
   const [printPreview, setPrintPreview] = useState(null); // round object to preview
   const [previewDg, setPreviewDg] = useState(null);      // null = beide, 1 = nur D1, 2 = nur D2
   const prevRoundRef = useRef(0);
   const round = getCurrentRoundData();
+  const displayRound = viewingRoundId ? rounds.find((r) => r.id === viewingRoundId) : round;
   const isSchnellrunde = round?.isSchnellrunde ?? false;
   const durchgang = round?.currentDurchgang ?? 1;
 
@@ -72,9 +74,10 @@ export default function RundeScreen() {
   };
   const getTeam = (ids) => ids.map(getName).join(' & ');
 
-  // Nur Matches des aktuellen Durchgangs anzeigen, nach Feld sortiert (Feld 1 zuerst)
-  const visibleMatches = (round?.matches?.filter((m) => m.durchgang === durchgang) ?? [])
-    .sort((a, b) => (a.feld ?? 0) - (b.feld ?? 0));
+  // Wenn eine vergangene Runde angeschaut wird: alle Matches zeigen (beide DGs)
+  const visibleMatches = viewingRoundId
+    ? (displayRound?.matches ?? []).sort((a, b) => (a.durchgang ?? 1) - (b.durchgang ?? 1) || (a.feld ?? 0) - (b.feld ?? 0))
+    : (round?.matches?.filter((m) => m.durchgang === durchgang) ?? []).sort((a, b) => (a.feld ?? 0) - (b.feld ?? 0));
   const pendingCount = visibleMatches.filter((m) => !m.done).length;
   const doneCount = visibleMatches.filter((m) => m.done).length;
 
@@ -305,11 +308,20 @@ export default function RundeScreen() {
                   const total = r.matches?.length ?? 0;
                   const done = r.matches?.filter((m) => m.done).length ?? 0;
                   const isCurrent = r.id === currentRound;
+                  const isViewing = r.id === viewingRoundId;
                   return (
-                    <View key={r.id} style={[s.roundRow, isCurrent && s.roundRowCurrent]}>
+                    <AnimatedPressable
+                      key={r.id}
+                      style={[s.roundRow, isCurrent && s.roundRowCurrent, isViewing && s.roundRowViewing]}
+                      onPress={() => {
+                        setViewingRoundId(r.id === viewingRoundId ? null : r.id);
+                        setRoundsMenuOpen(false);
+                      }}
+                      activeOpacity={0.8}
+                    >
                       <View style={{ flex: 1 }}>
                         <View style={s.roundRowTop}>
-                          <Text style={[s.roundRowTitle, isCurrent && { color: colors.gold }]}>
+                          <Text style={[s.roundRowTitle, isCurrent && { color: colors.gold }, isViewing && { color: colors.info }]}>
                             Runde {r.id}
                           </Text>
                           <View style={[r.isSchnellrunde ? s.schnellPill : s.normalPill, { paddingHorizontal: 7, paddingVertical: 2 }]}>
@@ -327,17 +339,25 @@ export default function RundeScreen() {
                               <Text style={s.currentBadgeText}>AKTIV</Text>
                             </View>
                           )}
+                          {isViewing && (
+                            <View style={s.viewingBadge}>
+                              <Text style={s.viewingBadgeText}>ANSICHT</Text>
+                            </View>
+                          )}
                         </View>
                         <Text style={s.roundRowMeta}>{total} Spiele · {done} fertig · {total - done} offen</Text>
                       </View>
-                      <AnimatedPressable
-                        style={s.roundDeleteBtn}
-                        onPress={() => setRoundToDelete(r)}
-                        activeOpacity={0.75}
-                      >
-                        <Ionicons name="trash-outline" size={16} color={colors.error} />
-                      </AnimatedPressable>
-                    </View>
+                      <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+                        <Ionicons name="eye-outline" size={15} color={isViewing ? colors.info : colors.textDim} />
+                        <AnimatedPressable
+                          style={s.roundDeleteBtn}
+                          onPress={(e) => { e.stopPropagation?.(); setRoundToDelete(r); }}
+                          activeOpacity={0.75}
+                        >
+                          <Ionicons name="trash-outline" size={16} color={colors.error} />
+                        </AnimatedPressable>
+                      </View>
+                    </AnimatedPressable>
                   );
                 })}
               </ScrollView>
@@ -641,13 +661,26 @@ export default function RundeScreen() {
         </View>
       </View>
 
-      {round ? (
+      {/* Banner when viewing a past round */}
+      {viewingRoundId && (
+        <AnimatedPressable
+          style={s.viewingBanner}
+          onPress={() => setViewingRoundId(null)}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="eye-outline" size={13} color={colors.info} />
+          <Text style={s.viewingBannerText}>Ansicht: Runde {viewingRoundId}</Text>
+          <Text style={s.viewingBannerBack}>← Aktuelle Runde</Text>
+        </AnimatedPressable>
+      )}
+
+      {displayRound ? (
         <>
           {/* Stats row */}
           <View style={s.statsRow}>
             <View style={s.statBox}>
               <Text style={s.statNum}>{visibleMatches.length}</Text>
-              <Text style={s.statLbl}>Spiele D{durchgang}</Text>
+              <Text style={s.statLbl}>{viewingRoundId ? 'Spiele' : `Spiele D${durchgang}`}</Text>
             </View>
             <View style={[s.statBox, s.statBoxMid]}>
               <Text style={[s.statNum, { color: colors.success }]}>{doneCount}</Text>
@@ -659,22 +692,31 @@ export default function RundeScreen() {
             </View>
           </View>
 
-          {round.sittingOut?.length > 0 && (
+          {displayRound.sittingOut?.length > 0 && (
             <View style={s.sittingBanner}>
               <Ionicons name="pause-circle-outline" size={14} color={colors.warning} />
               <Text style={s.sittingText}>
-                Freilos: {round.sittingOut.map(getName).join(', ')}
+                Freilos: {displayRound.sittingOut.map(getName).join(', ')}
               </Text>
             </View>
           )}
 
-          <Text style={shared.sectionLabel}>PAARUNGEN — DURCHGANG {durchgang}</Text>
+          <Text style={shared.sectionLabel}>
+            {viewingRoundId ? `PAARUNGEN — RUNDE ${viewingRoundId}` : `PAARUNGEN — DURCHGANG ${durchgang}`}
+          </Text>
 
           <ScrollView showsVerticalScrollIndicator={false}>
             {visibleMatches.map((match, idx) => {
               const cfg = TYPE_CONFIG[match.type] ?? TYPE_CONFIG.MF;
+              // DG-Trenner beim Blättern in vergangenen Runden
+              const prevMatch = visibleMatches[idx - 1];
+              const showDgHeader = viewingRoundId && (idx === 0 || match.durchgang !== prevMatch?.durchgang);
               return (
-                <View key={match.id} style={[s.matchCard, match.done && s.matchCardDone]}>
+                <View key={match.id}>
+                {showDgHeader && (
+                  <Text style={[shared.sectionLabel, { marginTop: idx > 0 ? 12 : 0 }]}>DURCHGANG {match.durchgang}</Text>
+                )}
+                <View style={[s.matchCard, match.done && s.matchCardDone]}>
                   {/* Top accent line — type color */}
                   <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, backgroundColor: match.done ? colors.success : cfg.color, opacity: 0.7, borderTopLeftRadius: 14, borderTopRightRadius: 14 }} />
                   <View style={s.matchCardHeader}>
@@ -712,6 +754,7 @@ export default function RundeScreen() {
                     </View>
                     <Text style={s.teamB} numberOfLines={1}>{getTeam(match.teamB)}</Text>
                   </View>
+                </View>
                 </View>
               );
             })}
@@ -1368,6 +1411,46 @@ const s = StyleSheet.create({
     color: colors.white,
     fontSize: 13,
     fontWeight: '800',
+  },
+
+  viewingBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: colors.info + '15',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.info + '35',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginBottom: 10,
+  },
+  viewingBannerText: {
+    color: colors.info,
+    fontSize: 12,
+    fontWeight: '700',
+    flex: 1,
+  },
+  viewingBannerBack: {
+    color: colors.info + 'BB',
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  roundRowViewing: {
+    borderColor: colors.info + '50',
+    backgroundColor: colors.info + '10',
+  },
+  viewingBadge: {
+    backgroundColor: colors.info,
+    borderRadius: 4,
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+  },
+  viewingBadgeText: {
+    color: colors.white,
+    fontSize: 8,
+    fontWeight: '800',
+    letterSpacing: 1,
   },
 
   headerBtnGroup: {

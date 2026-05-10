@@ -238,7 +238,7 @@ export default function TimerScreen() {
 
   return (
     <Animated.View style={[{ flex: 1 }, entranceStyle]}>
-    <ScrollView style={{ flex: 1 }} contentContainerStyle={[shared.screen, s.screen]} showsVerticalScrollIndicator={false}>
+    <ScrollView style={{ flex: 1, backgroundColor: colors.bg }} contentContainerStyle={[shared.screen, s.screen]} showsVerticalScrollIndicator={false}>
       <Text style={s.title}>Timer</Text>
 
       {/* Phase banner */}
