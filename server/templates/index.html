@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Moonlight Cup · Start{% endblock %}
+
+{% block content %}
+<section class="card card-gold">
+  <div id="countdown" class="countdown" role="timer" aria-live="polite">
+    <div class="countdown-label">Nächstes Spiel</div>
+    <div class="countdown-time">––:––</div>
+    <div class="countdown-sub">Lade Timer…</div>
+  </div>
+</section>
+
+<nav class="quick-links" aria-label="Schnellzugriff">
+  <a href="{{ url_for('public.rangliste') }}">Rangliste</a>
+  <a href="{{ url_for('public.ergebnisse') }}">Ergebnisse</a>
+  <a href="{{ url_for('public.spielplan') }}">Spielplan</a>
+  <a href="{{ url_for('anmeldung.anmeldung') }}">Anmeldung</a>
+</nav>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/timer.js') }}" defer></script>
+{% endblock %}

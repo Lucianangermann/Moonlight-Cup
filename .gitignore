@@ -39,3 +39,14 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# Flask server
+server/.env
+server/*.db
+server/*.db-journal
+server/*.db-wal
+server/*.db-shm
+server/__pycache__/
+server/**/__pycache__/
+server/venv/
+*.pyc

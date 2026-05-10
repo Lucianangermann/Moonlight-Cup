@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Admin · Dashboard{% endblock %}
+{% block content %}
+<h1>Admin Dashboard</h1>
+<p class="text-muted">Übersicht — wird in Phase 4 ausgebaut.</p>
+
+<div class="quick-links">
+  <a href="{{ url_for('admin.teilnehmer') }}">Teilnehmer</a>
+  <a href="{{ url_for('admin.spielplan') }}">Spielplan</a>
+  <a href="{{ url_for('admin.ergebnisse') }}">Ergebnisse</a>
+  <a href="{{ url_for('admin.rangliste') }}">Rangliste</a>
+  <a href="{{ url_for('admin.timer') }}">Timer</a>
+</div>
+{% endblock %}
