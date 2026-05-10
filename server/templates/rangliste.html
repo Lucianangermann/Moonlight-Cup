@@ -1,6 +1,48 @@
 {% extends "base.html" %}
 {% block title %}Rangliste · Moonlight Cup{% endblock %}
+
 {% block content %}
-<h1>Rangliste</h1>
-<div class="card text-muted">Wird in Phase 3 aus der Datenbank gefüllt.</div>
+<header style="display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:16px;">
+  <h1 class="mb-0">Rangliste</h1>
+  <div class="text-muted" style="letter-spacing:1.5px;">
+    {{ total_players }} Spieler · Live-Update bei jedem Aufruf
+  </div>
+</header>
+
+{% if total_players == 0 %}
+  <div class="card text-center text-muted mt-2">
+    Noch keine Teilnehmer. Sobald der Admin Anmeldungen bestätigt, erscheinen sie hier.
+  </div>
+{% else %}
+  <div class="group-grid mt-2">
+    {% for g in groups %}
+      <section class="group-col group-col-{{ g.key }} group-{{ g.key }}">
+        <header class="group-header">
+          <span>{{ g.label }}</span>
+          <small class="text-muted" style="font-family:'Rajdhani',sans-serif;font-size:11px;letter-spacing:1px;">
+            {{ g.range }}
+          </small>
+        </header>
+        <p class="text-muted mb-2" style="font-size:12px;letter-spacing:1.5px;text-transform:uppercase;">
+          {{ g.sub }}
+        </p>
+        {% if g.players %}
+          {% for p in g.players %}
+            <div class="player-row {% if p.is_paused %}player-paused{% endif %}">
+              <span class="player-rank">#{{ p.rank }}</span>
+              <span class="player-name">
+                {{ p.name }}
+                <small class="text-muted" style="font-size:10px;">[{{ p.league }}]</small>
+                {% if p.is_paused %}<span class="tag-paused">pausiert</span>{% endif %}
+              </span>
+              <span class="player-pts">{{ p.points }}</span>
+            </div>
+          {% endfor %}
+        {% else %}
+          <p class="text-muted text-center" style="padding:12px;">—</p>
+        {% endif %}
+      </section>
+    {% endfor %}
+  </div>
+{% endif %}
 {% endblock %}

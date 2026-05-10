@@ -1,6 +1,71 @@
 {% extends "base.html" %}
 {% block title %}Spielplan · Moonlight Cup{% endblock %}
+
 {% block content %}
 <h1>Spielplan</h1>
-<div class="card text-muted">Wird in Phase 3 aus der Datenbank gefüllt.</div>
+
+{% if not has_round %}
+  <div class="card text-center text-muted">
+    Noch keine Runde gestartet. Der Admin startet die nächste Runde im Admin-Bereich.
+  </div>
+{% endif %}
+
+{% for r in rounds %}
+  <section class="card mt-2">
+    <header style="display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:14px;">
+      <h2 class="mb-0" style="font-size:22px;">
+        {% if r.is_final %}Finale Runde
+        {% elif r.is_schnellrunde %}Schnellrunde {{ r.round_number }}
+        {% else %}Runde {{ r.round_number }}{% endif %}
+      </h2>
+      <span class="text-muted" style="font-size:13px;letter-spacing:1.5px;">
+        Aktiver Durchgang: <strong style="color:var(--gold);">D{{ r.current_durchgang }}</strong>
+      </span>
+    </header>
+
+    {% for dg in [1, 2] %}
+      {% set dg_matches = r.matches | selectattr('durchgang', 'equalto', dg) | list %}
+      {% if dg_matches %}
+        <h3 class="mt-2" style="font-size:14px;letter-spacing:2px;color:{% if dg == r.current_durchgang %}var(--gold){% else %}var(--silver-dim){% endif %};">
+          Durchgang {{ dg }}
+        </h3>
+        <table class="table">
+          <thead>
+            <tr>
+              <th style="width:48px;">Feld</th>
+              <th>Team A</th>
+              <th class="num" style="width:80px;">Stand</th>
+              <th>Team B</th>
+              <th style="width:60px;">Typ</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for m in dg_matches %}
+              <tr style="{% if not m.done %}opacity:0.85;{% endif %}">
+                <td><strong>{{ m.field }}</strong></td>
+                <td style="{% if m.winner == 'A' %}color:var(--gold);font-weight:700;{% endif %}">
+                  {{ m.team_a|join(' / ') }}
+                </td>
+                <td class="num">
+                  {% if m.done %}<strong>{{ m.score_a }} : {{ m.score_b }}</strong>
+                  {% else %}<span class="text-muted">– : –</span>{% endif %}
+                </td>
+                <td style="{% if m.winner == 'B' %}color:var(--gold);font-weight:700;{% endif %}">
+                  {{ m.team_b|join(' / ') }}
+                </td>
+                <td><span class="text-muted" style="font-size:11px;">{{ m.match_type }}</span></td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% endif %}
+    {% endfor %}
+
+    {% if r.sitting_out %}
+      <p class="text-muted mt-2" style="font-size:13px;letter-spacing:1px;">
+        <strong style="color:var(--warm);">Freilos:</strong> {{ r.sitting_out|join(', ') }}
+      </p>
+    {% endif %}
+  </section>
+{% endfor %}
 {% endblock %}

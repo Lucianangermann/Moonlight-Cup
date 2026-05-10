@@ -1,7 +1,70 @@
 {% extends "base.html" %}
-{% block title %}Admin · ergebnisse{% endblock %}
+{% block title %}Admin · Ergebnisse{% endblock %}
+
 {% block content %}
-<h1>ergebnisse</h1>
-<p class="text-muted">Wird in Phase 4 ausgebaut.</p>
-<p><a href="{{ url_for('admin.dashboard') }}" class="btn btn-ghost">← Zurück</a></p>
+<header style="display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:16px;">
+  <h1 class="mb-0">Ergebnisse erfassen</h1>
+  <a href="{{ url_for('admin.dashboard') }}" class="btn btn-ghost">← Dashboard</a>
+</header>
+
+{% if not rounds %}
+  <div class="card text-center text-muted mt-2">Noch keine Runde — erst eine Runde starten.</div>
+{% endif %}
+
+{% for r in rounds %}
+  <section class="card mt-2">
+    <header style="display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:14px;">
+      <h2 class="mb-0" style="font-size:20px;">
+        {% if r.is_final %}Finale Runde
+        {% elif r.is_schnellrunde %}Schnellrunde {{ r.round_number }}
+        {% else %}Runde {{ r.round_number }}{% endif %}
+        {% if loop.first %}<span class="text-muted" style="font-size:12px;letter-spacing:2px;">· AKTUELL</span>{% endif %}
+      </h2>
+    </header>
+
+    <table class="table">
+      <thead>
+        <tr>
+          <th style="width:48px;">Feld</th>
+          <th style="width:48px;">DG</th>
+          <th>Team A</th>
+          <th>Team B</th>
+          <th class="num" style="width:300px;">Ergebnis</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for m in r.matches %}
+          <tr>
+            <td><strong>{{ m.field }}</strong></td>
+            <td class="text-muted">D{{ m.durchgang }}</td>
+            <td style="{% if m.winner == 'A' %}color:var(--gold);font-weight:700;{% endif %}">{{ m.team_a|join(' / ') }}</td>
+            <td style="{% if m.winner == 'B' %}color:var(--gold);font-weight:700;{% endif %}">{{ m.team_b|join(' / ') }}</td>
+            <td>
+              <form method="POST" style="display:flex;gap:4px;align-items:center;justify-content:flex-end;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="action" value="save_result">
+                <input type="hidden" name="match_id" value="{{ m.id }}">
+                <input type="number" name="score_a" min="0" max="99" required
+                       value="{{ m.score_a if m.done else '' }}"
+                       style="width:54px;padding:4px 6px;background:rgba(6,9,18,0.6);border:1px solid var(--border);color:var(--silver);border-radius:4px;font-family:inherit;text-align:center;">
+                <span class="text-muted">:</span>
+                <input type="number" name="score_b" min="0" max="99" required
+                       value="{{ m.score_b if m.done else '' }}"
+                       style="width:54px;padding:4px 6px;background:rgba(6,9,18,0.6);border:1px solid var(--border);color:var(--silver);border-radius:4px;font-family:inherit;text-align:center;">
+                <button type="submit" class="btn btn-primary" style="padding:4px 10px;font-size:11px;">
+                  {% if m.done %}↺{% else %}✓{% endif %}
+                </button>
+                {% if m.done %}
+                  <button type="submit" formaction="" class="btn btn-ghost" style="padding:4px 10px;font-size:11px;"
+                          name="action" value="clear" formnovalidate
+                          onclick="return confirm('Ergebnis zurücksetzen?')">×</button>
+                {% endif %}
+              </form>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+{% endfor %}
 {% endblock %}

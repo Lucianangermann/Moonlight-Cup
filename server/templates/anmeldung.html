@@ -1,11 +1,36 @@
 {% extends "base.html" %}
 {% block title %}Anmeldung · Moonlight Cup{% endblock %}
+
 {% block content %}
-<div class="card card-gold" style="max-width: 520px; margin: 40px auto;">
+<div class="card card-gold" style="max-width: 540px; margin: 40px auto;">
   <h1 class="text-center">Anmeldung</h1>
   <p class="text-muted text-center mb-3" style="letter-spacing: 1.5px;">
-    Trage dich für den nächsten Moonlight Cup ein. Der Admin bestätigt deine Anmeldung.
+    Trage dich für den nächsten Moonlight Cup ein.<br>
+    Der Admin bestätigt deine Anmeldung anschließend.
   </p>
-  <p class="text-muted text-center">Wird in Phase 3 mit echtem Form-Handler aktiviert.</p>
+
+  <form method="POST" action="{{ url_for('anmeldung.anmeldung') }}" class="form" novalidate>
+    {{ form.hidden_tag() }}
+
+    <div class="form-row">
+      <label for="name">{{ form.name.label.text }}</label>
+      {{ form.name(id="name", placeholder="Müller, Max", autocomplete="name", required=True) }}
+      {% for err in form.name.errors %}<span class="field-error">{{ err }}</span>{% endfor %}
+    </div>
+
+    <div class="form-row">
+      <label for="email">{{ form.email.label.text }}</label>
+      {{ form.email(id="email", placeholder="max@example.com", autocomplete="email", required=True) }}
+      {% for err in form.email.errors %}<span class="field-error">{{ err }}</span>{% endfor %}
+    </div>
+
+    <div class="form-row">
+      <label for="verein">{{ form.verein.label.text }}</label>
+      {{ form.verein(id="verein", placeholder="z.B. TSV Musterhausen", autocomplete="organization") }}
+      {% for err in form.verein.errors %}<span class="field-error">{{ err }}</span>{% endfor %}
+    </div>
+
+    <button type="submit" class="btn btn-primary">Anmelden</button>
+  </form>
 </div>
 {% endblock %}

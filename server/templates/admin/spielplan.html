@@ -1,7 +1,129 @@
 {% extends "base.html" %}
-{% block title %}Admin · spielplan{% endblock %}
+{% block title %}Admin · Spielplan{% endblock %}
+
 {% block content %}
-<h1>spielplan</h1>
-<p class="text-muted">Wird in Phase 4 ausgebaut.</p>
-<p><a href="{{ url_for('admin.dashboard') }}" class="btn btn-ghost">← Zurück</a></p>
+<header style="display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:16px;">
+  <h1 class="mb-0">Spielplan</h1>
+  <a href="{{ url_for('admin.dashboard') }}" class="btn btn-ghost">← Dashboard</a>
+</header>
+
+{# ---------------- Aktionen ---------------- #}
+<section class="card card-gold mt-2">
+  <h2 style="font-size:18px;">Aktionen</h2>
+  <p class="text-muted mb-2" style="font-size:13px;">
+    {{ n_active }} aktive Spieler · {{ rounds|length }} Runde(n) gespielt
+  </p>
+
+  <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
+    <form method="POST" style="display:inline;">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="action" value="start_round">
+      <button type="submit" class="btn btn-primary"
+        {% if current and not current.all_done %}disabled{% endif %}
+        onclick="return confirm('Neue Runde auslosen?')">
+        Neue Runde auslosen
+      </button>
+    </form>
+
+    {% if current and current.current_durchgang == 1 %}
+      <form method="POST" style="display:inline;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="action" value="advance_durchgang">
+        <button type="submit" class="btn">Durchgang 2 starten</button>
+      </form>
+    {% endif %}
+
+    {% if can_start_final %}
+      <form method="POST" style="display:inline;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="action" value="start_final">
+        <button type="submit" class="btn"
+          onclick="return confirm('Finale auslosen? (Gruppen von 4 Spielern)')">
+          Finale auslosen
+        </button>
+      </form>
+    {% endif %}
+
+    <form method="POST" style="display:inline;margin-left:auto;">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="action" value="reset">
+      <button type="submit" class="btn btn-danger"
+        onclick="return confirm('Turnier KOMPLETT zurücksetzen? Alle Runden, Ergebnisse und Stat-Adjustments werden gelöscht. Pausierte Spieler werden reaktiviert.')">
+        Turnier zurücksetzen
+      </button>
+    </form>
+  </div>
+</section>
+
+{# ---------------- Runden anzeigen ---------------- #}
+{% if not rounds %}
+  <div class="card text-center text-muted mt-2">Noch keine Runde gestartet.</div>
+{% endif %}
+
+{% for r in rounds | reverse %}
+  <section class="card mt-2">
+    <header style="display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:14px;">
+      <h2 class="mb-0" style="font-size:20px;">
+        {% if r.is_final %}Finale Runde
+        {% elif r.is_schnellrunde %}Schnellrunde {{ r.round_number }}
+        {% else %}Runde {{ r.round_number }}{% endif %}
+        {% if loop.first %}<span class="text-muted" style="font-size:12px;letter-spacing:2px;">· AKTUELL</span>{% endif %}
+      </h2>
+      <div style="display:flex;gap:10px;align-items:center;">
+        <span class="text-muted" style="font-size:12px;letter-spacing:1.5px;">
+          Aktiver Durchgang: <strong style="color:var(--gold);">D{{ r.current_durchgang }}</strong>
+        </span>
+        {% if loop.first %}
+          <form method="POST" style="display:inline;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="action" value="delete_round">
+            <input type="hidden" name="round_id" value="{{ r.id }}">
+            <button type="submit" class="btn btn-danger" style="padding:4px 10px;font-size:11px;"
+              onclick="return confirm('Diese Runde löschen?')">Runde löschen</button>
+          </form>
+        {% endif %}
+      </div>
+    </header>
+
+    {% for dg in [1, 2] %}
+      {% set dg_matches = r.matches | selectattr('durchgang', 'equalto', dg) | list %}
+      {% if dg_matches %}
+        <h3 class="mt-2" style="font-size:13px;letter-spacing:2px;color:{% if dg == r.current_durchgang %}var(--gold){% else %}var(--silver-dim){% endif %};">
+          Durchgang {{ dg }}
+        </h3>
+        <table class="table">
+          <thead>
+            <tr>
+              <th style="width:48px;">Feld</th>
+              <th>Team A</th>
+              <th class="num" style="width:80px;">Stand</th>
+              <th>Team B</th>
+              <th style="width:50px;">Typ</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for m in dg_matches %}
+              <tr style="{% if not m.done %}opacity:0.85;{% endif %}">
+                <td><strong>{{ m.field }}</strong></td>
+                <td style="{% if m.winner == 'A' %}color:var(--gold);font-weight:700;{% endif %}">{{ m.team_a|join(' / ') }}</td>
+                <td class="num">
+                  {% if m.done %}<strong>{{ m.score_a }}:{{ m.score_b }}</strong>
+                  {% else %}<span class="text-muted">–</span>{% endif %}
+                </td>
+                <td style="{% if m.winner == 'B' %}color:var(--gold);font-weight:700;{% endif %}">{{ m.team_b|join(' / ') }}</td>
+                <td><span class="text-muted" style="font-size:11px;">{{ m.match_type }}</span></td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% endif %}
+    {% endfor %}
+
+    {% if r.sitting_out %}
+      <p class="text-muted mt-2" style="font-size:13px;">
+        <strong style="color:var(--warm);">Freilos:</strong> {{ r.sitting_out|join(', ') }}
+      </p>
+    {% endif %}
+  </section>
+{% endfor %}
 {% endblock %}

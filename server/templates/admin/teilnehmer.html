@@ -1,7 +1,163 @@
 {% extends "base.html" %}
-{% block title %}Admin · teilnehmer{% endblock %}
+{% block title %}Admin · Teilnehmer{% endblock %}
+
 {% block content %}
-<h1>teilnehmer</h1>
-<p class="text-muted">Wird in Phase 4 ausgebaut.</p>
-<p><a href="{{ url_for('admin.dashboard') }}" class="btn btn-ghost">← Zurück</a></p>
+<header style="display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:16px;">
+  <h1 class="mb-0">Teilnehmer</h1>
+  <a href="{{ url_for('admin.dashboard') }}" class="btn btn-ghost">← Dashboard</a>
+</header>
+
+{# ---------------- Pending Anmeldungen ---------------- #}
+{% if pending %}
+  <section class="card card-gold mt-2">
+    <h2 style="font-size:18px;">
+      Offene Anmeldungen
+      <span class="text-muted" style="font-size:12px;letter-spacing:1.5px;font-family:'Rajdhani',sans-serif;">
+        · {{ pending|length }}
+      </span>
+    </h2>
+    <p class="text-muted mb-2" style="font-size:13px;">
+      Bestätige eine Anmeldung mit Geschlecht & Liga, oder lösche sie.
+    </p>
+    <table class="table">
+      <thead>
+        <tr><th>Name</th><th>E-Mail</th><th>Verein</th><th>Eingegangen</th><th style="width:360px;">Aktion</th></tr>
+      </thead>
+      <tbody>
+        {% for a in pending %}
+          <tr>
+            <td><strong>{{ a.name }}</strong></td>
+            <td class="text-muted">{{ a.email }}</td>
+            <td class="text-muted">{{ a.verein or '—' }}</td>
+            <td class="text-muted">{{ a.created_at }}</td>
+            <td>
+              <form method="POST" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+                {{ confirm_form.hidden_tag() }}
+                <input type="hidden" name="action" value="confirm">
+                <input type="hidden" name="confirm-anmeldung_id" value="{{ a.id }}">
+                <select name="confirm-gender" required style="padding:6px;background:rgba(6,9,18,0.6);border:1px solid var(--border);color:var(--silver);border-radius:6px;font-family:inherit;">
+                  <option value="M">M</option>
+                  <option value="F">F</option>
+                </select>
+                <select name="confirm-league" required style="padding:6px;background:rgba(6,9,18,0.6);border:1px solid var(--border);color:var(--silver);border-radius:6px;font-family:inherit;">
+                  {% for k, label in leagues %}
+                    <option value="{{ k }}">{{ k }}</option>
+                  {% endfor %}
+                </select>
+                <button type="submit" class="btn btn-primary" style="padding:6px 14px;font-size:12px;">Bestätigen</button>
+              </form>
+              <form method="POST" style="margin-top:6px;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="action" value="delete_anmeldung">
+                <input type="hidden" name="anmeldung_id" value="{{ a.id }}">
+                <button type="submit" class="btn btn-danger" style="padding:4px 12px;font-size:11px;"
+                  onclick="return confirm('Anmeldung wirklich löschen?')">Löschen</button>
+              </form>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+{% endif %}
+
+{# ---------------- Add Participant ---------------- #}
+<section class="card mt-2">
+  <h2 style="font-size:18px;">Neuer Teilnehmer (manuell)</h2>
+  <form method="POST" class="form" style="flex-direction:row;flex-wrap:wrap;gap:12px;align-items:flex-end;">
+    {{ add_form.hidden_tag() }}
+    <input type="hidden" name="action" value="add">
+    <div class="form-row" style="flex:1;min-width:240px;">
+      <label>{{ add_form.name.label.text }}</label>
+      {{ add_form.name(placeholder="Müller, Max") }}
+      {% for e in add_form.name.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
+    </div>
+    <div class="form-row" style="width:120px;">
+      <label>{{ add_form.gender.label.text }}</label>
+      {{ add_form.gender() }}
+    </div>
+    <div class="form-row" style="width:200px;">
+      <label>{{ add_form.league.label.text }}</label>
+      {{ add_form.league() }}
+    </div>
+    <div class="form-row" style="flex:1;min-width:200px;">
+      <label>{{ add_form.verein.label.text }}</label>
+      {{ add_form.verein() }}
+    </div>
+    <div class="form-row" style="flex:1;min-width:200px;">
+      <label>{{ add_form.email.label.text }}</label>
+      {{ add_form.email() }}
+    </div>
+    <button type="submit" class="btn btn-primary">Hinzufügen</button>
+  </form>
+</section>
+
+{# ---------------- Active Participants ---------------- #}
+<section class="card mt-2">
+  <h2 style="font-size:18px;">Aktive Teilnehmer ({{ active|length }})</h2>
+  {% if active %}
+    <table class="table">
+      <thead>
+        <tr><th>Name</th><th>G</th><th>Liga</th><th>Verein</th><th style="width:200px;">Aktion</th></tr>
+      </thead>
+      <tbody>
+        {% for p in active %}
+          <tr>
+            <td><strong>{{ p.name }}</strong></td>
+            <td>{{ p.gender }}</td>
+            <td><span style="font-size:11px;letter-spacing:1px;color:var(--gold);">{{ p.league }}</span></td>
+            <td class="text-muted">{{ p.verein or '—' }}</td>
+            <td>
+              <form method="POST" style="display:inline;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="action" value="pause">
+                <input type="hidden" name="pid" value="{{ p.id }}">
+                <button type="submit" class="btn btn-ghost" style="padding:4px 10px;font-size:11px;">Pausieren</button>
+              </form>
+              <form method="POST" style="display:inline;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="action" value="remove_participant">
+                <input type="hidden" name="pid" value="{{ p.id }}">
+                <button type="submit" class="btn btn-danger" style="padding:4px 10px;font-size:11px;"
+                  onclick="return confirm('Teilnehmer wirklich entfernen?')">×</button>
+              </form>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="text-muted">Keine aktiven Teilnehmer.</p>
+  {% endif %}
+</section>
+
+{# ---------------- Paused Participants ---------------- #}
+{% if paused %}
+  <section class="card mt-2">
+    <h2 style="font-size:18px;">Pausierte Spieler ({{ paused|length }})</h2>
+    <p class="text-muted mb-2" style="font-size:13px;">
+      Pausierte Spieler bleiben in der Rangliste, nehmen aber an keinen Auslosungen teil.
+    </p>
+    <table class="table">
+      <thead><tr><th>Name</th><th>G</th><th>Liga</th><th style="width:200px;">Aktion</th></tr></thead>
+      <tbody>
+        {% for p in paused %}
+          <tr style="opacity:0.7;">
+            <td>{{ p.name }} <span class="tag-paused">pausiert</span></td>
+            <td>{{ p.gender }}</td>
+            <td><span style="font-size:11px;letter-spacing:1px;">{{ p.league }}</span></td>
+            <td>
+              <form method="POST" style="display:inline;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="action" value="resume">
+                <input type="hidden" name="pid" value="{{ p.id }}">
+                <button type="submit" class="btn btn-primary" style="padding:4px 12px;font-size:11px;">Reaktivieren</button>
+              </form>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+{% endif %}
 {% endblock %}

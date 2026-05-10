@@ -68,23 +68,27 @@ def standalone_db() -> Iterator[sqlite3.Connection]:
 
 SCHEMA = """
 -- Active tournament participants. `gender` and `league` mirror the RN model.
+-- `email` and `verein` are optional, populated when admin promotes an anmeldung.
 CREATE TABLE IF NOT EXISTS participants (
     id          TEXT PRIMARY KEY,
     name        TEXT NOT NULL,                       -- "Nachname, Vorname"
     gender      TEXT NOT NULL CHECK (gender IN ('M','F')),
     league      TEXT NOT NULL,                       -- 'FZ','BK','BL','BOL','BAY','OL','RL','BU'
+    email       TEXT,                                -- optional, from promoted anmeldung
+    verein      TEXT,                                -- optional display string (club name)
     is_paused   INTEGER NOT NULL DEFAULT 0,          -- 0 active, 1 paused (still in standings, no draws)
     created_at  TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
 -- Round metadata. Matches live in their own table referencing this.
 CREATE TABLE IF NOT EXISTS rounds (
-    id              INTEGER PRIMARY KEY AUTOINCREMENT,
-    round_number    INTEGER NOT NULL,                -- 1-indexed
-    is_final_runde  INTEGER NOT NULL DEFAULT 0,
-    is_schnellrunde INTEGER NOT NULL DEFAULT 0,
-    sitting_out     TEXT NOT NULL DEFAULT '[]',      -- JSON array of participant ids (Freilos)
-    created_at      TEXT NOT NULL DEFAULT (datetime('now'))
+    id                INTEGER PRIMARY KEY AUTOINCREMENT,
+    round_number      INTEGER NOT NULL,              -- 1-indexed
+    is_final_runde    INTEGER NOT NULL DEFAULT 0,
+    is_schnellrunde   INTEGER NOT NULL DEFAULT 0,
+    current_durchgang INTEGER NOT NULL DEFAULT 1 CHECK (current_durchgang IN (1,2)),
+    sitting_out       TEXT NOT NULL DEFAULT '[]',    -- JSON array of participant ids (Freilos)
+    created_at        TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
 -- A single match in a round. teamA/teamB are JSON arrays of two participant ids.
