@@ -61,7 +61,7 @@ python app.py
 # → http://127.0.0.1:5000
 ```
 
-Login: `ADMIN_EMAIL` aus `.env`, Passwort = das, das du vorher gehasht hast.
+Login: `ADMIN_USERNAME` aus `.env`, Passwort = das, das du vorher gehasht hast.
 
 Algorithmus-Tests:
 
@@ -140,7 +140,7 @@ nano .env
 ```
 SECRET_KEY=<64 hex chars>
 DATABASE_PATH=moonlight_cup.db
-ADMIN_EMAIL=admin@example.com
+ADMIN_USERNAME=admin
 ADMIN_PASSWORD_HASH=$2b$12$...
 PORT=5000
 ```

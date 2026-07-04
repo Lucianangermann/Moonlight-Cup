@@ -29,7 +29,7 @@ class Config:
     )
 
     # --- Admin (only one) ---
-    ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "")
+    ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME", "")
     ADMIN_PASSWORD_HASH = os.environ.get("ADMIN_PASSWORD_HASH", "")
 
     # --- Sessions ---

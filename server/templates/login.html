@@ -9,9 +9,9 @@
     {{ form.hidden_tag() }}
 
     <div class="form-row">
-      <label for="email">{{ form.email.label.text }}</label>
-      {{ form.email(id="email", autocomplete="email", required=True) }}
-      {% for err in form.email.errors %}<span class="field-error">{{ err }}</span>{% endfor %}
+      <label for="username">{{ form.username.label.text }}</label>
+      {{ form.username(id="username", autocomplete="username", required=True) }}
+      {% for err in form.username.errors %}<span class="field-error">{{ err }}</span>{% endfor %}
     </div>
 
     <div class="form-row">

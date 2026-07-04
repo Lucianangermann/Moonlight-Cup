@@ -2,7 +2,7 @@
 Admin-only authentication.
 
 There is exactly one admin account; credentials live in `.env` as the
-email and a bcrypt hash. We compare the submitted password against the
+username and a bcrypt hash. We compare the submitted password against the
 hash with `bcrypt.check_password_hash` (constant-time).
 
 Login is rate-limited per-IP to make brute-force impractical even if
@@ -38,18 +38,18 @@ def login():
 
     if form.validate_on_submit():
         bcrypt = current_app.extensions["bcrypt"]
-        email = form.email.data.strip().lower()
+        username = form.username.data.strip().lower()
         password = form.password.data
 
-        admin_email = current_app.config["ADMIN_EMAIL"].strip().lower()
+        admin_username = current_app.config["ADMIN_USERNAME"].strip().lower()
         admin_hash = current_app.config["ADMIN_PASSWORD_HASH"]
 
-        # Always run the bcrypt check, even if the email doesn't match,
-        # to avoid timing leaks of "valid email but wrong pw".
+        # Always run the bcrypt check, even if the username doesn't match,
+        # to avoid timing leaks of "valid username but wrong pw".
         password_ok = bcrypt.check_password_hash(admin_hash, password) if admin_hash else False
-        email_ok = email == admin_email and bool(admin_email)
+        username_ok = username == admin_username and bool(admin_username)
 
-        if email_ok and password_ok:
+        if username_ok and password_ok:
             session.clear()
             session["is_admin"] = True
             session.permanent = True  # respects PERMANENT_SESSION_LIFETIME
@@ -59,7 +59,7 @@ def login():
                 next_url = url_for("admin.dashboard")
             return redirect(next_url)
 
-        flash("E-Mail oder Passwort ist falsch.", "error")
+        flash("Benutzername oder Passwort ist falsch.", "error")
 
     return render_template("login.html", form=form)
 

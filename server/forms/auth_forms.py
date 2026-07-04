@@ -1,15 +1,14 @@
 """WTForms used by the auth blueprint."""
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField
-from wtforms.validators import DataRequired, Email, Length
+from wtforms.validators import DataRequired, Length
 
 
 class LoginForm(FlaskForm):
-    email = StringField(
-        "E-Mail",
+    username = StringField(
+        "Benutzername",
         validators=[
-            DataRequired(message="E-Mail ist erforderlich."),
-            Email(message="Ungültige E-Mail-Adresse."),
+            DataRequired(message="Benutzername ist erforderlich."),
             Length(max=120),
         ],
     )
