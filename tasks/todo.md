@@ -44,7 +44,7 @@ Verhalten der Tournament-Logik bleibt 1:1 erhalten (Schnellrunde, Finale, Freilo
 ## Phase 5 — Deployment ✅
 - [x] `README.md` mit Pi-5-Setup, systemd, cloudflared-Anleitung
 - [x] `moonlight-cup.service` mit Hardening
-- [x] `cloudflared-config.yml.example` für badminton.bergerhq.de
+- [x] `cloudflared-config.yml.example` für moonlightcup.lucianangermann.com
 
 ## Review-Notizen
 

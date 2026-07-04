@@ -1,6 +1,8 @@
 # Moonlight Cup Server
 
-Flask + SQLite Turniermanager — gehostet auf einem Raspberry Pi 5, öffentlich erreichbar via Cloudflare Tunnel unter **https://badminton.bergerhq.de**.
+Flask + SQLite Turniermanager — gehostet auf einem Raspberry Pi 5, öffentlich erreichbar via Cloudflare Tunnel unter **https://moonlightcup.lucianangermann.com**.
+
+> **Status:** Noch nicht live deployed — die folgende Anleitung beschreibt den vollständigen Setup-Prozess für den ersten Rollout auf den Pi.
 
 ## Architektur in 30 Sekunden
 
@@ -138,7 +140,7 @@ nano .env
 ```
 SECRET_KEY=<64 hex chars>
 DATABASE_PATH=moonlight_cup.db
-ADMIN_EMAIL=admin@bergerhq.de
+ADMIN_EMAIL=admin@example.com
 ADMIN_PASSWORD_HASH=$2b$12$...
 PORT=5000
 ```
@@ -186,7 +188,7 @@ sudo systemctl restart moonlight-cup
 
 ## 6. Cloudflare Tunnel
 
-> Vorbedingung: `bergerhq.de` läuft bereits über Cloudflare DNS.
+> Vorbedingung: `lucianangermann.com` ist bereits registriert. Falls die Domain noch nicht über Cloudflare DNS läuft, zuerst die Domain als Site zu Cloudflare hinzufügen und die Nameserver beim Registrar umstellen — sonst schlägt `tunnel route dns` fehl.
 
 ### 6.1 `cloudflared` installieren
 
@@ -203,7 +205,7 @@ cloudflared --version
 cloudflared tunnel login
 ```
 
-Öffnet einen Browser-Link. Auf einem Headless-Pi: URL kopieren, im Browser einer anderen Maschine öffnen, mit deinem Cloudflare-Account einloggen, `bergerhq.de` autorisieren. Der Pi schreibt dann `~/.cloudflared/cert.pem`.
+Öffnet einen Browser-Link. Auf einem Headless-Pi: URL kopieren, im Browser einer anderen Maschine öffnen, mit deinem Cloudflare-Account einloggen, `lucianangermann.com` autorisieren. Der Pi schreibt dann `~/.cloudflared/cert.pem`.
 
 ### 6.3 Tunnel anlegen
 
@@ -229,7 +231,7 @@ tunnel: moonlight-cup
 credentials-file: /home/pi/.cloudflared/abc123-...-def.json
 
 ingress:
-  - hostname: badminton.bergerhq.de
+  - hostname: moonlightcup.lucianangermann.com
     service: http://127.0.0.1:5000
   - service: http_status:404
 ```
@@ -237,10 +239,10 @@ ingress:
 ### 6.5 DNS-Record anlegen
 
 ```bash
-cloudflared tunnel route dns moonlight-cup badminton.bergerhq.de
+cloudflared tunnel route dns moonlight-cup moonlightcup.lucianangermann.com
 ```
 
-Cloudflare legt automatisch einen CNAME-Record `badminton → <UUID>.cfargotunnel.com` an.
+Cloudflare legt automatisch einen CNAME-Record `moonlightcup → <UUID>.cfargotunnel.com` an.
 
 ### 6.6 Als systemd-Service installieren
 
@@ -262,12 +264,12 @@ sudo journalctl -u cloudflared -f
 Vom Laptop:
 
 ```bash
-curl -I https://badminton.bergerhq.de/
+curl -I https://moonlightcup.lucianangermann.com/
 # → HTTP/2 200
 ```
 
-Im Browser: <https://badminton.bergerhq.de> → Startseite mit Countdown.
-Admin-Login: <https://badminton.bergerhq.de/login>.
+Im Browser: <https://moonlightcup.lucianangermann.com> → Startseite mit Countdown.
+Admin-Login: <https://moonlightcup.lucianangermann.com/login>.
 
 ---
 
