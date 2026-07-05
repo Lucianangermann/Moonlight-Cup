@@ -36,6 +36,10 @@ LEAGUE_RANK = {
     "FZ": 0, "BK": 1, "BL": 2, "BOL": 3, "BAY": 4, "OL": 5, "RL": 6, "BU": 7,
 }
 
+# Hard cap of the whole tournament model: the Rangliste is built from three
+# fixed moon groups (Vollmond/Halbmond/Neumond) of 33 players each.
+MAX_PARTICIPANTS = 99
+
 LEAGUES = [
     ("FZ",  "Freizeitspieler"),
     ("BK",  "Bezirksklasse"),

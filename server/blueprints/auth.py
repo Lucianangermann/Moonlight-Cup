@@ -43,7 +43,11 @@ def login():
 
     # Always run the bcrypt check, even if the username doesn't match,
     # to avoid timing leaks of "valid username but wrong pw".
-    password_ok = bcrypt.check_password_hash(admin_hash, password) if admin_hash else False
+    try:
+        password_ok = bcrypt.check_password_hash(admin_hash, password) if admin_hash else False
+    except ValueError:
+        # Malformed ADMIN_PASSWORD_HASH in .env — fail as 401, not 500.
+        password_ok = False
     username_ok = username == admin_username and bool(admin_username)
 
     if username_ok and password_ok:

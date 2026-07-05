@@ -54,8 +54,10 @@ export default function TeilnehmerScreen() {
 
   const openConfirm = (a) => {
     setConfirmTarget(a);
-    setConfirmGender('M');
-    setConfirmLeague('FZ');
+    // Registrations collect gender/league themselves — prefill instead of
+    // making the admin re-answer what the player already told us.
+    setConfirmGender(a.gender ?? 'M');
+    setConfirmLeague(a.league ?? 'FZ');
   };
 
   const handleConfirmAnmeldung = async () => {
@@ -207,10 +209,10 @@ export default function TeilnehmerScreen() {
         </View>
       </View>
 
-      {/* Ausstehende Anmeldungen */}
+      {/* Warteliste — Anmeldungen, die eingingen, als die Liste voll war */}
       {anmeldungen.length > 0 && (
         <View style={s.anmeldungBox}>
-          <Text style={s.anmeldungTitle}>AUSSTEHENDE ANMELDUNGEN ({anmeldungen.length})</Text>
+          <Text style={s.anmeldungTitle}>WARTELISTE ({anmeldungen.length})</Text>
           {anmeldungen.map((a) => (
             <View key={a.id} style={s.anmeldungRow}>
               <View style={{ flex: 1 }}>

@@ -34,7 +34,7 @@ def is_configured() -> bool:
 
 def build_receipt(*, name: str, email: str, age: int, verein: str, league: str,
                   midnight_meal: bool, breakfast: bool,
-                  breakfast_type: str | None) -> EmailMessage:
+                  breakfast_type: str | None, waitlisted: bool = False) -> EmailMessage:
     """Pure message assembly — unit-testable without an SMTP server."""
     parts = name.split(",")
     display_name = f"{parts[1].strip()} {parts[0].strip()}" if len(parts) > 1 else name.strip()
@@ -44,15 +44,29 @@ def build_receipt(*, name: str, email: str, age: int, verein: str, league: str,
         art = "Weißwurscht" if breakfast_type == "weisswurscht" else "Vegetarisch"
         breakfast_line = f"Ja ({art})"
 
+    if waitlisted:
+        subject = "Deine Anmeldung zum Moonlight Cup — Warteliste"
+        status_text = (
+            "die Teilnehmerliste ist bereits voll — du stehst auf der\n"
+            "Warteliste. Sobald ein Platz frei wird, melden wir uns bei dir!"
+        )
+        closing = "Drück uns die Daumen — vielleicht klappt's noch! 🏸"
+    else:
+        subject = "Deine Anmeldung zum Moonlight Cup"
+        status_text = (
+            "deine Anmeldung zum Moonlight Cup ist eingegangen — du stehst\n"
+            "ab sofort auf der Teilnehmerliste!"
+        )
+        closing = "Wir sehen uns auf dem Feld! 🏸"
+
     msg = EmailMessage()
-    msg["Subject"] = "Deine Anmeldung zum Moonlight Cup"
+    msg["Subject"] = subject
     msg["From"] = Config.MAIL_FROM
     msg["To"] = email
     msg.set_content(
         f"""Hallo {display_name},
 
-deine Anmeldung zum Moonlight Cup ist eingegangen — du stehst ab sofort
-auf der Teilnehmerliste!
+{status_text}
 
 Deine Angaben:
   Name:              {name}
@@ -65,7 +79,7 @@ Deine Angaben:
 Am Turnierabend läuft alles live — Spielplan, Ergebnisse und Rangliste:
 https://moonlightcup.lucianangermann.com
 
-Wir sehen uns auf dem Feld! 🏸
+{closing}
 
 ☽ Moonlight Cup
 """

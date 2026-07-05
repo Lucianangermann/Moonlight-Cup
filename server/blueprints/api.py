@@ -28,7 +28,9 @@ from db_state import (
     set_paused, set_stat_adjustment, set_timer, swap_match_players,
     update_participant,
 )
-from tournament_logic import build_final_runde, build_new_round, get_standings
+from tournament_logic import (
+    MAX_PARTICIPANTS, build_final_runde, build_new_round, get_standings,
+)
 
 bp = Blueprint("api", __name__, url_prefix="/api")
 
@@ -72,6 +74,9 @@ def _serialize_anmeldung(row) -> dict:
     return {
         "id": row["id"], "name": row["name"], "email": row["email"],
         "verein": row["verein"], "createdAt": row["created_at"],
+        # Collected by the public form since the waitlist rework — lets the
+        # admin's confirm dialog prefill instead of guessing M/FZ.
+        "age": row["age"], "gender": row["gender"], "league": row["league"],
     }
 
 
@@ -129,8 +134,12 @@ def anmeldung_confirm(anmeldung_id):
     gender, league = data.get("gender"), data.get("league")
     if gender not in ("M", "F") or not league:
         return jsonify({"error": "gender ('M'/'F') and league are required"}), 400
+    db = get_db()
+    n_participants = db.execute("SELECT COUNT(*) FROM participants").fetchone()[0]
+    if n_participants >= MAX_PARTICIPANTS:
+        return jsonify({"error": f"Teilnehmerliste ist voll ({MAX_PARTICIPANTS} Plätze)."}), 409
     try:
-        pid = confirm_anmeldung(get_db(), anmeldung_id, gender=gender, league=league)
+        pid = confirm_anmeldung(db, anmeldung_id, gender=gender, league=league)
     except ValueError as e:
         return jsonify({"error": str(e)}), 404
     return jsonify({"pid": pid})
