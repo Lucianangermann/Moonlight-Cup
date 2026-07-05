@@ -21,8 +21,11 @@ export const colors = {
   emberGlow:  '#FF6B3520',
 
   // Text
+  // textMuted carries real reading matter (hints, labels, empty states) and
+  // must clear WCAG AA on the #060912 background — projection use makes
+  // contrast stricter in practice (PRODUCT.md). textDim is decoration only.
   white:      '#EEF2FF',
-  textMuted:  '#5A6A8A',
+  textMuted:  '#7E8DB0',
   textDim:    '#3A4A65',
 
   // Semantic

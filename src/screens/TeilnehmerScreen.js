@@ -694,6 +694,8 @@ const s = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 16,
+    // Reserved gutter for the global admin lock icon (App.js).
+    marginRight: 44,
   },
   addBtn: {
     flexDirection: 'row',

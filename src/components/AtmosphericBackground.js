@@ -1,6 +1,7 @@
 import { useRef, useEffect, useMemo } from 'react';
 import { View, StyleSheet, useWindowDimensions, Animated } from 'react-native';
 import Svg, { Circle, Defs, RadialGradient, Stop, Ellipse } from 'react-native-svg';
+import { prefersReducedMotion } from '../utils/motion';
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
@@ -33,6 +34,7 @@ export default function AtmosphericBackground() {
   ).current;
 
   useEffect(() => {
+    if (prefersReducedMotion()) return; // stars render static, no loops
     const loops = twinkleAnims.map((anim, i) =>
       Animated.loop(
         Animated.sequence([

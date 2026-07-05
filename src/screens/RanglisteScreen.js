@@ -7,6 +7,8 @@ import { shared, cardShadow, fonts } from '../theme/styles';
 import { useTournament } from '../store/tournament';
 import { useAuth } from '../store/auth';
 import AnimatedPressable from '../components/AnimatedPressable';
+import LiveBadge from '../components/LiveBadge';
+import EmptyState from '../components/EmptyState';
 
 const MEDAL_ICONS = ['trophy', 'medal', 'ribbon'];
 
@@ -178,42 +180,40 @@ export default function RanglisteScreen() {
       <View style={s.header}>
         <Text style={shared.screenTitle}>Rangliste</Text>
         <View style={s.headerRight}>
-          <AnimatedPressable style={s.printBtn} onPress={doPrint} activeOpacity={0.75}>
-            <Ionicons name="print-outline" size={15} color={colors.silver} />
-            <Text style={s.printBtnText}>Drucken</Text>
-          </AnimatedPressable>
-          <View style={s.liveBadge}>
-            <View style={s.liveDot} />
-            <Text style={s.liveText}>LIVE</Text>
-          </View>
+          {isAdmin && standings.length > 0 && (
+            <AnimatedPressable style={s.printBtn} onPress={doPrint} activeOpacity={0.75}>
+              <Ionicons name="print-outline" size={15} color={colors.silver} />
+              <Text style={s.printBtnText}>Drucken</Text>
+            </AnimatedPressable>
+          )}
+          <LiveBadge />
         </View>
       </View>
 
-      {/* Search */}
-      <View style={s.searchBox}>
-        <Ionicons name="search-outline" size={15} color={colors.textMuted} />
-        <TextInput
-          style={s.searchInput}
-          placeholder="Spieler suchen..."
-          placeholderTextColor={colors.textMuted}
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-        />
-        {searchQuery.length > 0 && (
-          <AnimatedPressable onPress={() => setSearchQuery('')} activeOpacity={0.7}>
-            <Ionicons name="close-circle" size={15} color={colors.textMuted} />
-          </AnimatedPressable>
-        )}
-      </View>
+      {/* Search — pointless over an empty list, so only with data */}
+      {standings.length > 0 && (
+        <View style={s.searchBox}>
+          <Ionicons name="search-outline" size={15} color={colors.textMuted} />
+          <TextInput
+            style={s.searchInput}
+            placeholder="Spieler suchen..."
+            placeholderTextColor={colors.textMuted}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+          {searchQuery.length > 0 && (
+            <AnimatedPressable onPress={() => setSearchQuery('')} activeOpacity={0.7}>
+              <Ionicons name="close-circle" size={15} color={colors.textMuted} />
+            </AnimatedPressable>
+          )}
+        </View>
+      )}
 
       {standings.length === 0 ? (
-        <View style={s.emptyState}>
-          <View style={s.emptyIcon}>
-            <Ionicons name="trophy-outline" size={40} color={colors.gold} />
-          </View>
-          <Text style={s.emptyTitle}>Noch keine Daten</Text>
-          <Text style={s.emptyHint}>Starte eine Runde und trage Ergebnisse ein.</Text>
-        </View>
+        <EmptyState
+          title="Das Turnier hat noch nicht begonnen"
+          hint="Sobald es losgeht, erscheint hier die Rangliste."
+        />
       ) : (
         <>
           <ScrollView showsVerticalScrollIndicator={false}>
@@ -242,6 +242,7 @@ export default function RanglisteScreen() {
                         key={p.id}
                         style={[s.colRow, { backgroundColor: colors.panel, borderColor: colors.border, marginBottom: 4, paddingVertical: 8 }, isSelected && s.colRowSelected, isPaused && { opacity: 0.65 }]}
                         onPress={isAdmin ? () => setSelected(isSelected ? null : p.id) : undefined}
+                        disabled={!isAdmin}
                       >
                         <Text style={[s.colRankNum, { width: 28 }]}>#{overallIdx + 1}</Text>
                         <View style={{ flex: 1, overflow: 'hidden' }}>
@@ -314,6 +315,7 @@ export default function RanglisteScreen() {
                               isPaused && { opacity: 0.6 },
                             ]}
                             onPress={isAdmin ? () => setSelected(isSelected ? null : p.id) : undefined}
+                            disabled={!isAdmin}
                           >
                             {/* Rang */}
                             <View style={{ width: 22, alignItems: 'center' }}>
@@ -536,6 +538,9 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: 16,
+    // Reserved gutter for the global admin lock icon (App.js) — prevents it
+    // overlapping the LIVE badge, which happened on narrow phones.
+    marginRight: 44,
   },
   headerRight: {
     flexDirection: 'row',
@@ -559,59 +564,6 @@ const s = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: 0.5,
   },
-  liveBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: colors.error + '18',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: colors.error + '30',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-  },
-  liveDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: colors.error,
-  },
-  liveText: {
-    color: colors.error,
-    fontSize: 11,
-    fontFamily: fonts.headingSemi,
-    letterSpacing: 1,
-  },
-  emptyState: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingBottom: 60,
-  },
-  emptyIcon: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: colors.goldGlow,
-    borderWidth: 1,
-    borderColor: colors.borderGoldGlow,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 20,
-  },
-  emptyTitle: {
-    color: colors.white,
-    fontSize: 20,
-    fontFamily: fonts.heading,
-    marginBottom: 8,
-  },
-  emptyHint: {
-    color: colors.textMuted,
-    fontSize: 13,
-    fontFamily: fonts.body,
-    textAlign: 'center',
-  },
-
   searchBox: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -723,7 +675,7 @@ const s = StyleSheet.create({
   },
   colName: {
     color: colors.silver,
-    fontSize: 11,
+    fontSize: 12,
     fontFamily: fonts.bodySemi,
     flexShrink: 1,
   },

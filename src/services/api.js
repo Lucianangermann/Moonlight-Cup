@@ -72,7 +72,8 @@ export const api = {
   setStatAdjustment: (pid, adj) => request(`/api/standings/${pid}/adjustment`, { method: 'POST', body: adj }),
 
   // Timer
-  setTimer: (label, targetTimeIso) => request('/api/timer', { method: 'POST', body: { label, targetTime: targetTimeIso } }),
+  setTimer: (label, targetTimeIso, phase, totalSeconds) =>
+    request('/api/timer', { method: 'POST', body: { label, targetTime: targetTimeIso, phase, totalSeconds } }),
   deactivateTimer: () => request('/api/timer/deactivate', { method: 'POST' }),
   deleteTimer: () => request('/api/timer', { method: 'DELETE' }),
 };

@@ -126,13 +126,17 @@ CREATE TABLE IF NOT EXISTS anmeldungen (
 );
 
 -- Single-row table; we only ever keep one active timer.
+-- phase/total_seconds let viewer devices render the same progress ring
+-- (arc + phase color) the admin sees, not just a bare countdown.
 CREATE TABLE IF NOT EXISTS timer (
-    id          INTEGER PRIMARY KEY AUTOINCREMENT,
-    label       TEXT NOT NULL,
-    target_time TEXT NOT NULL,                       -- ISO-8601, UTC
-    is_active   INTEGER NOT NULL DEFAULT 1,
-    created_at  TEXT NOT NULL DEFAULT (datetime('now')),
-    updated_at  TEXT NOT NULL DEFAULT (datetime('now'))
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    label         TEXT NOT NULL,
+    target_time   TEXT NOT NULL,                     -- ISO-8601, UTC
+    phase         TEXT,                              -- 'prep'|'warmup'|'game' (nullable, legacy rows)
+    total_seconds INTEGER,                           -- full phase duration for progress arcs
+    is_active     INTEGER NOT NULL DEFAULT 1,
+    created_at    TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at    TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
 -- Speed up frequent lookups.
@@ -142,10 +146,26 @@ CREATE INDEX IF NOT EXISTS idx_timer_active     ON timer(is_active);
 """
 
 
+# Columns added after the initial release. CREATE TABLE IF NOT EXISTS won't
+# touch an existing table, so each entry here is applied via ALTER TABLE on
+# init. (table, column, type) — ALTER errors for already-present columns are
+# expected and swallowed.
+MIGRATIONS = [
+    ("timer", "phase", "TEXT"),
+    ("timer", "total_seconds", "INTEGER"),
+]
+
+
 def init_db() -> None:
     """Create the schema if missing. Idempotent — safe to call repeatedly."""
     with standalone_db() as conn:
         conn.executescript(SCHEMA)
+        for table, column, col_type in MIGRATIONS:
+            try:
+                conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {col_type}")
+                print(f"[database] migrated: {table}.{column}")
+            except sqlite3.OperationalError:
+                pass  # column already exists
     print(f"[database] schema ensured at {Config.DATABASE_PATH}")
 
 

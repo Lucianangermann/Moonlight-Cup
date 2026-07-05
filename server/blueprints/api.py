@@ -100,11 +100,16 @@ def tournament():
 def timer():
     row = get_active_timer(get_db())
     if row is None:
-        return jsonify({"label": None, "targetTime": None, "isActive": False})
+        return jsonify({
+            "label": None, "targetTime": None, "isActive": False,
+            "phase": None, "totalSeconds": None,
+        })
     return jsonify({
         "label": row["label"],
         "targetTime": row["target_time"],  # ISO-8601 UTC, parsed client-side
         "isActive": bool(row["is_active"]),
+        "phase": row["phase"],             # 'prep'|'warmup'|'game' — drives ring color
+        "totalSeconds": row["total_seconds"],  # full phase duration for the progress arc
     })
 
 
@@ -307,7 +312,13 @@ def timer_set():
     label, target_time = data.get("label"), data.get("targetTime")
     if not label or not target_time:
         return jsonify({"error": "label and targetTime (ISO-8601 UTC) are required"}), 400
-    set_timer(get_db(), label=label.strip(), target_time_iso=target_time)
+    phase = data.get("phase")
+    total_seconds = data.get("totalSeconds")
+    set_timer(
+        get_db(), label=label.strip(), target_time_iso=target_time,
+        phase=phase if phase in ("prep", "warmup", "game") else None,
+        total_seconds=int(total_seconds) if total_seconds else None,
+    )
     return jsonify({})
 
 

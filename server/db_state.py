@@ -364,13 +364,17 @@ def get_active_timer(db: sqlite3.Connection) -> Optional[sqlite3.Row]:
     ).fetchone()
 
 
-def set_timer(db: sqlite3.Connection, *, label: str, target_time_iso: str) -> None:
+def set_timer(
+    db: sqlite3.Connection, *,
+    label: str, target_time_iso: str,
+    phase: Optional[str] = None, total_seconds: Optional[int] = None,
+) -> None:
     """Setting a new timer deactivates any previous one (single active row)."""
     db.execute("UPDATE timer SET is_active = 0 WHERE is_active = 1")
     db.execute(
-        "INSERT INTO timer (label, target_time, is_active, updated_at) "
-        "VALUES (?, ?, 1, datetime('now'))",
-        (label, target_time_iso),
+        "INSERT INTO timer (label, target_time, phase, total_seconds, is_active, updated_at) "
+        "VALUES (?, ?, ?, ?, 1, datetime('now'))",
+        (label, target_time_iso, phase, total_seconds),
     )
     db.commit()
 

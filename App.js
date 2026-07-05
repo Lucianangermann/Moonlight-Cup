@@ -9,7 +9,7 @@ import { Barlow_400Regular, Barlow_600SemiBold } from '@expo-google-fonts/barlow
 import { handleCallback } from './src/services/spotify';
 import { injectWebStyles } from './src/utils/webEnhancements';
 
-import { TournamentProvider } from './src/store/tournament';
+import { TournamentProvider, useTournament } from './src/store/tournament';
 import { AuthProvider, useAuth } from './src/store/auth';
 import { colors } from './src/theme/colors';
 import { shared, fonts } from './src/theme/styles';
@@ -80,8 +80,24 @@ function AdminAccessButton() {
   );
 }
 
+// Branded gate for the first ~seconds before the initial poll answers.
+// Without it the app renders a confident "empty tournament" while loading,
+// which reads as broken data rather than a loading state.
+function LoadingSplash() {
+  return (
+    <View style={s.splash}>
+      <Text style={s.splashGlyph}>☽</Text>
+      <Text style={s.splashWordmark}>MOONLIGHT CUP</Text>
+      <Text style={s.splashHint}>Verbinde…</Text>
+    </View>
+  );
+}
+
 function AppNavigator() {
   const { isAdmin } = useAuth();
+  const { loaded } = useTournament();
+
+  if (!loaded) return <LoadingSplash />;
 
   return (
     <NavigationContainer>
@@ -157,6 +173,28 @@ export default function App() {
 }
 
 const s = StyleSheet.create({
+  splash: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  splashGlyph: {
+    color: colors.gold,
+    fontSize: 52,
+    lineHeight: 60,
+    marginBottom: 10,
+  },
+  splashWordmark: {
+    color: colors.gold,
+    fontSize: 17,
+    fontFamily: fonts.heading,
+    letterSpacing: 5,
+    marginBottom: 20,
+  },
+  splashHint: {
+    color: colors.textMuted,
+    fontSize: 13,
+  },
   lockButton: {
     position: 'absolute',
     top: 54,

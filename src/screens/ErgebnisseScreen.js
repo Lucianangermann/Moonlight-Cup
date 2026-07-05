@@ -9,11 +9,15 @@ import { shared, cardShadow, fonts } from '../theme/styles';
 import { useTournament } from '../store/tournament';
 import { useAuth } from '../store/auth';
 import AnimatedPressable from '../components/AnimatedPressable';
+import LiveBadge from '../components/LiveBadge';
+import EmptyState from '../components/EmptyState';
 
+// Match-type colors identify a category, so none of them may be gold —
+// gold is reserved for authority (winner, active selection, live state).
 const TYPE_CONFIG = {
   MM: { label: 'HERRENDOPPEL', color: colors.info },
   FF: { label: 'DAMENDOPPEL',  color: '#E879A0' },
-  MF: { label: 'MIXED',        color: colors.gold },
+  MF: { label: 'MIXED',        color: colors.silver },
 };
 
 export default function ErgebnisseScreen() {
@@ -111,39 +115,30 @@ export default function ErgebnisseScreen() {
         key={match.id}
         style={[s.matchCard, match.done && s.matchCardDone]}
         onPress={isAdmin ? () => openEdit(match) : undefined}
+        disabled={!isAdmin}
       >
         <View style={s.cardTop}>
-          <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
+          {/* One chip identifies the match; everything else is plain text.
+              A card header with five competing badges buries the payload
+              (who plays whom) under metadata. */}
+          <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
             <View style={[s.typePill, { borderColor: cfg.color + (match.done ? '30' : '50') }]}>
               <Text style={[s.typeText, { color: cfg.color + (match.done ? '60' : 'FF') }]}>{cfg.label}</Text>
             </View>
-            {match.isSchnellrunde ? (
-              <View style={[s.schnellBadge, match.done && s.badgeDone]}>
-                <Ionicons name="flash" size={9} color={match.done ? colors.textDim : colors.warning} />
-                <Text style={[s.schnellBadgeText, match.done && s.badgeTextDone]}>SCHNELL</Text>
-              </View>
-            ) : (
-              <View style={[s.normalBadge, match.done && s.badgeDone]}>
-                <Ionicons name="shield-checkmark" size={9} color={match.done ? colors.textDim : colors.success} />
-                <Text style={[s.normalBadgeText, match.done && s.badgeTextDone]}>NORMAL</Text>
-              </View>
-            )}
+            <Text style={[s.metaText, match.done && s.tagTextDone]}>
+              {match.isSchnellrunde ? 'Schnellrunde' : 'Normale Runde'}
+            </Text>
           </View>
-          <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
+          <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
             {match.feld != null && (
               <View style={[s.feldTag, match.done && s.tagDone]}>
                 <Text style={[s.feldTagText, match.done && s.tagTextDone]}>Feld {match.feld}</Text>
               </View>
             )}
             {!isRoundView && (
-              <View style={[s.durchgangTag, match.durchgang === 2 && s.durchgangTag2, match.done && s.tagDone]}>
-                <Text style={[s.durchgangTagText, match.durchgang === 2 && s.durchgangTagText2, match.done && s.tagTextDone]}>D{match.durchgang}</Text>
-              </View>
-            )}
-            {!isRoundView && (
-              <View style={s.roundTag}>
-                <Text style={s.roundTagText}>R{match.roundNumber}</Text>
-              </View>
+              <Text style={[s.metaText, match.done && s.tagTextDone]}>
+                R{match.roundNumber} · D{match.durchgang}
+              </Text>
             )}
             {match.done && (
               <Ionicons name="checkmark-circle" size={16} color={colors.success + '60'} />
@@ -164,7 +159,7 @@ export default function ErgebnisseScreen() {
                 <Text style={s.editHintText}>Eingeben</Text>
               </View>
             ) : (
-              <Text style={s.editHintText}>–</Text>
+              <Text style={s.editHintText}>offen</Text>
             )}
           </View>
           <Text style={[s.teamName, s.teamRight, bWins && s.teamWinner, match.done && !bWins && s.teamDimmed]} numberOfLines={1}>
@@ -212,29 +207,32 @@ export default function ErgebnisseScreen() {
               <Text style={s.simulateBtnText}>Simulieren</Text>
             </AnimatedPressable>
           )}
+          <LiveBadge />
         </View>
       </View>
 
-      {/* Round Filter */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={s.filterScroll}
-        contentContainerStyle={{ paddingRight: 8 }}
-      >
-        {[{ key: 'all', label: 'Alle' }, ...rounds.map((r) => ({ key: String(r.id), label: `Runde ${r.roundNumber}` }))].map((f) => (
-          <AnimatedPressable
-            key={f.key}
-            style={[s.filterChip, selectedRound === f.key && s.filterChipActive]}
-            onPress={() => setSelectedRound(f.key)}
-            activeOpacity={0.7}
-          >
-            <Text style={[s.filterText, selectedRound === f.key && s.filterTextActive]}>
-              {f.label}
-            </Text>
-          </AnimatedPressable>
-        ))}
-      </ScrollView>
+      {/* Round Filter — a filter over zero rounds is noise, so only with data */}
+      {rounds.length > 0 && (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={s.filterScroll}
+          contentContainerStyle={{ paddingRight: 8 }}
+        >
+          {[{ key: 'all', label: 'Alle' }, ...rounds.map((r) => ({ key: String(r.id), label: `Runde ${r.roundNumber}` }))].map((f) => (
+            <AnimatedPressable
+              key={f.key}
+              style={[s.filterChip, selectedRound === f.key && s.filterChipActive]}
+              onPress={() => setSelectedRound(f.key)}
+              activeOpacity={0.7}
+            >
+              <Text style={[s.filterText, selectedRound === f.key && s.filterTextActive]}>
+                {f.label}
+              </Text>
+            </AnimatedPressable>
+          ))}
+        </ScrollView>
+      )}
 
       {/* Match List */}
       <ScrollView
@@ -245,10 +243,17 @@ export default function ErgebnisseScreen() {
         scrollEventThrottle={16}
       >
         {filtered.length === 0 ? (
-          <View style={s.empty}>
-            <Ionicons name="bar-chart-outline" size={36} color={colors.textDim} />
-            <Text style={s.emptyText}>Keine Spiele vorhanden</Text>
-          </View>
+          rounds.length === 0 ? (
+            <EmptyState
+              title="Das Turnier hat noch nicht begonnen"
+              hint="Sobald die erste Runde ausgelost ist, findest du hier alle Spiele."
+            />
+          ) : (
+            <View style={s.empty}>
+              <Ionicons name="bar-chart-outline" size={36} color={colors.textDim} />
+              <Text style={s.emptyText}>Keine Spiele in dieser Runde</Text>
+            </View>
+          )
         ) : isRoundView ? (
           <>
             {d1.length > 0 && (
@@ -372,6 +377,9 @@ const s = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 16,
+    // Reserved gutter for the global admin lock icon (App.js, absolute
+    // top-right) — without it the lock overlaps whatever sits header-right.
+    marginRight: 44,
   },
   simulateBtn: {
     flexDirection: 'row',
@@ -391,15 +399,15 @@ const s = StyleSheet.create({
     letterSpacing: 0.3,
   },
   progressPill: {
-    backgroundColor: colors.goldGlow,
+    backgroundColor: colors.panel,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: colors.borderGoldGlow,
+    borderColor: colors.borderStrong,
     paddingHorizontal: 12,
     paddingVertical: 5,
   },
   progressText: {
-    color: colors.gold,
+    color: colors.silver,
     fontSize: 12,
     fontWeight: '700',
   },
@@ -455,13 +463,6 @@ const s = StyleSheet.create({
   teamDimmed: {
     color: colors.textDim,
   },
-  badgeDone: {
-    backgroundColor: colors.panel,
-    borderColor: colors.border,
-  },
-  badgeTextDone: {
-    color: colors.textDim,
-  },
   tagDone: {
     backgroundColor: 'transparent',
     borderColor: colors.border,
@@ -508,59 +509,35 @@ const s = StyleSheet.create({
     letterSpacing: 1,
   },
   feldTag: {
-    backgroundColor: colors.goldGlow,
+    backgroundColor: colors.panelLight,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: colors.borderGoldGlow,
+    borderColor: colors.borderStrong,
     paddingHorizontal: 7,
     paddingVertical: 3,
   },
   feldTagText: {
-    color: colors.gold,
-    fontSize: 10,
+    color: colors.silver,
+    fontSize: 11,
     fontFamily: fonts.headingSemi,
     letterSpacing: 0.5,
   },
-  durchgangTag: {
-    backgroundColor: colors.info + '18',
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: colors.info + '40',
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-  },
-  durchgangTag2: {
-    backgroundColor: colors.goldGlow,
-    borderColor: colors.borderGoldGlow,
-  },
-  durchgangTagText: {
-    color: colors.info,
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 0.5,
-  },
-  durchgangTagText2: {
-    color: colors.gold,
-  },
-  roundTag: {
-    backgroundColor: colors.bgSurface,
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-  },
-  roundTagText: {
+  metaText: {
     color: colors.textMuted,
     fontSize: 11,
-    fontWeight: '600',
+    fontFamily: fonts.bodySemi,
+    letterSpacing: 0.3,
   },
   matchRow: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   teamName: {
+    // Player names are what everyone scans for — they get the scale,
+    // not the metadata chips (hierarchy through scale, per PRODUCT.md).
     flex: 1,
-    color: colors.silverDim,
-    fontSize: 13,
+    color: colors.silver,
+    fontSize: 16,
     fontFamily: fonts.bodySemi,
   },
   teamRight: {
@@ -673,23 +650,6 @@ const s = StyleSheet.create({
   saveBtnTextDisabled: {
     color: colors.textMuted,
   },
-  schnellBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-    backgroundColor: colors.warning + '18',
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: colors.warning + '40',
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-  },
-  schnellBadgeText: {
-    color: colors.warning,
-    fontSize: 9,
-    fontWeight: '800',
-    letterSpacing: 1,
-  },
   schnellHint: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -707,23 +667,6 @@ const s = StyleSheet.create({
     fontSize: 12,
     fontWeight: '500',
     flex: 1,
-  },
-  normalBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-    backgroundColor: colors.success + '18',
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: colors.success + '40',
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-  },
-  normalBadgeText: {
-    color: colors.success,
-    fontSize: 9,
-    fontWeight: '800',
-    letterSpacing: 1,
   },
   normalHint: {
     flexDirection: 'row',

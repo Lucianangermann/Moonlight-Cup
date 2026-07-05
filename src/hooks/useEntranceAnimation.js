@@ -1,15 +1,18 @@
 import { useRef, useEffect } from 'react';
 import { Animated, Easing } from 'react-native';
+import { prefersReducedMotion } from '../utils/motion';
 
 // Emil: start from scale(0.97) + translateY, not scale(0) — nothing appears from nothing
 const EASE_OUT = Easing.bezier(0.23, 1, 0.32, 1);
 
 export const useEntranceAnimation = (delay = 0) => {
-  const opacity    = useRef(new Animated.Value(0)).current;
-  const translateY = useRef(new Animated.Value(8)).current;
-  const scale      = useRef(new Animated.Value(0.97)).current;
+  const reduced = prefersReducedMotion();
+  const opacity    = useRef(new Animated.Value(reduced ? 1 : 0)).current;
+  const translateY = useRef(new Animated.Value(reduced ? 0 : 8)).current;
+  const scale      = useRef(new Animated.Value(reduced ? 1 : 0.97)).current;
 
   useEffect(() => {
+    if (reduced) return;
     Animated.parallel([
       Animated.timing(opacity, {
         toValue: 1,
@@ -40,14 +43,16 @@ export const useEntranceAnimation = (delay = 0) => {
 
 // Emil: stagger 50ms between items (within the 30-80ms sweet spot)
 export const useStaggerAnimation = (itemCount, baseDelay = 50) => {
+  const reduced = prefersReducedMotion();
   const anims = useRef(
     Array.from({ length: itemCount }, () => ({
-      opacity:    new Animated.Value(0),
-      translateY: new Animated.Value(5),
+      opacity:    new Animated.Value(reduced ? 1 : 0),
+      translateY: new Animated.Value(reduced ? 0 : 5),
     }))
   ).current;
 
   useEffect(() => {
+    if (reduced) return;
     const animations = anims.map((anim, i) =>
       Animated.parallel([
         Animated.timing(anim.opacity, {

@@ -1014,6 +1014,8 @@ const s = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     marginBottom: 20,
+    // Reserved gutter for the global admin lock icon (App.js).
+    marginRight: 44,
   },
   logoText: {
     color: colors.silver,

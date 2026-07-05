@@ -1,4 +1,4 @@
-import { createContext, useContext, useState } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
 import { api } from '../services/api';
 import { usePolling } from '../hooks/usePolling';
 
@@ -22,6 +22,12 @@ const EMPTY_SNAPSHOT = {
 
 export function TournamentProvider({ children }) {
   const [snapshot, setSnapshot] = useState(EMPTY_SNAPSHOT);
+  // Sync/freshness truth: loaded flips once after the first successful poll
+  // (before that the app must show a loading state, not a fake-empty
+  // tournament), lastSync feeds the honest LIVE/Stand-HH:MM indicator.
+  const [loaded, setLoaded] = useState(false);
+  const [lastSync, setLastSync] = useState(null);
+  const [online, setOnline] = useState(true);
 
   // Local-only UI signals for the CURRENT device's TimerScreen (vibration /
   // Spotify playback only make sense per-device, not synced). TimerScreen
@@ -33,11 +39,29 @@ export function TournamentProvider({ children }) {
   const [timerResetTrigger, setTimerResetTrigger] = useState(null);
 
   const refresh = async () => {
-    const data = await api.getTournament();
-    setSnapshot(data);
+    try {
+      const data = await api.getTournament();
+      setSnapshot(data);
+      setLastSync(Date.now());
+      setOnline(true);
+      setLoaded(true);
+    } catch (e) {
+      setOnline(false);
+      throw e; // usePolling swallows it; rethrow so manual callers can react
+    }
   };
 
   usePolling(refresh, 5000);
+
+  // Downgrade "online" if polls stop succeeding (e.g. the tab's poll loop is
+  // alive but every request fails silently, or the device sleeps).
+  useEffect(() => {
+    if (!lastSync) return;
+    const id = setInterval(() => {
+      setOnline(Date.now() - lastSync < 15000);
+    }, 5000);
+    return () => clearInterval(id);
+  }, [lastSync]);
 
   const { participants, pausedParticipants, rounds, currentRound, statAdjustments } = snapshot;
 
@@ -138,6 +162,7 @@ export function TournamentProvider({ children }) {
   return (
     <TournamentContext.Provider
       value={{
+        loaded, lastSync, online,
         participants, pausedParticipants,
         addParticipant, removeParticipant, updateParticipant,
         pauseParticipant, resumeParticipant,

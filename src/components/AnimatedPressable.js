@@ -63,7 +63,9 @@ export default function AnimatedPressable({
     onPressOut?.();
   };
 
-  const hoverProps = Platform.OS === 'web' ? {
+  // Disabled elements must not invite interaction: no hover lift either,
+  // or a read-only card still "answers" the cursor and reads as tappable.
+  const hoverProps = Platform.OS === 'web' && !disabled ? {
     onMouseEnter: () => {
       hovering.current = true;
       animateTo(1.04, 150);

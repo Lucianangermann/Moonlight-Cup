@@ -56,8 +56,9 @@ function AdminTimer() {
   const PHASE_LABELS = { prep: 'Vorbereitung', warmup: 'Einspielen', game: 'Spielzeit' };
   const pushTimer = (p, seconds, durchgang) => {
     const label = PHASE_LABELS[p] + (durchgang ? ` — Durchgang ${durchgang}` : '');
-    const targetTime = new Date(Date.now() + (seconds / speedRef.current) * 1000).toISOString();
-    api.setTimer(label, targetTime).catch(() => {});
+    const compressed = Math.round(seconds / speedRef.current);
+    const targetTime = new Date(Date.now() + compressed * 1000).toISOString();
+    api.setTimer(label, targetTime, p, compressed).catch(() => {});
   };
 
   const SPEED_STEPS = [1, 2, 3, 4, 5, 10, 15, 20];
@@ -485,8 +486,13 @@ function AdminTimer() {
 // countdown from the shared server timer (GET /api/timer) instead of the
 // local trigger-based phase machine AdminTimer uses; a local 1s interval
 // interpolates between the 5s polls so the display still ticks smoothly.
+// Visually this mirrors the AdminTimer ring (progress arc, phase colors,
+// glow) — this is the surface every player phone and the projector shows,
+// so it gets the full treatment, minus the controls.
 function ViewerTimer() {
-  const [timer, setTimer] = useState({ label: null, targetTime: null, isActive: false });
+  const [timer, setTimer] = useState({
+    label: null, targetTime: null, isActive: false, phase: null, totalSeconds: null,
+  });
   const [secondsLeft, setSecondsLeft] = useState(0);
 
   usePolling(async () => {
@@ -511,34 +517,106 @@ function ViewerTimer() {
   const entranceStyle = useEntranceAnimation();
   const mins = Math.floor(secondsLeft / 60).toString().padStart(2, '0');
   const secs = (secondsLeft % 60).toString().padStart(2, '0');
-  const isFinished = timer.isActive && secondsLeft === 0;
-  const phaseColor = isFinished ? colors.error : timer.isActive ? colors.gold : colors.textMuted;
+  const active = timer.isActive;
+  const isFinished = active && secondsLeft === 0;
+  const isWarning = active && timer.phase === 'game' && secondsLeft <= WARNING_SECONDS && secondsLeft > 0;
+
+  // Same phase-color semantics as AdminTimer.
+  const phaseColor = !active ? colors.textMuted
+    : isFinished ? colors.error
+    : isWarning ? colors.warning
+    : timer.phase === 'prep' ? colors.silver
+    : timer.phase === 'warmup' ? colors.success
+    : colors.gold;
+
+  const phaseLabel = timer.phase === 'prep' ? 'VORBEREITUNG'
+    : timer.phase === 'warmup' ? 'EINSPIELEN'
+    : timer.phase === 'game' ? 'SPIELZEIT'
+    : 'LÄUFT';
+
+  const total = timer.totalSeconds ?? null;
+  const progress = active && total ? Math.min(1, Math.max(0, secondsLeft / total)) : 1;
 
   const RING_SIZE = 280;
   const RING_CENTER = RING_SIZE / 2;
   const RING_RADIUS = 118;
+  const CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
+  const dashOffset = CIRCUMFERENCE * (1 - progress);
+
+  // Idle: the wordmark, not a dead "00:00" (zeros read as broken).
+  if (!active) {
+    return (
+      <Animated.View style={[{ flex: 1 }, entranceStyle]}>
+        <ScrollView style={{ flex: 1, backgroundColor: colors.bg }} contentContainerStyle={[shared.screen, s.screen]} showsVerticalScrollIndicator={false}>
+          <Text style={s.title}>Timer</Text>
+          <View style={s.ringContainer}>
+            <Svg width={RING_SIZE} height={RING_SIZE} style={{ position: 'absolute' }}>
+              <Circle cx={RING_CENTER} cy={RING_CENTER} r={RING_RADIUS} stroke={colors.border} strokeWidth={7} fill="none" opacity={0.5} />
+            </Svg>
+            <View style={s.ringInner}>
+              <Text style={s.viewerIdleGlyph}>☽</Text>
+              <Text style={s.viewerIdleWordmark}>MOONLIGHT CUP</Text>
+              <Text style={s.viewerIdleHint}>Der nächste Countdown{'\n'}startet mit der Runde</Text>
+            </View>
+          </View>
+        </ScrollView>
+      </Animated.View>
+    );
+  }
 
   return (
     <Animated.View style={[{ flex: 1 }, entranceStyle]}>
       <ScrollView style={{ flex: 1, backgroundColor: colors.bg }} contentContainerStyle={[shared.screen, s.screen]} showsVerticalScrollIndicator={false}>
         <Text style={s.title}>Timer</Text>
 
+        {/* Phase banner — identical vocabulary to AdminTimer */}
+        <View style={[s.phaseBanner, { borderColor: phaseColor + '40', backgroundColor: phaseColor + '12' }]}>
+          <Ionicons
+            name={timer.phase === 'prep' ? 'document-text-outline' : timer.phase === 'warmup' ? 'fitness-outline' : 'tennisball-outline'}
+            size={13}
+            color={phaseColor}
+          />
+          <Text style={[s.phaseBannerText, { color: phaseColor }]}>
+            {timer.label ?? phaseLabel}
+          </Text>
+          {isFinished && (
+            <View style={[s.finishedBadge, { backgroundColor: colors.error }]}>
+              <Text style={s.finishedBadgeText}>FERTIG</Text>
+            </View>
+          )}
+        </View>
+
         <View style={s.ringContainer}>
           <Svg width={RING_SIZE} height={RING_SIZE} style={{ position: 'absolute' }}>
+            <Defs>
+              <RadialGradient id="viewerGlow" cx="50%" cy="50%" r="50%">
+                <Stop offset="0%" stopColor={phaseColor} stopOpacity={isFinished ? '0.2' : '0.12'} />
+                <Stop offset="100%" stopColor={phaseColor} stopOpacity="0" />
+              </RadialGradient>
+            </Defs>
+            <Circle cx={RING_CENTER} cy={RING_CENTER} r={RING_RADIUS + 28} fill="url(#viewerGlow)" />
             <Circle cx={RING_CENTER} cy={RING_CENTER} r={RING_RADIUS} stroke={phaseColor + '18'} strokeWidth={7} fill="none" />
+            <Circle
+              cx={RING_CENTER} cy={RING_CENTER} r={RING_RADIUS}
+              stroke={phaseColor}
+              strokeWidth={7}
+              fill="none"
+              strokeLinecap="round"
+              strokeDasharray={`${CIRCUMFERENCE} ${CIRCUMFERENCE}`}
+              strokeDashoffset={dashOffset}
+              transform={`rotate(-90 ${RING_CENTER} ${RING_CENTER})`}
+            />
           </Svg>
           <View style={s.ringInner}>
             <Text style={[s.timerText, { color: phaseColor }]}>{mins}:{secs}</Text>
-            <Text style={[s.statusText, { color: phaseColor }]}>
-              {isFinished ? 'ZEIT!' : timer.isActive ? (timer.label ?? 'LÄUFT') : 'WARTE AUF START'}
+            <Text style={[s.viewerPhaseText, { color: phaseColor }]}>
+              {isFinished ? 'ZEIT!' : phaseLabel}
             </Text>
+            {isWarning && !isFinished && (
+              <Text style={s.warningText}>⚡ 1 Min. Rest</Text>
+            )}
           </View>
         </View>
-
-        <Text style={s.hint}>
-          {timer.isActive ? 'Live · aktualisiert automatisch' : 'Der Admin hat noch keinen Timer gestartet.'}
-        </Text>
-        <View style={{ height: 24 }} />
       </ScrollView>
     </Animated.View>
   );
@@ -616,6 +694,35 @@ const s = StyleSheet.create({
     letterSpacing: 3,
     marginTop: 4,
     textTransform: 'uppercase',
+  },
+  // Viewer ring: the phase label under the digits is the second-most
+  // important thing on a projected screen — sized to be read from meters
+  // away, not whisper-tracked 10px.
+  viewerPhaseText: {
+    fontSize: 18,
+    fontFamily: 'BarlowCondensed_600SemiBold',
+    letterSpacing: 1.5,
+    marginTop: 4,
+    textTransform: 'uppercase',
+  },
+  viewerIdleGlyph: {
+    color: colors.gold,
+    fontSize: 40,
+    lineHeight: 48,
+    marginBottom: 6,
+  },
+  viewerIdleWordmark: {
+    color: colors.gold,
+    fontSize: 14,
+    fontFamily: 'BarlowCondensed_700Bold',
+    letterSpacing: 4,
+    marginBottom: 14,
+  },
+  viewerIdleHint: {
+    color: colors.textMuted,
+    fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 21,
   },
   warningText: {
     color: colors.warning,
