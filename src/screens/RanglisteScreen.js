@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 import { shared, cardShadow, fonts } from '../theme/styles';
 import { useTournament } from '../store/tournament';
+import { useAuth } from '../store/auth';
 import AnimatedPressable from '../components/AnimatedPressable';
 
 const MEDAL_ICONS = ['trophy', 'medal', 'ribbon'];
@@ -111,6 +112,7 @@ const buildPrintContent = (standings, pausedIds = new Set()) => {
 
 export default function RanglisteScreen() {
   const { getStandings, statAdjustments, setStatAdjustment, pausedParticipants } = useTournament();
+  const { isAdmin } = useAuth();
   const [selected, setSelected] = useState(null);
   const [pendingDelta, setPendingDelta] = useState(null);
   const [confirming, setConfirming] = useState(false);
@@ -239,7 +241,7 @@ export default function RanglisteScreen() {
                       <AnimatedPressable
                         key={p.id}
                         style={[s.colRow, { backgroundColor: colors.panel, borderColor: colors.border, marginBottom: 4, paddingVertical: 8 }, isSelected && s.colRowSelected, isPaused && { opacity: 0.65 }]}
-                        onPress={() => setSelected(isSelected ? null : p.id)}
+                        onPress={isAdmin ? () => setSelected(isSelected ? null : p.id) : undefined}
                       >
                         <Text style={[s.colRankNum, { width: 28 }]}>#{overallIdx + 1}</Text>
                         <View style={{ flex: 1, overflow: 'hidden' }}>
@@ -311,7 +313,7 @@ export default function RanglisteScreen() {
                               isSelected && s.colRowSelected,
                               isPaused && { opacity: 0.6 },
                             ]}
-                            onPress={() => setSelected(isSelected ? null : p.id)}
+                            onPress={isAdmin ? () => setSelected(isSelected ? null : p.id) : undefined}
                           >
                             {/* Rang */}
                             <View style={{ width: 22, alignItems: 'center' }}>
@@ -382,7 +384,7 @@ export default function RanglisteScreen() {
                 games: (savedAdj.games ?? 0) + delta.games,
                 wins:  (savedAdj.wins  ?? 0) + delta.wins,
                 diff:  (savedAdj.diff  ?? 0) + delta.diff,
-              });
+              }).catch(() => {});
               setPendingDelta(null);
               setConfirming(false);
             };

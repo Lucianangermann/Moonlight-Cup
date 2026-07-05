@@ -162,6 +162,40 @@ def clear_match_result(db: sqlite3.Connection, match_id: int) -> None:
     db.commit()
 
 
+def swap_match_players(
+    db: sqlite3.Connection, *,
+    match1_id: int, team1: str, idx1: int,
+    match2_id: int, team2: str, idx2: int,
+) -> None:
+    """
+    Swap the participant at team{team1}[idx1] of match1 with the participant
+    at team{team2}[idx2] of match2. team1/team2 in {'A','B'}, idx1/idx2 in {0,1}.
+    Mirrors swapMatchPlayers() in src/store/tournament.js (lines 549-567) —
+    both target values are read before either is written, so a swap within
+    the same match (match1_id == match2_id) is safe even when team1 == team2.
+    """
+    rows = {}
+    for mid in {match1_id, match2_id}:
+        row = db.execute("SELECT team_a, team_b FROM matches WHERE id = ?", (mid,)).fetchone()
+        if row is None:
+            raise ValueError(f"match {mid} not found")
+        rows[mid] = {"team_a": json.loads(row["team_a"]), "team_b": json.loads(row["team_b"])}
+
+    team1_list = rows[match1_id]["team_a" if team1 == "A" else "team_b"]
+    team2_list = rows[match2_id]["team_a" if team2 == "A" else "team_b"]
+
+    pid1, pid2 = team1_list[idx1], team2_list[idx2]
+    team1_list[idx1] = pid2
+    team2_list[idx2] = pid1
+
+    for mid, teams in rows.items():
+        db.execute(
+            "UPDATE matches SET team_a = ?, team_b = ? WHERE id = ?",
+            (json.dumps(teams["team_a"]), json.dumps(teams["team_b"]), mid),
+        )
+    db.commit()
+
+
 def advance_durchgang(db: sqlite3.Connection, round_id: int) -> None:
     db.execute("UPDATE rounds SET current_durchgang = 2 WHERE id = ?", (round_id,))
     db.commit()

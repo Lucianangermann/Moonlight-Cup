@@ -4,7 +4,7 @@
 const SCOPES = 'user-read-playback-state user-modify-playback-state';
 
 // Feste Redirect URI — muss exakt so im Spotify Developer Dashboard eingetragen sein
-const REDIRECT_URI = 'https://lucianangermann.github.io/Moonlight-Cup';
+const REDIRECT_URI = 'https://moonlightcup.lucianangermann.com';
 
 const getRedirectUri = () => REDIRECT_URI;
 

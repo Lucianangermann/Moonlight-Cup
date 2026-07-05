@@ -2,7 +2,9 @@
 
 Flask + SQLite Turniermanager — gehostet auf einem Raspberry Pi 5, öffentlich erreichbar via Cloudflare Tunnel unter **https://moonlightcup.lucianangermann.com**.
 
-> **Status:** Noch nicht live deployed — die folgende Anleitung beschreibt den vollständigen Setup-Prozess für den ersten Rollout auf den Pi.
+Seit dem Umbau auf die React/Expo-Web-App als "eigentliches Programm" hat dieser Server zwei Aufgaben:
+1. **Anmeldeformular** (`/anmeldung`, Jinja-Template) — der einzige klassische HTML-Bereich.
+2. **JSON-API** (`/api/*`) + **Ausliefern der Expo-Web-App** (`/`, alles andere) — die React-App unter `../src/`/`../App.js` läuft hier als Single-Page-App und ist das eigentliche Turnier-Management-Tool (Admin: volle Kontrolle; alle anderen: nur Ergebnisse/Rangliste/Timer lesend).
 
 ## Architektur in 30 Sekunden
 
@@ -12,17 +14,21 @@ Internet ──▶│ Cloudflare Edge  │── HTTPS terminiert hier
             └────────┬─────────┘
                      │ Cloudflare Tunnel (cloudflared)
                      ▼
-            ┌──────────────────┐
-            │ Raspberry Pi 5   │
-            │  systemd ──▶ Gunicorn (127.0.0.1:5000)
-            │              ▼
-            │           Flask App ──▶ SQLite (WAL mode)
-            └──────────────────┘
+            ┌──────────────────────────────────────┐
+            │ Raspberry Pi 5                        │
+            │  systemd ──▶ Gunicorn (127.0.0.1:5000) │
+            │              │                         │
+            │              ├─▶ "/"        → server/webapp/ (Expo-Web-Build, SPA)
+            │              ├─▶ "/anmeldung" → Jinja-Template
+            │              ├─▶ "/api/*"    → JSON-API (session-cookie-basierter Admin-Login)
+            │              └─▶ SQLite (WAL mode)
+            └──────────────────────────────────────┘
 ```
 
 - **Kein Port-Forwarding** am Router. Der Pi ist nicht direkt aus dem Internet erreichbar.
 - **HTTPS** wird komplett von Cloudflare übernommen.
 - **Gunicorn** lauscht nur auf 127.0.0.1 — kein Public-Listener auf dem Pi.
+- **Kein CORS nötig**: Die Expo-Web-App wird vom selben Flask-Prozess/derselben Origin ausgeliefert wie die API — Admin-Login läuft über dasselbe Session-Cookie (SameSite=Strict).
 
 ## Inhaltsverzeichnis
 
@@ -33,8 +39,9 @@ Internet ──▶│ Cloudflare Edge  │── HTTPS terminiert hier
 5. [systemd-Service einrichten](#5-systemd-service-einrichten)
 6. [Cloudflare Tunnel](#6-cloudflare-tunnel)
 7. [Firewall (ufw)](#7-firewall-ufw)
-8. [Updates ausrollen](#8-updates-ausrollen)
-9. [Troubleshooting](#9-troubleshooting)
+8. [Web-App (RN-Frontend) deployen](#8-web-app-rn-frontend-deployen)
+9. [Updates ausrollen](#9-updates-ausrollen)
+10. [Troubleshooting](#10-troubleshooting)
 
 ---
 
@@ -61,12 +68,15 @@ python app.py
 # → http://127.0.0.1:5000
 ```
 
-Login: `ADMIN_USERNAME` aus `.env`, Passwort = das, das du vorher gehasht hast.
+Solange `server/webapp/` noch nicht befüllt ist (siehe [Abschnitt 8](#8-web-app-rn-frontend-deployen)), liefert `/` einen 503-Platzhaltertext statt der App — `/anmeldung` und `/api/*` funktionieren trotzdem sofort.
 
-Algorithmus-Tests:
+Login (in der Web-App über das Schloss-Icon): `ADMIN_USERNAME` aus `.env`, Passwort = das, das du vorher gehasht hast.
+
+Algorithmus- und DB-Tests:
 
 ```bash
 python test_logic.py
+python test_db_state.py
 ```
 
 ---
@@ -88,14 +98,14 @@ python3 --version    # sollte 3.11+ sein
 
 ## 3. App auf den Pi kopieren
 
-Eine der folgenden Optionen.
+Eine der folgenden Optionen. Der tatsächliche Pfad auf dem Pi ist `/home/pi/Moonlight-Cup` (Großschreibung, entspricht dem Repo-Namen).
 
 ### Variante A — über Git (empfohlen für laufende Updates)
 
 ```bash
 cd /home/pi
-git clone https://github.com/Lucianangermann/Moonlight-Cup.git moonlight-cup
-cd moonlight-cup/server
+git clone https://github.com/Lucianangermann/Moonlight-Cup.git Moonlight-Cup
+cd Moonlight-Cup/server
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
@@ -106,14 +116,14 @@ pip install -r requirements.txt
 Vom Mac aus:
 
 ```bash
-rsync -av --exclude venv --exclude '*.db*' --exclude __pycache__ \
-  /pfad/zu/MoonlightCup/server/ pi@<PI-IP>:/home/pi/moonlight-cup/server/
+rsync -av --exclude venv --exclude '*.db*' --exclude __pycache__ --exclude webapp \
+  /pfad/zu/MoonlightCup/server/ pi@<PI-IP>:/home/pi/Moonlight-Cup/server/
 ```
 
 Dann auf dem Pi:
 
 ```bash
-cd /home/pi/moonlight-cup/server
+cd /home/pi/Moonlight-Cup/server
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
@@ -124,7 +134,7 @@ pip install -r requirements.txt
 ## 4. `.env` konfigurieren
 
 ```bash
-cd /home/pi/moonlight-cup/server
+cd /home/pi/Moonlight-Cup/server
 cp .env.example .env
 
 # Secrets generieren — niemals zweimal denselben Hash verwenden
@@ -155,7 +165,7 @@ Smoke-Test (nur lokal auf dem Pi):
 
 ```bash
 ./venv/bin/gunicorn --workers 2 --bind 127.0.0.1:5000 app:app
-# in einem anderen Terminal: curl http://127.0.0.1:5000/  → sollte 200 zurückgeben
+# in einem anderen Terminal: curl http://127.0.0.1:5000/anmeldung  → sollte 200 zurückgeben
 ```
 
 `Ctrl+C` und weiter mit systemd.
@@ -164,24 +174,26 @@ Smoke-Test (nur lokal auf dem Pi):
 
 ## 5. systemd-Service einrichten
 
+Der Service heißt `moonlightcup` (ohne Bindestrich).
+
 ```bash
-sudo cp /home/pi/moonlight-cup/server/moonlight-cup.service /etc/systemd/system/
+sudo cp /home/pi/Moonlight-Cup/server/moonlightcup.service /etc/systemd/system/
 sudo systemctl daemon-reload
-sudo systemctl enable moonlight-cup
-sudo systemctl start moonlight-cup
-sudo systemctl status moonlight-cup
+sudo systemctl enable moonlightcup
+sudo systemctl start moonlightcup
+sudo systemctl status moonlightcup
 ```
 
 Logs live verfolgen:
 
 ```bash
-sudo journalctl -u moonlight-cup -f
+sudo journalctl -u moonlightcup -f
 ```
 
 Bei Code-Änderungen einfach neu starten:
 
 ```bash
-sudo systemctl restart moonlight-cup
+sudo systemctl restart moonlightcup
 ```
 
 ---
@@ -220,7 +232,7 @@ Die UUID merken (oder gleich kopieren).
 ### 6.4 Config-Datei einrichten
 
 ```bash
-cp /home/pi/moonlight-cup/server/cloudflared-config.yml.example /home/pi/.cloudflared/config.yml
+cp /home/pi/Moonlight-Cup/server/cloudflared-config.yml.example /home/pi/.cloudflared/config.yml
 nano /home/pi/.cloudflared/config.yml
 ```
 
@@ -264,12 +276,13 @@ sudo journalctl -u cloudflared -f
 Vom Laptop:
 
 ```bash
-curl -I https://moonlightcup.lucianangermann.com/
+curl -I https://moonlightcup.lucianangermann.com/anmeldung
 # → HTTP/2 200
 ```
 
-Im Browser: <https://moonlightcup.lucianangermann.com> → Startseite mit Countdown.
-Admin-Login: <https://moonlightcup.lucianangermann.com/login>.
+Im Browser: <https://moonlightcup.lucianangermann.com> → die Turnier-App (sobald `server/webapp/` deployed ist, siehe Abschnitt 8).
+Anmeldung: <https://moonlightcup.lucianangermann.com/anmeldung>.
+Admin-Login läuft **innerhalb der App** über das Schloss-Icon, nicht über eine eigene `/login`-Seite.
 
 ---
 
@@ -288,30 +301,53 @@ Ports 80/443 bleiben **geschlossen** — Cloudflare braucht sie nicht.
 
 ---
 
-## 8. Updates ausrollen
+## 8. Web-App (RN-Frontend) deployen
+
+Die React/Expo-App (`../src/`, `../App.js`) wird als statischer Web-Export gebaut und von Flask unter `server/webapp/` ausgeliefert (siehe `blueprints/webapp.py`). Es gibt dafür **keine automatische CI/CD-Pipeline** (bewusst — ein GitHub-Actions-Runner auf dem Pi wäre unverhältnismäßiger Aufwand für ein Ein-Personen-Jahresevent-Tool); stattdessen ein manueller Build+Rsync-Schritt, analog zum restlichen Deployment:
+
+```bash
+# Auf deinem Mac, im Repo-Root (nicht in server/)
+npx expo export --platform web --clear
+
+# Build auf den Pi kopieren
+rsync -av --delete dist/ pi@<PI-IP>:/home/pi/Moonlight-Cup/server/webapp/
+
+# Service neu starten, damit Flask den neuen Build ausliefert
+ssh pi@<PI-IP> 'sudo systemctl restart moonlightcup'
+```
+
+`--delete` auf dem rsync-Ziel verhindert, dass alte, gehashte JS-Bundle-Dateien aus vorherigen Builds sich ansammeln. `server/webapp/` ist gitignored — sie lebt nur auf dem Pi (und lokal, falls du sie zum Testen dorthin kopierst).
+
+**Wann neu deployen?** Nach jeder Änderung an `src/`, `App.js` oder `app.json`. Änderungen an `server/` (Backend) brauchen dagegen nur `git pull` + `systemctl restart` (Abschnitt 9) — kein neuer Web-Build nötig.
+
+---
+
+## 9. Updates ausrollen
 
 ```bash
 ssh pi@<PI-IP>
-cd /home/pi/moonlight-cup
+cd /home/pi/Moonlight-Cup
 git pull
 cd server
 source venv/bin/activate
 pip install -r requirements.txt    # nur wenn requirements.txt sich geändert hat
-sudo systemctl restart moonlight-cup
-sudo journalctl -u moonlight-cup -f
+sudo systemctl restart moonlightcup
+sudo journalctl -u moonlightcup -f
 ```
 
 Bei Schema-Migrationen einfach `python database.py` zwischen `git pull` und `restart` laufen lassen — `init_db()` ist idempotent (`IF NOT EXISTS`).
 
+Falls sich `src/`/`App.js` geändert haben, zusätzlich Abschnitt 8 (Web-App neu bauen + rsyncen) durchführen.
+
 ---
 
-## 9. Troubleshooting
+## 10. Troubleshooting
 
 ### App startet nicht
 
 ```bash
-sudo systemctl status moonlight-cup
-sudo journalctl -u moonlight-cup -n 50 --no-pager
+sudo systemctl status moonlightcup
+sudo journalctl -u moonlightcup -n 50 --no-pager
 ```
 
 Häufige Ursachen:
@@ -319,9 +355,13 @@ Häufige Ursachen:
 - Falscher Pfad in `WorkingDirectory=` (überprüfe `.service` File)
 - DB-Datei nicht beschreibbar: `ls -l server/moonlight_cup.db`
 
+### `/` zeigt nur einen 503-Text
+
+`server/webapp/` ist leer oder fehlt — die Web-App wurde noch nicht deployed. Siehe Abschnitt 8.
+
 ### 502 Bad Gateway über Cloudflare
 
-Die App ist down. Prüfe `sudo systemctl status moonlight-cup` und Logs.
+Die App ist down. Prüfe `sudo systemctl status moonlightcup` und Logs.
 
 ### Tunnel verbindet sich nicht
 
@@ -333,22 +373,22 @@ Häufig: `cert.pem` fehlt (→ erneut `cloudflared tunnel login`) oder die Tunne
 
 ### Login schlägt mit „falsch" fehl, obwohl PW richtig
 
-Die `.env` wurde nicht neu geladen. Nach Änderung: `sudo systemctl restart moonlight-cup`.
+Die `.env` wurde nicht neu geladen. Nach Änderung: `sudo systemctl restart moonlightcup`.
 
 ### Rate-Limit greift bei lokaler Tests
 
-Nach 5 fehlgeschlagenen Logins / 15 Minuten / IP wird geblockt. Den Limiter-Speicher leerst du mit Service-Neustart (`memory://` ist prozesslokal).
+Nach 5 fehlgeschlagenen Logins / 15 Minuten / IP wird geblockt (`POST /api/login`). Den Limiter-Speicher leerst du mit Service-Neustart (`memory://` ist prozesslokal).
 
 ### DB versehentlich beschädigt
 
 Backup wiederherstellen oder bei leerer DB einfach löschen:
 
 ```bash
-sudo systemctl stop moonlight-cup
-rm /home/pi/moonlight-cup/server/moonlight_cup.db*
-cd /home/pi/moonlight-cup/server
+sudo systemctl stop moonlightcup
+rm /home/pi/Moonlight-Cup/server/moonlight_cup.db*
+cd /home/pi/Moonlight-Cup/server
 ./venv/bin/python database.py
-sudo systemctl start moonlight-cup
+sudo systemctl start moonlightcup
 ```
 
 ### Backup
@@ -356,43 +396,41 @@ sudo systemctl start moonlight-cup
 WAL-Mode ist aktiv → einfach kopieren reicht **nicht**. Korrekt:
 
 ```bash
-sqlite3 /home/pi/moonlight-cup/server/moonlight_cup.db ".backup '/home/pi/backups/mc-$(date +%F).db'"
+sqlite3 /home/pi/Moonlight-Cup/server/moonlight_cup.db ".backup '/home/pi/backups/mc-$(date +%F).db'"
 ```
 
 In Cron für tägliches Backup:
 
 ```cron
-0 3 * * * sqlite3 /home/pi/moonlight-cup/server/moonlight_cup.db ".backup '/home/pi/backups/mc-$(date +\%F).db'"
+0 3 * * * sqlite3 /home/pi/Moonlight-Cup/server/moonlight_cup.db ".backup '/home/pi/backups/mc-$(date +\%F).db'"
 ```
 
 ---
 
 ## Routenübersicht
 
-| Pfad                | Auth | Zweck                                |
-|---------------------|------|--------------------------------------|
-| `/`                 | —    | Startseite mit Live-Countdown        |
-| `/rangliste`        | —    | Vollmond / Halbmond / Neumond Anzeige |
-| `/ergebnisse`       | —    | Alle abgeschlossenen Matches          |
-| `/spielplan`        | —    | Aktuelle Runde + Durchgang            |
-| `/anmeldung`        | —    | Öffentliches Anmeldeformular          |
-| `/api/timer`        | —    | JSON für den Live-Countdown           |
-| `/login`            | —    | Admin-Login (rate-limited)            |
-| `/logout`           | Admin| Logout                               |
-| `/admin/`           | Admin| Dashboard                             |
-| `/admin/teilnehmer` | Admin| Anmeldungen + Spieler verwalten       |
-| `/admin/spielplan`  | Admin| Runde starten, Finale, Reset          |
-| `/admin/ergebnisse` | Admin| Ergebnisse erfassen                   |
-| `/admin/rangliste`  | Admin| Stat-Adjustments                      |
-| `/admin/timer`      | Admin| Timer setzen / löschen                |
+| Pfad                          | Auth  | Zweck                                              |
+|--------------------------------|-------|-----------------------------------------------------|
+| `/`, alle sonstigen Pfade      | —     | Expo-Web-App (SPA, `server/webapp/`) — Ergebnisse/Rangliste/Timer für alle, Runde/Teilnehmer nur für eingeloggten Admin |
+| `/anmeldung`                   | —     | Öffentliches Anmeldeformular (Jinja)                |
+| `/api/tournament`              | —     | Teilnehmer, Runden, Rangliste (JSON, gepollt)        |
+| `/api/timer`                   | —     | Aktueller Timer-Status (JSON, gepollt)               |
+| `/api/session`                 | —     | Prüft ob eine Admin-Session aktiv ist                |
+| `/api/login`, `/api/logout`    | —     | Admin-Login/-Logout (rate-limited)                   |
+| `/api/anmeldungen*`            | Admin | Anmeldungen einsehen/bestätigen/ablehnen             |
+| `/api/participants*`           | Admin | Teilnehmer anlegen/bearbeiten/entfernen/pausieren    |
+| `/api/rounds*`, `/api/matches*`| Admin | Runde starten/Finale/Ergebnis erfassen/Spieler tauschen |
+| `/api/standings/<id>/adjustment`| Admin| Stat-Adjustments                                    |
+| `/api/timer` (POST/DELETE)     | Admin | Timer setzen/deaktivieren/löschen                    |
+| `/api/tournament/reset`        | Admin | Turnier zurücksetzen                                |
 
 ## Sicherheitsentscheidungen
 
 - **Bcrypt** mit 12 Rounds für das Admin-Passwort.
-- **Session-Cookies**: HttpOnly, Secure, SameSite=Strict, 24h Laufzeit.
-- **CSRF**: Flask-WTF auf allen Formularen, Referer-Check (HTTPS-only) ebenfalls aktiv.
-- **CSP**: strikt gesetzt, nur eigene Origin + Google Fonts erlaubt.
-- **Rate-Limit**: 5 Login-Versuche / 15 Minuten / IP.
+- **Session-Cookies**: HttpOnly, Secure, SameSite=Strict, 24h Laufzeit — dasselbe Cookie authentifiziert sowohl die Web-App als auch die API (same-origin, kein Token-Schema nötig).
+- **CSRF**: `/anmeldung` läuft über Flask-WTF (Formular-Token). `/api/*` und `/api/login`/`/api/logout` sind CSRF-exempt (wie schon das ursprüngliche `/api/timer`) — die praktische CSRF-Absicherung dafür ist `SameSite=Strict`, da ein nativer/JS-Fetch-Client kein Formular-Token mitschicken kann.
+- **CSP**: strikt gesetzt, nur eigene Origin + Google Fonts + Spotify (Timer-Screen, optional) erlaubt.
+- **Rate-Limit**: 5 Login-Versuche / 15 Minuten / IP auf `/api/login`.
 - **Talisman**: HSTS, X-Content-Type-Options, X-Frame-Options=DENY.
 - **`force_https=False`**: Cloudflare terminiert TLS und leitet HTTP weiter — Talisman trotzdem für HSTS-Header.
 - **Gunicorn bind 127.0.0.1**: Pi ist niemals direkt im Internet exponiert.

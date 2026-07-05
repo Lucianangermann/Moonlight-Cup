@@ -1,6 +1,6 @@
 # Moonlight Cup — systemd service unit
 #
-# Place at /etc/systemd/system/moonlight-cup.service on the Pi.
+# Place at /etc/systemd/system/moonlightcup.service on the Pi.
 # Adjust User= and WorkingDirectory= if you deployed under a different account.
 
 [Unit]
@@ -12,11 +12,11 @@ Wants=network-online.target
 Type=simple
 User=pi
 Group=pi
-WorkingDirectory=/home/pi/moonlight-cup/server
+WorkingDirectory=/home/pi/Moonlight-Cup/server
 
 # Gunicorn binds to localhost only — Cloudflare Tunnel forwards public traffic.
 # 2 workers is enough for a Pi 5 hosting one tournament at a time.
-ExecStart=/home/pi/moonlight-cup/server/venv/bin/gunicorn \
+ExecStart=/home/pi/Moonlight-Cup/server/venv/bin/gunicorn \
           --workers 2 \
           --bind 127.0.0.1:5000 \
           --access-logfile - \
@@ -34,7 +34,7 @@ Environment=PYTHONUNBUFFERED=1
 NoNewPrivileges=true
 ProtectSystem=strict
 ProtectHome=read-only
-ReadWritePaths=/home/pi/moonlight-cup/server
+ReadWritePaths=/home/pi/Moonlight-Cup/server
 PrivateTmp=true
 ProtectKernelTunables=true
 ProtectKernelModules=true

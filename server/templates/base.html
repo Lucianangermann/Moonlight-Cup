@@ -24,25 +24,12 @@
   </div>
 
   <header class="topbar">
-    <a href="{{ url_for('public.index') }}" class="brand">
+    <a href="/" class="brand">
       <span class="brand-glyph">☽</span>
       <span class="brand-name">Moonlight Cup</span>
     </a>
     <nav class="nav">
-      <a href="{{ url_for('public.index') }}" {% if request.endpoint == 'public.index' %}class="active"{% endif %}>Start</a>
-      <a href="{{ url_for('public.rangliste') }}" {% if request.endpoint == 'public.rangliste' %}class="active"{% endif %}>Rangliste</a>
-      <a href="{{ url_for('public.ergebnisse') }}" {% if request.endpoint == 'public.ergebnisse' %}class="active"{% endif %}>Ergebnisse</a>
-      <a href="{{ url_for('public.spielplan') }}" {% if request.endpoint == 'public.spielplan' %}class="active"{% endif %}>Spielplan</a>
       <a href="{{ url_for('anmeldung.anmeldung') }}" {% if request.endpoint == 'anmeldung.anmeldung' %}class="active"{% endif %}>Anmeldung</a>
-      {% if session.get('is_admin') %}
-        <a href="{{ url_for('admin.dashboard') }}" class="admin-link" {% if request.endpoint and request.endpoint.startswith('admin.') %}class="active"{% endif %}>Admin</a>
-        <form method="POST" action="{{ url_for('auth.logout') }}" class="logout-form">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <button type="submit" class="logout-btn" aria-label="Abmelden">
-            <span aria-hidden="true">⎋</span>
-          </button>
-        </form>
-      {% endif %}
     </nav>
   </header>
 

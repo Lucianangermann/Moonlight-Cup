@@ -24,8 +24,7 @@
     },
     "web": {
       "favicon": "./assets/favicon.png",
-      "output": "single",
-      "baseUrl": "/Moonlight-Cup"
+      "output": "single"
     }
   }
 }

@@ -5,8 +5,11 @@ import { Ionicons } from '@expo/vector-icons';
 import Svg, { Circle, Defs, RadialGradient, Stop } from 'react-native-svg';
 import { useEntranceAnimation } from '../hooks/useEntranceAnimation';
 import { colors } from '../theme/colors';
-import { shared, goldGlowShadow, cardShadow } from '../theme/styles';
+import { shared, goldGlowShadow, cardShadow, fonts } from '../theme/styles';
 import { useTournament } from '../store/tournament';
+import { useAuth } from '../store/auth';
+import { api } from '../services/api';
+import { usePolling } from '../hooks/usePolling';
 import {
   initiateLogin, isConnected, disconnect, spotifyPlay, spotifyPause, getClientId, getRedirectUriDisplay,
 } from '../services/spotify';
@@ -17,7 +20,7 @@ const FIRST_ROUND_WARMUP_SECONDS = 5 * 60;
 const DEFAULT_SECONDS = 20 * 60;
 const WARNING_SECONDS = 60; // letzte Minute
 
-export default function TimerScreen() {
+function AdminTimer() {
   const { autoTimerTrigger, timerResetTrigger } = useTournament();
   const [phase, setPhaseState] = useState('idle');
   const [timerDurchgang, setTimerDurchgang] = useState(null);
@@ -45,6 +48,18 @@ export default function TimerScreen() {
 
   const setPhase = (p) => { phaseRef.current = p; setPhaseState(p); };
 
+  // Broadcasts the current phase's real-world deadline to the shared
+  // server timer (GET/POST /api/timer) so every other viewer's device sees
+  // the same countdown — the "speed" multiplier is compressed into the
+  // target time itself, so no server-side speed concept is needed (see
+  // tasks/plan). Best-effort: a failed push never blocks the local timer.
+  const PHASE_LABELS = { prep: 'Vorbereitung', warmup: 'Einspielen', game: 'Spielzeit' };
+  const pushTimer = (p, seconds, durchgang) => {
+    const label = PHASE_LABELS[p] + (durchgang ? ` — Durchgang ${durchgang}` : '');
+    const targetTime = new Date(Date.now() + (seconds / speedRef.current) * 1000).toISOString();
+    api.setTimer(label, targetTime).catch(() => {});
+  };
+
   const SPEED_STEPS = [1, 2, 3, 4, 5, 10, 15, 20];
   const cycleSpeed = () => {
     const idx = SPEED_STEPS.indexOf(speed);
@@ -71,10 +86,12 @@ export default function TimerScreen() {
       setPhase('warmup');
       setSecondsLeft(warmup);
       sp(spotifyPlay);
+      pushTimer('warmup', warmup, autoTimerTrigger.durchgang);
     } else {
       setPhase('prep'); // 1 Min. Blätter anschauen, bevor Einspielen beginnt
       setSecondsLeft(PREP_SECONDS);
       // Keine Musik während Vorbereitung
+      pushTimer('prep', PREP_SECONDS, autoTimerTrigger.durchgang);
     }
     setRunning(true);
   }, [autoTimerTrigger]);
@@ -104,6 +121,7 @@ export default function TimerScreen() {
       setPhaseComplete(null);
       setRunning(true);
       sp(spotifyPlay);
+      pushTimer('warmup', warmupSeconds, timerDurchgang);
     } else if (phaseComplete === 'warmup') {
       sp(spotifyPause); // Musik aus = Signal: Spiel beginnt!
       setPhase('game');
@@ -111,8 +129,10 @@ export default function TimerScreen() {
       setWarned(false);
       setPhaseComplete(null);
       setRunning(true);
+      pushTimer('game', DEFAULT_SECONDS, timerDurchgang);
     } else if (phaseComplete === 'game') {
       sp(spotifyPause); // Musik aus = Spiel vorbei
+      api.deactivateTimer().catch(() => {});
       setPhaseComplete(null);
     }
   }, [phaseComplete]);
@@ -182,6 +202,7 @@ export default function TimerScreen() {
     setPhaseComplete(null);
     speedRef.current = 1;
     setSpeed(1);
+    api.deleteTimer().catch(() => {});
   };
 
   const handleConnectSpotify = () => {
@@ -319,8 +340,17 @@ export default function TimerScreen() {
         <AnimatedPressable
           style={[s.ctrlBtn, running && s.ctrlBtnActive]}
           onPress={() => {
-            if (phase === 'idle') setPhase('game');
+            const wasIdle = phase === 'idle';
+            const wasRunning = running;
+            if (wasIdle) setPhase('game');
             setRunning((r) => !r);
+            if (wasIdle) {
+              pushTimer('game', DEFAULT_SECONDS, timerDurchgang);
+            } else if (wasRunning) {
+              api.deactivateTimer().catch(() => {});
+            } else {
+              pushTimer(phaseRef.current, secondsLeft, timerDurchgang);
+            }
           }}
         >
           <Ionicons name={running ? 'pause' : 'play'} size={22} color={running ? colors.bg : colors.gold} />
@@ -336,7 +366,7 @@ export default function TimerScreen() {
 
         <AnimatedPressable
           style={[s.ctrlBtn, s.ctrlBtnStop]}
-          onPress={() => { setRunning(false); sp(spotifyPause); setSecondsLeft(0); }}
+          onPress={() => { setRunning(false); sp(spotifyPause); setSecondsLeft(0); api.deactivateTimer().catch(() => {}); }}
         >
           <Ionicons name="stop" size={20} color={colors.error} />
           <Text style={[s.ctrlLabel, { color: colors.error + 'BB' }]}>Stop</Text>
@@ -448,6 +478,75 @@ export default function TimerScreen() {
     </ScrollView>
     </Animated.View>
   );
+}
+
+// Read-only countdown for non-admin viewers — no controls, no vibration, no
+// Spotify (those only make sense on the admin's own device). Derives the
+// countdown from the shared server timer (GET /api/timer) instead of the
+// local trigger-based phase machine AdminTimer uses; a local 1s interval
+// interpolates between the 5s polls so the display still ticks smoothly.
+function ViewerTimer() {
+  const [timer, setTimer] = useState({ label: null, targetTime: null, isActive: false });
+  const [secondsLeft, setSecondsLeft] = useState(0);
+
+  usePolling(async () => {
+    const t = await api.getTimer();
+    setTimer(t);
+  }, 5000);
+
+  useEffect(() => {
+    if (!timer.isActive || !timer.targetTime) {
+      setSecondsLeft(0);
+      return;
+    }
+    const tick = () => {
+      const left = Math.round((new Date(timer.targetTime).getTime() - Date.now()) / 1000);
+      setSecondsLeft(Math.max(0, left));
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [timer.isActive, timer.targetTime]);
+
+  const entranceStyle = useEntranceAnimation();
+  const mins = Math.floor(secondsLeft / 60).toString().padStart(2, '0');
+  const secs = (secondsLeft % 60).toString().padStart(2, '0');
+  const isFinished = timer.isActive && secondsLeft === 0;
+  const phaseColor = isFinished ? colors.error : timer.isActive ? colors.gold : colors.textMuted;
+
+  const RING_SIZE = 280;
+  const RING_CENTER = RING_SIZE / 2;
+  const RING_RADIUS = 118;
+
+  return (
+    <Animated.View style={[{ flex: 1 }, entranceStyle]}>
+      <ScrollView style={{ flex: 1, backgroundColor: colors.bg }} contentContainerStyle={[shared.screen, s.screen]} showsVerticalScrollIndicator={false}>
+        <Text style={s.title}>Timer</Text>
+
+        <View style={s.ringContainer}>
+          <Svg width={RING_SIZE} height={RING_SIZE} style={{ position: 'absolute' }}>
+            <Circle cx={RING_CENTER} cy={RING_CENTER} r={RING_RADIUS} stroke={phaseColor + '18'} strokeWidth={7} fill="none" />
+          </Svg>
+          <View style={s.ringInner}>
+            <Text style={[s.timerText, { color: phaseColor }]}>{mins}:{secs}</Text>
+            <Text style={[s.statusText, { color: phaseColor }]}>
+              {isFinished ? 'ZEIT!' : timer.isActive ? (timer.label ?? 'LÄUFT') : 'WARTE AUF START'}
+            </Text>
+          </View>
+        </View>
+
+        <Text style={s.hint}>
+          {timer.isActive ? 'Live · aktualisiert automatisch' : 'Der Admin hat noch keinen Timer gestartet.'}
+        </Text>
+        <View style={{ height: 24 }} />
+      </ScrollView>
+    </Animated.View>
+  );
+}
+
+export default function TimerScreen() {
+  const { isAdmin } = useAuth();
+  return isAdmin ? <AdminTimer /> : <ViewerTimer />;
 }
 
 const s = StyleSheet.create({

@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 import { shared, cardShadow, fonts } from '../theme/styles';
 import { useTournament } from '../store/tournament';
+import { useAuth } from '../store/auth';
 import AnimatedPressable from '../components/AnimatedPressable';
 
 const TYPE_CONFIG = {
@@ -17,6 +18,7 @@ const TYPE_CONFIG = {
 
 export default function ErgebnisseScreen() {
   const { rounds, participants, saveResult, getCurrentRoundData, currentRound } = useTournament();
+  const { isAdmin } = useAuth();
   const [selectedRound, setSelectedRound] = useState(() => currentRound > 0 ? String(currentRound) : 'all');
 
   useEffect(() => {
@@ -39,7 +41,10 @@ export default function ErgebnisseScreen() {
   const getTeam = (ids) => ids.map(getName).join(' & ');
 
   const allMatches = rounds.flatMap((r) =>
-    r.matches.map((m) => ({ ...m, roundId: r.id, isSchnellrunde: r.isSchnellrunde, durchgang: m.durchgang ?? 1 }))
+    r.matches.map((m) => ({
+      ...m, roundId: r.id, roundNumber: r.roundNumber,
+      isSchnellrunde: r.isSchnellrunde, durchgang: m.durchgang ?? 1,
+    }))
   );
   const filtered = selectedRound === 'all'
     ? allMatches
@@ -88,7 +93,7 @@ export default function ErgebnisseScreen() {
   const handleSave = () => {
     if (!editMatch || !isFormValid) return;
     const savedOffset = scrollOffsetRef.current;
-    saveResult(editMatch.id, Number(scoreA), Number(scoreB));
+    saveResult(editMatch.id, Number(scoreA), Number(scoreB)).catch(() => {});
     setEditMatch(null);
     setTimeout(() => {
       scrollRef.current?.scrollTo({ y: savedOffset, animated: false });
@@ -105,7 +110,7 @@ export default function ErgebnisseScreen() {
       <AnimatedPressable
         key={match.id}
         style={[s.matchCard, match.done && s.matchCardDone]}
-        onPress={() => openEdit(match)}
+        onPress={isAdmin ? () => openEdit(match) : undefined}
       >
         <View style={s.cardTop}>
           <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
@@ -137,7 +142,7 @@ export default function ErgebnisseScreen() {
             )}
             {!isRoundView && (
               <View style={s.roundTag}>
-                <Text style={s.roundTagText}>R{match.roundId}</Text>
+                <Text style={s.roundTagText}>R{match.roundNumber}</Text>
               </View>
             )}
             {match.done && (
@@ -153,11 +158,13 @@ export default function ErgebnisseScreen() {
           <View style={s.scoreBox}>
             {match.done ? (
               <Text style={s.scoreText}>{match.scoreA} – {match.scoreB}</Text>
-            ) : (
+            ) : isAdmin ? (
               <View style={s.editHintBox}>
                 <Ionicons name="pencil-outline" size={12} color={colors.textMuted} />
                 <Text style={s.editHintText}>Eingeben</Text>
               </View>
+            ) : (
+              <Text style={s.editHintText}>–</Text>
             )}
           </View>
           <Text style={[s.teamName, s.teamRight, bWins && s.teamWinner, match.done && !bWins && s.teamDimmed]} numberOfLines={1}>
@@ -179,7 +186,7 @@ export default function ErgebnisseScreen() {
       const winScore = schnell ? 21 : 40;
       const loseScore = Math.floor(Math.random() * winScore);
       const aWins = Math.random() < 0.5;
-      saveResult(m.id, aWins ? winScore : loseScore, aWins ? loseScore : winScore);
+      saveResult(m.id, aWins ? winScore : loseScore, aWins ? loseScore : winScore).catch(() => {});
     });
   };
 
@@ -199,7 +206,7 @@ export default function ErgebnisseScreen() {
               <Text style={s.progressText}>{doneCount}/{filtered.length}</Text>
             </View>
           )}
-          {hasPending && currentRoundData && (
+          {isAdmin && hasPending && currentRoundData && (
             <AnimatedPressable style={s.simulateBtn} onPress={simulateAll} activeOpacity={0.75}>
               <Ionicons name="dice-outline" size={14} color={colors.warning} />
               <Text style={s.simulateBtnText}>Simulieren</Text>
@@ -215,7 +222,7 @@ export default function ErgebnisseScreen() {
         style={s.filterScroll}
         contentContainerStyle={{ paddingRight: 8 }}
       >
-        {[{ key: 'all', label: 'Alle' }, ...rounds.map((r) => ({ key: String(r.id), label: `Runde ${r.id}` }))].map((f) => (
+        {[{ key: 'all', label: 'Alle' }, ...rounds.map((r) => ({ key: String(r.id), label: `Runde ${r.roundNumber}` }))].map((f) => (
           <AnimatedPressable
             key={f.key}
             style={[s.filterChip, selectedRound === f.key && s.filterChipActive]}

@@ -95,8 +95,8 @@ export default function RundeScreen() {
     if (!round || !inD1) {
       if (!isFinalRunde) setShowConfirm(true);
     } else {
-      advanceDurchgang();
-      triggerAutoTimer(2, currentRound === 1);
+      advanceDurchgang().catch(() => {});
+      triggerAutoTimer(2, round?.roundNumber === 1);
     }
   };
 
@@ -146,20 +146,23 @@ export default function RundeScreen() {
   const handleConfirmStart = () => {
     setShowConfirm(false);
     setViewingRoundId(null);
-    startNewRound();
+    startNewRound().catch(() => {});
   };
 
-  // Wenn eine neue Runde startet: Timer starten + automatisch drucken
+  // Wenn eine neue Runde startet: Timer starten + automatisch drucken.
+  // currentRound is the server-assigned round id (monotonically increasing,
+  // even across a tournament reset) — compare by inequality rather than the
+  // old ">" check so a reset (currentRound -> null) is handled cleanly too.
   useEffect(() => {
-    if (currentRound === 0) {
-      prevRoundRef.current = 0;
+    if (currentRound == null) {
+      prevRoundRef.current = null;
       return;
     }
-    if (currentRound > prevRoundRef.current) {
+    if (currentRound !== prevRoundRef.current) {
       prevRoundRef.current = currentRound;
       const newRound = rounds.find((r) => r.id === currentRound);
       if (newRound) {
-        triggerAutoTimer(1, currentRound === 1);
+        triggerAutoTimer(1, newRound.roundNumber === 1);
         doPrintBoth(newRound);
       }
     }
@@ -183,7 +186,7 @@ export default function RundeScreen() {
     return `
       <div style="overflow:hidden;margin-bottom:5px">
         <div style="float:right;background:#1a1a2e;color:#fff;padding:5px 12px;border-radius:6px;font-size:12px;font-weight:800;letter-spacing:1px;margin-left:10px">DURCHGANG ${dg}</div>
-        <div style="font-size:18px;font-weight:800">☽ Moonlight Cup — Runde ${r.id}</div>
+        <div style="font-size:18px;font-weight:800">☽ Moonlight Cup — Runde ${r.roundNumber}</div>
         <div style="font-size:11px;color:#666;margin-top:2px">${r.isSchnellrunde ? 'Schnellrunde' : 'Normale Runde'}</div>
       </div>
       <hr style="border:none;border-top:2px solid #1a1a2e;margin:8px 0 12px"/>
@@ -246,7 +249,7 @@ export default function RundeScreen() {
       `\n── ${lbl} ──\n` + list.map((m, i) =>
         `${i + 1}. [${TYPE_LABELS[m.type]}]  ${m.teamA.map(getName).join(' & ')}  vs  ${m.teamB.map(getName).join(' & ')}`
       ).join('\n');
-    const text = `☽ MOONLIGHT CUP — Runde ${r.id}\n` +
+    const text = `☽ MOONLIGHT CUP — Runde ${r.roundNumber}\n` +
       (r.isSchnellrunde ? 'Schnellrunde' : 'Normale Runde') + '\n' +
       '─'.repeat(38) +
       fmt(r.matches.filter(m => m.durchgang === 1), 'DURCHGANG 1') +
@@ -282,14 +285,14 @@ export default function RundeScreen() {
 
   const confirmSwap = () => {
     const { slot1, slot2 } = pendingSwap;
-    swapMatchPlayers(slot1.matchId, slot1.team, slot1.idx, slot2.matchId, slot2.team, slot2.idx);
+    swapMatchPlayers(slot1.matchId, slot1.team, slot1.idx, slot2.matchId, slot2.team, slot2.idx).catch(() => {});
     setPendingSwap(null);
   };
 
   const confirmDeleteRound = () => {
     setConfirmDelete(false);
     setEditOpen(false);
-    deleteCurrentRound();
+    deleteCurrentRound().catch(() => {});
   };
 
   return (
@@ -328,7 +331,7 @@ export default function RundeScreen() {
                       <View style={{ flex: 1 }}>
                         <View style={s.roundRowTop}>
                           <Text style={[s.roundRowTitle, isCurrent && { color: colors.gold }, isViewing && { color: colors.info }]}>
-                            Runde {r.id}
+                            Runde {r.roundNumber}
                           </Text>
                           <View style={[r.isSchnellrunde ? s.schnellPill : s.normalPill, { paddingHorizontal: 7, paddingVertical: 2 }]}>
                             <Ionicons
@@ -376,7 +379,7 @@ export default function RundeScreen() {
           <Modal visible transparent animationType="fade">
             <View style={s.modalOverlay}>
               <View style={s.modalCard}>
-                <Text style={s.modalTitle}>Runde {roundToDelete.id} löschen?</Text>
+                <Text style={s.modalTitle}>Runde {roundToDelete.roundNumber} löschen?</Text>
                 <Text style={s.modalBody}>
                   Alle Paarungen und Ergebnisse dieser Runde werden unwiderruflich gelöscht.{'\n'}
                   Die Rangliste wird entsprechend aktualisiert.
@@ -388,7 +391,7 @@ export default function RundeScreen() {
                   <AnimatedPressable
                     style={s.modalBtnRed}
                     onPress={() => {
-                      deleteRound(roundToDelete.id);
+                      deleteRound(roundToDelete.id).catch(() => {});
                       setRoundToDelete(null);
                       setRoundsMenuOpen(false);
                     }}
@@ -434,7 +437,7 @@ export default function RundeScreen() {
                       <View style={{ flex: 1 }}>
                         <View style={s.roundRowTop}>
                           <Text style={[s.roundRowTitle, isCurrent && { color: colors.gold }]}>
-                            Runde {r.id}
+                            Runde {r.roundNumber}
                           </Text>
                           <View style={[r.isSchnellrunde ? s.schnellPill : s.normalPill, { paddingHorizontal: 7, paddingVertical: 2 }]}>
                             <Ionicons
@@ -469,7 +472,7 @@ export default function RundeScreen() {
         <View style={s.editScreen}>
           {/* Edit Header */}
           <View style={s.editHeader}>
-            <Text style={s.editTitle}>Runde {currentRound} bearbeiten</Text>
+            <Text style={s.editTitle}>Runde {round?.roundNumber} bearbeiten</Text>
             <AnimatedPressable onPress={() => { setEditOpen(false); setSelectedSlot(null); }} activeOpacity={0.7}>
               <Ionicons name="close-circle" size={26} color={colors.textMuted} />
             </AnimatedPressable>
@@ -539,7 +542,7 @@ export default function RundeScreen() {
           {/* Delete round */}
           <AnimatedPressable style={s.deleteRoundBtn} onPress={() => setConfirmDelete(true)} activeOpacity={0.8}>
             <Ionicons name="trash-outline" size={15} color={colors.error} />
-            <Text style={s.deleteRoundText}>Runde {currentRound} löschen</Text>
+            <Text style={s.deleteRoundText}>Runde {round?.roundNumber} löschen</Text>
           </AnimatedPressable>
         </View>
 
@@ -576,7 +579,7 @@ export default function RundeScreen() {
               <View style={s.modalCard}>
                 <Text style={s.modalTitle}>Runde löschen?</Text>
                 <Text style={s.modalBody}>
-                  Runde {currentRound} wird unwiderruflich gelöscht.{'\n'}Alle Paarungen und Ergebnisse gehen verloren.
+                  Runde {round?.roundNumber} wird unwiderruflich gelöscht.{'\n'}Alle Paarungen und Ergebnisse gehen verloren.
                 </Text>
                 <View style={s.modalButtons}>
                   <AnimatedPressable style={s.modalBtnCancel} onPress={() => setConfirmDelete(false)} activeOpacity={0.8}>
@@ -599,7 +602,7 @@ export default function RundeScreen() {
           <View style={s.modalCard}>
             <Text style={s.modalTitle}>Neue Runde starten?</Text>
             <Text style={s.modalBody}>
-              Runde {currentRound + 1} wird jetzt ausgelost.{'\n'}Diese Aktion kann nicht rückgängig gemacht werden.
+              Runde {rounds.length + 1} wird jetzt ausgelost.{'\n'}Diese Aktion kann nicht rückgängig gemacht werden.
             </Text>
             <View style={s.modalButtons}>
               <AnimatedPressable style={s.modalBtnCancel} onPress={() => setShowConfirm(false)} activeOpacity={0.8}>
@@ -655,7 +658,7 @@ export default function RundeScreen() {
           ))}
           {currentRound > 0 && (
             <View style={s.roundPill}>
-              <Text style={s.roundPillText}>RUNDE {currentRound}</Text>
+              <Text style={s.roundPillText}>RUNDE {round?.roundNumber}</Text>
             </View>
           )}
           {currentRound > 0 && (
@@ -675,7 +678,7 @@ export default function RundeScreen() {
           activeOpacity={0.8}
         >
           <Ionicons name="eye-outline" size={13} color={colors.info} />
-          <Text style={s.viewingBannerText}>Ansicht: Runde {viewingRoundId}</Text>
+          <Text style={s.viewingBannerText}>Ansicht: Runde {displayRound?.roundNumber}</Text>
           <Text style={s.viewingBannerBack}>← Aktuelle Runde</Text>
         </AnimatedPressable>
       )}
@@ -782,7 +785,7 @@ export default function RundeScreen() {
           <View style={s.modalCard}>
             <Text style={s.modalTitle}>Neue Runde starten?</Text>
             <Text style={s.modalBody}>
-              Runde {currentRound + 1} wird jetzt ausgelost.{'\n'}Diese Aktion kann nicht rückgängig gemacht werden.
+              Runde {rounds.length + 1} wird jetzt ausgelost.{'\n'}Diese Aktion kann nicht rückgängig gemacht werden.
             </Text>
             <View style={s.modalButtons}>
               <AnimatedPressable style={s.modalBtnCancel} onPress={() => setShowConfirm(false)} activeOpacity={0.8}>
@@ -803,7 +806,7 @@ export default function RundeScreen() {
           <View style={s.previewScreen}>
             <View style={s.previewHeader}>
               <View style={{ flex: 1 }}>
-                <Text style={s.previewTitle}>☽ Moonlight Cup — Runde {printPreview.id}</Text>
+                <Text style={s.previewTitle}>☽ Moonlight Cup — Runde {printPreview.roundNumber}</Text>
                 <Text style={s.previewSub}>
                   {previewDg === 1 ? 'Schritt 1/2 — Durchgang 1 drucken' : previewDg === 2 ? 'Schritt 2/2 — Durchgang 2 drucken' : 'Wähle einen Durchgang'}
                 </Text>
@@ -960,7 +963,7 @@ export default function RundeScreen() {
               </AnimatedPressable>
               <AnimatedPressable
                 style={s.modalBtnRed}
-                onPress={() => { setShowResetConfirm(false); setViewingRoundId(null); resetTournament(); }}
+                onPress={() => { setShowResetConfirm(false); setViewingRoundId(null); resetTournament().catch(() => {}); }}
                 activeOpacity={0.8}
               >
                 <Ionicons name="refresh" size={13} color={colors.white} style={{ marginRight: 5 }} />
@@ -990,7 +993,7 @@ export default function RundeScreen() {
               </AnimatedPressable>
               <AnimatedPressable
                 style={s.modalBtnFinal}
-                onPress={() => { setShowFinalConfirm(false); setViewingRoundId(null); startFinalRunde(); }}
+                onPress={() => { setShowFinalConfirm(false); setViewingRoundId(null); startFinalRunde().catch(() => {}); }}
                 activeOpacity={0.8}
               >
                 <Ionicons name="trophy" size={13} color={colors.bg} style={{ marginRight: 5 }} />

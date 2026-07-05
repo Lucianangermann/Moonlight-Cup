@@ -49,4 +49,5 @@ server/*.db-shm
 server/__pycache__/
 server/**/__pycache__/
 server/venv/
+server/webapp/
 *.pyc

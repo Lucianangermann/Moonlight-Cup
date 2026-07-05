@@ -44,3 +44,8 @@ class Config:
 
     # --- Server ---
     PORT = int(os.environ.get("PORT", "5000"))
+
+    # --- Web app (Expo web export of the RN app, served at "/") ---
+    # Populated by `npx expo export --platform web` + rsync to the Pi — see
+    # server/README.md's deploy runbook. Gitignored; absent until first deploy.
+    WEBAPP_DIR = BASE_DIR / "webapp"

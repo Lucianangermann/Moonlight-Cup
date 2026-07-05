@@ -7,6 +7,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 import { shared, cardShadow, fonts } from '../theme/styles';
 import { useTournament, LEAGUES } from '../store/tournament';
+import { api } from '../services/api';
+import { usePolling } from '../hooks/usePolling';
 import AnimatedPressable from '../components/AnimatedPressable';
 
 export default function TeilnehmerScreen() {
@@ -35,6 +37,39 @@ export default function TeilnehmerScreen() {
   const [confirmRemove, setConfirmRemove] = useState(false);
   const [nameError, setNameError] = useState('');
 
+  // Pending Anmeldungen (public registrations from /anmeldung, awaiting review) —
+  // this used to be handled by the now-removed Flask admin panel; the API
+  // (server/blueprints/api.py) still exposes the same confirm/reject actions.
+  const [anmeldungen, setAnmeldungen] = useState([]);
+  const [confirmTarget, setConfirmTarget] = useState(null);
+  const [confirmGender, setConfirmGender] = useState('M');
+  const [confirmLeague, setConfirmLeague] = useState('FZ');
+
+  const loadAnmeldungen = async () => {
+    try {
+      setAnmeldungen(await api.getAnmeldungen());
+    } catch { /* next poll retries */ }
+  };
+  usePolling(loadAnmeldungen, 15000);
+
+  const openConfirm = (a) => {
+    setConfirmTarget(a);
+    setConfirmGender('M');
+    setConfirmLeague('FZ');
+  };
+
+  const handleConfirmAnmeldung = async () => {
+    if (!confirmTarget) return;
+    await api.confirmAnmeldung(confirmTarget.id, { gender: confirmGender, league: confirmLeague });
+    setConfirmTarget(null);
+    await loadAnmeldungen();
+  };
+
+  const handleRejectAnmeldung = async (a) => {
+    await api.deleteAnmeldung(a.id);
+    await loadAnmeldungen();
+  };
+
   const standings = getStandings();
 
   const getRank = (id) => {
@@ -56,7 +91,7 @@ export default function TeilnehmerScreen() {
       return;
     }
     if (participants.length >= 99) return;
-    addParticipant(newName.trim(), newGender, newLeague);
+    addParticipant(newName.trim(), newGender, newLeague).catch(() => {});
     setNewName('');
     setNewGender('M');
     setNewLeague('FZ');
@@ -101,7 +136,7 @@ export default function TeilnehmerScreen() {
       name: editName.trim(),
       gender: editGender,
       league: editLeague,
-    });
+    }).catch(() => {});
     const standing = standings.find((s) => s.id === editTarget.id);
     const prevAdj = statAdjustments[editTarget.id] ?? { games: 0, wins: 0, diff: 0 };
     const baseGames = (standing?.games ?? 0) - (prevAdj.games ?? 0);
@@ -111,23 +146,23 @@ export default function TeilnehmerScreen() {
       games: games - baseGames,
       wins:  wins  - baseWins,
       diff:  diff  - baseDiff,
-    });
+    }).catch(() => {});
     closeEdit();
   };
 
   const handlePause = () => {
     if (!editTarget) return;
-    pauseParticipant(editTarget.id);
+    pauseParticipant(editTarget.id).catch(() => {});
     closeEdit();
   };
 
   const handleResume = (p) => {
-    resumeParticipant(p.id);
+    resumeParticipant(p.id).catch(() => {});
   };
 
   const handleRemove = () => {
     if (!editTarget) return;
-    removeParticipant(editTarget.id);
+    removeParticipant(editTarget.id).catch(() => {});
     closeEdit();
   };
 
@@ -171,6 +206,29 @@ export default function TeilnehmerScreen() {
           <Text style={s.statLabel}>Gesamt</Text>
         </View>
       </View>
+
+      {/* Ausstehende Anmeldungen */}
+      {anmeldungen.length > 0 && (
+        <View style={s.anmeldungBox}>
+          <Text style={s.anmeldungTitle}>AUSSTEHENDE ANMELDUNGEN ({anmeldungen.length})</Text>
+          {anmeldungen.map((a) => (
+            <View key={a.id} style={s.anmeldungRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={s.anmeldungName} numberOfLines={1}>{a.name}</Text>
+                <Text style={s.anmeldungMeta} numberOfLines={1}>
+                  {a.email}{a.verein ? ` · ${a.verein}` : ''}
+                </Text>
+              </View>
+              <AnimatedPressable style={s.anmeldungReject} onPress={() => handleRejectAnmeldung(a).catch(() => {})} activeOpacity={0.7}>
+                <Ionicons name="close" size={15} color={colors.error} />
+              </AnimatedPressable>
+              <AnimatedPressable style={s.anmeldungConfirm} onPress={() => openConfirm(a)} activeOpacity={0.7}>
+                <Ionicons name="checkmark" size={15} color={colors.bg} />
+              </AnimatedPressable>
+            </View>
+          ))}
+        </View>
+      )}
 
       {/* Search */}
       <View style={s.searchBox}>
@@ -513,11 +571,124 @@ export default function TeilnehmerScreen() {
           </View>
         </KeyboardAvoidingView>
       </Modal>
+
+      {/* Anmeldung bestätigen (Geschlecht + Liga festlegen) */}
+      <Modal visible={!!confirmTarget} transparent animationType="slide">
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={shared.modalBg}>
+          <View style={shared.sheet}>
+            <View style={s.sheetHeader}>
+              <Text style={shared.sheetTitle}>Anmeldung bestätigen</Text>
+              <AnimatedPressable onPress={() => setConfirmTarget(null)} activeOpacity={0.7}>
+                <Ionicons name="close" size={22} color={colors.textMuted} />
+              </AnimatedPressable>
+            </View>
+
+            <Text style={s.confirmTargetName}>{confirmTarget?.name}</Text>
+
+            <Text style={s.genderLabel}>GESCHLECHT</Text>
+            <View style={s.genderRow}>
+              <AnimatedPressable
+                style={[s.genderBtn, confirmGender === 'M' && s.genderBtnActiveM]}
+                onPress={() => setConfirmGender('M')}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="male" size={18} color={confirmGender === 'M' ? colors.info : colors.textMuted} />
+                <Text style={[s.genderBtnText, confirmGender === 'M' && { color: colors.white }]}>Herr</Text>
+              </AnimatedPressable>
+              <AnimatedPressable
+                style={[s.genderBtn, confirmGender === 'F' && s.genderBtnActiveF]}
+                onPress={() => setConfirmGender('F')}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="female" size={18} color={confirmGender === 'F' ? '#E879A0' : colors.textMuted} />
+                <Text style={[s.genderBtnText, confirmGender === 'F' && { color: colors.white }]}>Dame</Text>
+              </AnimatedPressable>
+            </View>
+
+            <Text style={s.genderLabel}>LIGA</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.leagueScroll} contentContainerStyle={s.leagueScrollContent}>
+              {LEAGUES.map((lg) => (
+                <AnimatedPressable
+                  key={lg.key}
+                  style={[s.leagueBtn, confirmLeague === lg.key && s.leagueBtnActive]}
+                  onPress={() => setConfirmLeague(lg.key)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[s.leagueBtnKey, confirmLeague === lg.key && s.leagueBtnKeyActive]}>{lg.key}</Text>
+                  <Text style={[s.leagueBtnLabel, confirmLeague === lg.key && s.leagueBtnLabelActive]} numberOfLines={1}>{lg.label}</Text>
+                </AnimatedPressable>
+              ))}
+            </ScrollView>
+
+            <AnimatedPressable style={shared.saveBtn} onPress={() => handleConfirmAnmeldung().catch(() => {})} activeOpacity={0.8}>
+              <Text style={shared.saveBtnText}>BESTÄTIGEN</Text>
+            </AnimatedPressable>
+            <AnimatedPressable onPress={() => setConfirmTarget(null)} activeOpacity={0.7}>
+              <Text style={shared.cancelText}>Abbrechen</Text>
+            </AnimatedPressable>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </View>
   );
 }
 
 const s = StyleSheet.create({
+  anmeldungBox: {
+    backgroundColor: colors.goldGlow,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.borderGoldGlow,
+    padding: 12,
+    marginBottom: 12,
+  },
+  anmeldungTitle: {
+    color: colors.gold,
+    fontSize: 10,
+    fontFamily: fonts.headingSemi,
+    letterSpacing: 1,
+    marginBottom: 8,
+  },
+  anmeldungRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 6,
+  },
+  anmeldungName: {
+    color: colors.white,
+    fontSize: 13,
+    fontFamily: fonts.bodySemi,
+  },
+  anmeldungMeta: {
+    color: colors.textMuted,
+    fontSize: 11,
+  },
+  anmeldungReject: {
+    width: 30,
+    height: 30,
+    borderRadius: 8,
+    backgroundColor: colors.error + '18',
+    borderWidth: 1,
+    borderColor: colors.error + '40',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  anmeldungConfirm: {
+    width: 30,
+    height: 30,
+    borderRadius: 8,
+    backgroundColor: colors.gold,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  confirmTargetName: {
+    color: colors.gold,
+    fontSize: 16,
+    fontFamily: fonts.heading,
+    textAlign: 'center',
+    marginBottom: 16,
+  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',

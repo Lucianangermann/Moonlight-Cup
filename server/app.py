@@ -21,16 +21,18 @@ from config import Config
 from database import close_db
 
 
-# CSP: allow same-origin assets + Google Fonts (Cinzel/Rajdhani via @font-face).
-# 'unsafe-inline' for styles is unfortunate but Google Fonts CSS uses inline
-# directives; alternative is to vendor the fonts (TODO if hardening required).
+# CSP: allow same-origin assets + Google Fonts (Cinzel/Rajdhani via @font-face)
+# + the Spotify Web API/Accounts hosts (Timer screen's optional playback
+# control, src/services/spotify.js). 'unsafe-inline' for styles is unfortunate
+# but Google Fonts CSS uses inline directives; alternative is to vendor the
+# fonts (TODO if hardening required).
 CSP = {
     "default-src": "'self'",
     "script-src": "'self'",
     "style-src": ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
     "font-src": ["'self'", "https://fonts.gstatic.com"],
     "img-src": ["'self'", "data:"],
-    "connect-src": "'self'",
+    "connect-src": ["'self'", "https://accounts.spotify.com", "https://api.spotify.com"],
     "frame-ancestors": "'none'",
     "base-uri": "'self'",
     "form-action": "'self'",
@@ -72,18 +74,21 @@ def create_app() -> Flask:
 
     # --- Blueprints ---
     from blueprints import auth as auth_bp
-    from blueprints import public as public_bp
     from blueprints import anmeldung as anmeldung_bp
-    from blueprints import admin as admin_bp
     from blueprints import api as api_bp
+    from blueprints import webapp as webapp_bp
 
-    app.register_blueprint(auth_bp.bp)
-    app.register_blueprint(public_bp.bp)
     app.register_blueprint(anmeldung_bp.bp)
-    app.register_blueprint(admin_bp.bp)
-    # /api/timer is public, but it's read-only and served as JSON — exempt CSRF.
+    # auth/api are JSON-only, consumed by the RN web app's fetch() calls — no
+    # Flask-WTF form/session-token round-trip is possible from that client, so
+    # both are CSRF-exempt. SameSite=Strict cookies are the practical CSRF
+    # mitigation here (see server/README.md's security notes).
+    csrf.exempt(auth_bp.bp)
     csrf.exempt(api_bp.bp)
+    app.register_blueprint(auth_bp.bp)
     app.register_blueprint(api_bp.bp)
+    # Catch-all SPA route — registered last so it never shadows the routes above.
+    app.register_blueprint(webapp_bp.bp)
 
     # Wrap the login view with a rate-limit (5 attempts / 15 min / IP).
     # Done after registration so the endpoint exists in app.view_functions.
