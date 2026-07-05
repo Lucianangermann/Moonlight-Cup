@@ -12,6 +12,7 @@ from flask import Blueprint, render_template, redirect, url_for, flash
 from database import get_db
 from db_state import confirm_anmeldung, create_anmeldung
 from forms.public_forms import AnmeldungForm
+from mailer import is_configured as mail_configured, send_registration_receipt
 
 bp = Blueprint("anmeldung", __name__)
 
@@ -55,7 +56,21 @@ def anmeldung():
         )
         confirm_anmeldung(db, anmeldung_id, gender=form.gender.data, league=form.league.data)
 
-        flash("Du bist angemeldet und stehst ab sofort auf der Teilnehmerliste!", "success")
+        send_registration_receipt(
+            name=form.name.data.strip(),
+            email=email,
+            age=form.age.data,
+            verein=form.verein.data.strip(),
+            league=form.league.data,
+            midnight_meal=form.midnight_meal.data == "ja",
+            breakfast=breakfast,
+            breakfast_type=form.breakfast_type.data if breakfast else None,
+        )
+
+        msg = "Du bist angemeldet und stehst ab sofort auf der Teilnehmerliste!"
+        if mail_configured():
+            msg += " Eine Bestätigung ist unterwegs an deine E-Mail-Adresse."
+        flash(msg, "success")
         return redirect(url_for("anmeldung.anmeldung"))
 
     return render_template("anmeldung.html", form=form)

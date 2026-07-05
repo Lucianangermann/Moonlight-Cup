@@ -1,0 +1,94 @@
+"""
+Registration receipt mails.
+
+Provider-agnostic SMTP (STARTTLS) configured entirely via .env — designed
+for iCloud Mail (smtp.mail.me.com + app-specific password, the bergerhq.de
+custom-domain setup) but any STARTTLS SMTP works. If MAIL_HOST is unset the
+feature is off and send_registration_receipt() is a silent no-op, so the
+registration flow never depends on mail being configured.
+
+Sending happens on a daemon thread: the submitter gets their redirect
+immediately, and an SMTP hiccup can never fail a registration.
+"""
+from __future__ import annotations
+
+import logging
+import smtplib
+import threading
+from email.message import EmailMessage
+
+from config import Config
+
+log = logging.getLogger(__name__)
+
+_LEAGUE_LABELS = {
+    "FZ": "Freizeitspieler", "BK": "Bezirksklasse", "BL": "Bezirksliga",
+    "BOL": "Bezirksoberliga", "BAY": "Bayernliga", "OL": "Oberliga",
+    "RL": "Regionalliga", "BU": "Bundesliga",
+}
+
+
+def is_configured() -> bool:
+    return bool(Config.MAIL_HOST and Config.MAIL_USERNAME and Config.MAIL_PASSWORD and Config.MAIL_FROM)
+
+
+def build_receipt(*, name: str, email: str, age: int, verein: str, league: str,
+                  midnight_meal: bool, breakfast: bool,
+                  breakfast_type: str | None) -> EmailMessage:
+    """Pure message assembly — unit-testable without an SMTP server."""
+    parts = name.split(",")
+    display_name = f"{parts[1].strip()} {parts[0].strip()}" if len(parts) > 1 else name.strip()
+
+    breakfast_line = "Nein"
+    if breakfast:
+        art = "Weißwurscht" if breakfast_type == "weisswurscht" else "Vegetarisch"
+        breakfast_line = f"Ja ({art})"
+
+    msg = EmailMessage()
+    msg["Subject"] = "Deine Anmeldung zum Moonlight Cup"
+    msg["From"] = Config.MAIL_FROM
+    msg["To"] = email
+    msg.set_content(
+        f"""Hallo {display_name},
+
+deine Anmeldung zum Moonlight Cup ist eingegangen — du stehst ab sofort
+auf der Teilnehmerliste!
+
+Deine Angaben:
+  Name:              {name}
+  Alter:             {age}
+  Verein:            {verein}
+  Liga:              {_LEAGUE_LABELS.get(league, league)}
+  Mitternachtsessen: {"Ja" if midnight_meal else "Nein"}
+  Frühstück:         {breakfast_line}
+
+Am Turnierabend läuft alles live — Spielplan, Ergebnisse und Rangliste:
+https://moonlightcup.lucianangermann.com
+
+Wir sehen uns auf dem Feld! 🏸
+
+☽ Moonlight Cup
+"""
+    )
+    return msg
+
+
+def _send(msg: EmailMessage) -> None:
+    try:
+        with smtplib.SMTP(Config.MAIL_HOST, Config.MAIL_PORT, timeout=20) as smtp:
+            smtp.starttls()
+            smtp.login(Config.MAIL_USERNAME, Config.MAIL_PASSWORD)
+            smtp.send_message(msg)
+        log.info("registration receipt sent to %s", msg["To"])
+    except Exception:
+        # Receipt mail is best-effort; the registration itself already
+        # succeeded. Log loudly enough to notice a misconfigured .env.
+        log.exception("failed to send registration receipt to %s", msg["To"])
+
+
+def send_registration_receipt(**kwargs) -> None:
+    """Fire-and-forget. No-op when mail isn't configured."""
+    if not is_configured():
+        return
+    msg = build_receipt(**kwargs)
+    threading.Thread(target=_send, args=(msg,), daemon=True).start()

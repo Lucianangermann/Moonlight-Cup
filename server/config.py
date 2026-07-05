@@ -45,6 +45,16 @@ class Config:
     # --- Server ---
     PORT = int(os.environ.get("PORT", "5000"))
 
+    # --- Mail (registration receipts; feature is OFF while MAIL_HOST unset) ---
+    # Designed for iCloud Mail (bergerhq.de custom domain): host
+    # smtp.mail.me.com, port 587, username = Apple-ID, password = an
+    # app-specific password, MAIL_FROM = an address on that iCloud account.
+    MAIL_HOST = os.environ.get("MAIL_HOST", "")
+    MAIL_PORT = int(os.environ.get("MAIL_PORT", "587"))
+    MAIL_USERNAME = os.environ.get("MAIL_USERNAME", "")
+    MAIL_PASSWORD = os.environ.get("MAIL_PASSWORD", "")
+    MAIL_FROM = os.environ.get("MAIL_FROM", "")
+
     # --- Web app (Expo web export of the RN app, served at "/") ---
     # Populated by `npx expo export --platform web` + rsync to the Pi — see
     # server/README.md's deploy runbook. Gitignored; absent until first deploy.
