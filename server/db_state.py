@@ -310,10 +310,24 @@ def set_stat_adjustment(db: sqlite3.Connection, pid: str, games: int, wins: int,
 
 # --- Anmeldungen --------------------------------------------------------------
 
-def create_anmeldung(db: sqlite3.Connection, *, name: str, email: str, verein: Optional[str]) -> int:
+def create_anmeldung(
+    db: sqlite3.Connection, *,
+    name: str, email: str, verein: Optional[str],
+    age: Optional[int] = None, gender: Optional[str] = None,
+    league: Optional[str] = None,
+    midnight_meal: Optional[bool] = None,
+    breakfast: Optional[bool] = None,
+    breakfast_type: Optional[str] = None,
+) -> int:
     cur = db.execute(
-        "INSERT INTO anmeldungen (name, email, verein) VALUES (?, ?, ?)",
-        (name, email, verein),
+        "INSERT INTO anmeldungen (name, email, verein, age, gender, league, "
+        "midnight_meal, breakfast, breakfast_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        (
+            name, email, verein, age, gender, league,
+            None if midnight_meal is None else int(midnight_meal),
+            None if breakfast is None else int(breakfast),
+            breakfast_type,
+        ),
     )
     db.commit()
     return cur.lastrowid

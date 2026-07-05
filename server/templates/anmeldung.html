@@ -6,8 +6,8 @@
   <span class="card-mark" aria-hidden="true">☽</span>
   <h1 class="text-center">Anmeldung</h1>
   <p class="text-muted text-center mb-3">
-    Trage dich für den nächsten Moonlight Cup ein.<br>
-    Deine Anmeldung wird vom Veranstalter bestätigt.
+    Trage dich für den nächsten Moonlight Cup ein —<br>
+    du stehst danach sofort auf der Teilnehmerliste.
   </p>
 
   <form method="POST" action="{{ url_for('anmeldung.anmeldung') }}" class="form" novalidate>
@@ -29,10 +29,65 @@
       {% for err in form.email.errors %}<span class="field-error">{{ err }}</span>{% endfor %}
     </div>
 
+    <div class="form-split">
+      <div class="form-row">
+        <label for="age">{{ form.age.label.text }}</label>
+        {{ form.age(id="age", type="number", min="6", max="99", placeholder="z.B. 27", inputmode="numeric") }}
+        {% for err in form.age.errors %}<span class="field-error">{{ err }}</span>{% endfor %}
+      </div>
+
+      <div class="form-row">
+        <label>{{ form.gender.label.text }}</label>
+        <div class="choice-row">
+          {% for sub in form.gender %}
+            <label class="choice">{{ sub }}<span>{{ sub.label.text }}</span></label>
+          {% endfor %}
+        </div>
+        {% for err in form.gender.errors %}<span class="field-error">{{ err }}</span>{% endfor %}
+      </div>
+    </div>
+
     <div class="form-row">
       <label for="verein">{{ form.verein.label.text }}</label>
       {{ form.verein(id="verein", placeholder="z.B. TSV Musterhausen", autocomplete="organization") }}
       {% for err in form.verein.errors %}<span class="field-error">{{ err }}</span>{% endfor %}
+    </div>
+
+    <div class="form-row">
+      <label for="league">{{ form.league.label.text }}</label>
+      {{ form.league(id="league") }}
+      <span class="field-hint">Deine höchste aktuelle Spielklasse — sorgt für faire Auslosungen.</span>
+      {% for err in form.league.errors %}<span class="field-error">{{ err }}</span>{% endfor %}
+    </div>
+
+    <div class="form-row">
+      <label>{{ form.midnight_meal.label.text }}</label>
+      <div class="choice-row">
+        {% for sub in form.midnight_meal %}
+          <label class="choice">{{ sub }}<span>{{ sub.label.text }}</span></label>
+        {% endfor %}
+      </div>
+      {% for err in form.midnight_meal.errors %}<span class="field-error">{{ err }}</span>{% endfor %}
+    </div>
+
+    <div class="form-row">
+      <label>{{ form.breakfast.label.text }}</label>
+      <div class="choice-row">
+        {% for sub in form.breakfast %}
+          <label class="choice">{{ sub }}<span>{{ sub.label.text }}</span></label>
+        {% endfor %}
+      </div>
+      {% for err in form.breakfast.errors %}<span class="field-error">{{ err }}</span>{% endfor %}
+    </div>
+
+    <div class="form-row" id="breakfast-type-row" hidden>
+      <label>{{ form.breakfast_type.label.text }}</label>
+      <div class="choice-row">
+        {% for sub in form.breakfast_type %}
+          <label class="choice">{{ sub }}<span>{{ sub.label.text }}</span></label>
+        {% endfor %}
+      </div>
+      {% for err in form.breakfast_type.errors %}<span class="field-error">{{ err }}</span>{% endfor %}
     </div>
 
     <button type="submit" class="btn-primary">Anmelden</button>
@@ -43,4 +98,20 @@
   Am Turnierabend läuft alles live unter <a href="/">moonlightcup.lucianangermann.com</a> —
   Spielplan, Ergebnisse und Rangliste in Echtzeit.
 </p>
+{% endblock %}
+
+{% block scripts %}
+<script nonce="{{ csp_nonce() }}">
+  // Frühstücksart nur zeigen, wenn Frühstück = Ja (progressive disclosure).
+  (function () {
+    var row = document.getElementById('breakfast-type-row');
+    var radios = document.querySelectorAll('input[name="breakfast"]');
+    function update() {
+      var yes = document.querySelector('input[name="breakfast"]:checked');
+      row.hidden = !(yes && yes.value === 'ja');
+    }
+    radios.forEach(function (r) { r.addEventListener('change', update); });
+    update(); // initial state (e.g. after a validation round-trip)
+  })();
+</script>
 {% endblock %}

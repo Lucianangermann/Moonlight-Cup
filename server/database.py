@@ -114,15 +114,24 @@ CREATE TABLE IF NOT EXISTS stat_adjustments (
     updated_at     TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
--- Public sign-up form submissions. Admin promotes to participants table.
+-- Public sign-up form submissions. Registrations are auto-confirmed into
+-- the participants table on submit; this row is kept as the audit trail
+-- and carries the event-logistics answers (meals) the participant row
+-- doesn't need.
 CREATE TABLE IF NOT EXISTS anmeldungen (
-    id          INTEGER PRIMARY KEY AUTOINCREMENT,
-    name        TEXT NOT NULL,                       -- "Nachname, Vorname"
-    email       TEXT NOT NULL,
-    verein      TEXT,
-    status      TEXT NOT NULL DEFAULT 'pending'      -- 'pending'|'confirmed'|'rejected'
-                CHECK (status IN ('pending','confirmed','rejected')),
-    created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+    id             INTEGER PRIMARY KEY AUTOINCREMENT,
+    name           TEXT NOT NULL,                    -- "Nachname, Vorname"
+    email          TEXT NOT NULL,
+    verein         TEXT,
+    age            INTEGER,
+    gender         TEXT CHECK (gender IN ('M','F')),
+    league         TEXT,
+    midnight_meal  INTEGER,                          -- 1 ja / 0 nein
+    breakfast      INTEGER,                          -- 1 ja / 0 nein
+    breakfast_type TEXT CHECK (breakfast_type IN ('vegetarisch','weisswurscht')),
+    status         TEXT NOT NULL DEFAULT 'pending'   -- 'pending'|'confirmed'|'rejected'
+                   CHECK (status IN ('pending','confirmed','rejected')),
+    created_at     TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
 -- Single-row table; we only ever keep one active timer.
@@ -153,6 +162,12 @@ CREATE INDEX IF NOT EXISTS idx_timer_active     ON timer(is_active);
 MIGRATIONS = [
     ("timer", "phase", "TEXT"),
     ("timer", "total_seconds", "INTEGER"),
+    ("anmeldungen", "age", "INTEGER"),
+    ("anmeldungen", "gender", "TEXT"),
+    ("anmeldungen", "league", "TEXT"),
+    ("anmeldungen", "midnight_meal", "INTEGER"),
+    ("anmeldungen", "breakfast", "INTEGER"),
+    ("anmeldungen", "breakfast_type", "TEXT"),
 ]
 
 

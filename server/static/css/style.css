@@ -304,6 +304,70 @@ h3 { font-size: 18px; }
 .form-row .field-error { color: var(--error); font-size: 13px; font-weight: 600; }
 .form-row .field-hint  { color: var(--text-muted); font-size: 13px; }
 
+.form-row select {
+  padding: 13px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  color: var(--white);
+  font-family: inherit;
+  font-size: 16px;
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%237E8DB0' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 16px center;
+  transition: border-color 160ms var(--ease-out), box-shadow 160ms var(--ease-out);
+}
+.form-row select:focus {
+  outline: none;
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px var(--gold-glow);
+}
+
+/* Two short fields side by side (Alter + Geschlecht) */
+.form-split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+@media (max-width: 420px) { .form-split { grid-template-columns: 1fr; } }
+
+/* Radio pills — hidden native input, styled label; :checked wins gold
+   (selection = the app's one legitimate everyday use of gold). */
+.choice-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.choice { flex: 1; min-width: 90px; }
+.choice input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+}
+.choice span {
+  display: block;
+  padding: 12px 10px;
+  text-align: center;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  color: var(--text-muted);
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 600;
+  font-size: 15px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: border-color 160ms var(--ease-out), color 160ms var(--ease-out),
+              background 160ms var(--ease-out);
+}
+.choice input:checked + span {
+  border-color: var(--gold);
+  background: var(--gold-glow);
+  color: var(--gold);
+}
+.choice input:focus-visible + span {
+  box-shadow: 0 0 0 3px var(--gold-glow);
+}
+
 /* =========================================================================
    FOOTER
    ========================================================================= */
