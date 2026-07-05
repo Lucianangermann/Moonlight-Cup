@@ -13,6 +13,8 @@
   <form method="POST" action="{{ url_for('anmeldung.anmeldung') }}" class="form" novalidate>
     {{ form.hidden_tag() }}
 
+    <div class="form-section">Spieler</div>
+
     <div class="form-row">
       <label for="name">{{ form.name.label.text }}</label>
       {{ form.name(id="name", placeholder="Müller, Max", autocomplete="name", required=True) }}
@@ -47,6 +49,8 @@
       </div>
     </div>
 
+    <div class="form-section">Badminton</div>
+
     <div class="form-row">
       <label for="verein">{{ form.verein.label.text }}</label>
       {{ form.verein(id="verein", placeholder="z.B. TSV Musterhausen", autocomplete="organization", required=True) }}
@@ -59,6 +63,8 @@
       <span class="field-hint">Deine höchste aktuelle Spielklasse — sorgt für faire Auslosungen.</span>
       {% for err in form.league.errors %}<span class="field-error">{{ err }}</span>{% endfor %}
     </div>
+
+    <div class="form-section">Verpflegung</div>
 
     <div class="form-row">
       <label>{{ form.midnight_meal.label.text }}</label>

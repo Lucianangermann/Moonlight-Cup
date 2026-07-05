@@ -10,6 +10,8 @@ Boot order matters here:
 Everything is created inside `create_app()` so tests/CLI can spin up
 isolated instances without polluting module-level state.
 """
+from pathlib import Path
+
 from flask import Flask
 from flask_bcrypt import Bcrypt
 from flask_limiter import Limiter
@@ -71,6 +73,17 @@ def create_app() -> Flask:
 
     # --- Per-request DB teardown ---
     app.teardown_appcontext(close_db)
+
+    # --- Static asset cache-busting ---
+    # Flask serves /static with max-age=14400, so browsers hold style.css for
+    # hours after a deploy. Templates append ?v=<mtime> to the stylesheet URL;
+    # gunicorn restarts on every deploy, so computing it once at boot is safe.
+    css_path = Path(__file__).resolve().parent / "static" / "css" / "style.css"
+    css_version = int(css_path.stat().st_mtime) if css_path.exists() else 0
+
+    @app.context_processor
+    def inject_asset_version():
+        return {"css_version": css_version}
 
     # --- Blueprints ---
     from blueprints import auth as auth_bp

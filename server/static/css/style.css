@@ -277,6 +277,29 @@ h3 { font-size: 18px; }
    ========================================================================= */
 .form { display: flex; flex-direction: column; gap: 18px; }
 .form-row { display: flex; flex-direction: column; gap: 6px; }
+/* display:flex above would defeat the hidden attribute's UA display:none —
+   without this rule the Frühstücksart row is always visible. */
+.form-row[hidden] { display: none; }
+
+/* Section headers break the long single column into scannable groups. */
+.form-section {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 10px;
+  color: var(--gold);
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+}
+.form-section::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
 .form-row label {
   font-family: 'Barlow Condensed', sans-serif;
   font-weight: 600;
@@ -296,6 +319,11 @@ h3 { font-size: 18px; }
   transition: border-color 160ms var(--ease-out), box-shadow 160ms var(--ease-out);
 }
 .form-row input::placeholder { color: var(--text-muted); opacity: 0.7; }
+/* Native number spinners clash with the dark theme; the field stays a
+   numeric input (mobile numpad via inputmode) without the widget. */
+.form-row input[type="number"] { appearance: textfield; -moz-appearance: textfield; }
+.form-row input[type="number"]::-webkit-outer-spin-button,
+.form-row input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 .form-row input:focus {
   outline: none;
   border-color: var(--gold);
