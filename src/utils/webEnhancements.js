@@ -8,7 +8,6 @@ export const injectWebStyles = () => {
   const style = document.createElement('style');
   style.id = 'mc-web-styles';
   style.textContent = `
-    @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=Barlow:wght@300;400;500;600&display=swap');
 
     /* ── Emil Design Engineering: Custom Easing Curves ── */
     :root {

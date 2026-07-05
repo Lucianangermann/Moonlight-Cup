@@ -1,4 +1,4 @@
-import { useRef, useEffect, useMemo } from 'react';
+import { useRef, useEffect } from 'react';
 import { View, StyleSheet, useWindowDimensions, Animated } from 'react-native';
 import Svg, { Circle, Defs, RadialGradient, Stop, Ellipse } from 'react-native-svg';
 import { prefersReducedMotion } from '../utils/motion';

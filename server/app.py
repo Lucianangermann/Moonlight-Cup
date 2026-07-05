@@ -12,7 +12,7 @@ isolated instances without polluting module-level state.
 """
 from pathlib import Path
 
-from flask import Flask
+from flask import Flask, request
 from flask_bcrypt import Bcrypt
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -23,11 +23,22 @@ from config import Config
 from database import close_db
 
 
-# CSP: allow same-origin assets + Google Fonts (Cinzel/Rajdhani via @font-face)
-# + the Spotify Web API/Accounts hosts (Timer screen's optional playback
-# control, src/services/spotify.js). 'unsafe-inline' for styles is unfortunate
-# but Google Fonts CSS uses inline directives; alternative is to vendor the
-# fonts (TODO if hardening required).
+def _client_ip() -> str:
+    """
+    Rate-limit key. Behind the Cloudflare Tunnel every request reaches
+    gunicorn from 127.0.0.1, so keying on remote_addr would put ALL
+    visitors into one shared bucket (any guest could exhaust the admin's
+    login attempts). CF-Connecting-IP is trustworthy here because gunicorn
+    is bound to localhost — only cloudflared can reach it.
+    """
+    return request.headers.get("CF-Connecting-IP") or get_remote_address()
+
+
+# CSP: allow same-origin assets + Google Fonts (Barlow/Barlow Condensed on
+# the anmeldung page) + the Spotify Web API/Accounts hosts (Timer screen's
+# optional playback control, src/services/spotify.js). 'unsafe-inline' for
+# styles is unfortunate but Google Fonts CSS uses inline directives;
+# alternative is to vendor the fonts (TODO if hardening required).
 CSP = {
     "default-src": "'self'",
     "script-src": "'self'",
@@ -44,6 +55,11 @@ CSP = {
 def create_app() -> Flask:
     app = Flask(__name__, static_folder="static", template_folder="templates")
     app.config.from_object(Config)
+
+    # A missing SECRET_KEY breaks sessions/CSRF at first use with confusing
+    # runtime errors — fail loudly at boot instead.
+    if not app.config["SECRET_KEY"]:
+        raise RuntimeError("SECRET_KEY is not set — copy .env.example to .env and fill it in.")
 
     # --- Extensions ---
     bcrypt = Bcrypt(app)
@@ -65,10 +81,10 @@ def create_app() -> Flask:
     )
 
     limiter = Limiter(
-        get_remote_address,
+        _client_ip,
         app=app,
         default_limits=[],  # no global limit; we apply per-route below
-        storage_uri="memory://",
+        storage_uri="memory://",  # per-worker counters: real limits are ~2x with 2 workers
     )
 
     # --- Per-request DB teardown ---
@@ -108,6 +124,12 @@ def create_app() -> Flask:
     app.view_functions["auth.login"] = limiter.limit("5 per 15 minutes")(
         app.view_functions["auth.login"]
     )
+    # Registrations auto-confirm onto the 99-slot participant list, so an
+    # unthrottled bot could fill the whole tournament. GET (viewing the
+    # form) stays unlimited.
+    app.view_functions["anmeldung.anmeldung"] = limiter.limit(
+        "5 per hour; 20 per day", methods=["POST"]
+    )(app.view_functions["anmeldung.anmeldung"])
 
     return app
 

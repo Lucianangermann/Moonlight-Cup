@@ -18,14 +18,11 @@ import threading
 from email.message import EmailMessage
 
 from config import Config
+from tournament_logic import LEAGUES
 
 log = logging.getLogger(__name__)
 
-_LEAGUE_LABELS = {
-    "FZ": "Freizeitspieler", "BK": "Bezirksklasse", "BL": "Bezirksliga",
-    "BOL": "Bezirksoberliga", "BAY": "Bayernliga", "OL": "Oberliga",
-    "RL": "Regionalliga", "BU": "Bundesliga",
-}
+_LEAGUE_LABELS = dict(LEAGUES)
 
 
 def is_configured() -> bool:

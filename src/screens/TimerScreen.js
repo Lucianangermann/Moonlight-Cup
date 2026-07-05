@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Vibration, TextInput, ScrollView, Animated } from 'react-native';
+import { View, Text, StyleSheet, Vibration, TextInput, ScrollView, Animated } from 'react-native';
 import AnimatedPressable from '../components/AnimatedPressable';
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Circle, Defs, RadialGradient, Stop } from 'react-native-svg';
@@ -19,6 +19,16 @@ const WARMUP_SECONDS = 3 * 60;
 const FIRST_ROUND_WARMUP_SECONDS = 5 * 60;
 const DEFAULT_SECONDS = 20 * 60;
 const WARNING_SECONDS = 60; // letzte Minute
+
+// Shared between AdminTimer and ViewerTimer — the viewer ring mirrors the
+// admin ring, so the phase vocabulary and geometry live once at module scope.
+const PHASE_LABELS = { prep: 'Vorbereitung', warmup: 'Einspielen', game: 'Spielzeit' };
+const PHASE_LABELS_UPPER = { prep: 'VORBEREITUNG', warmup: 'EINSPIELEN', game: 'SPIELZEIT' };
+const PHASE_ICONS = { prep: 'document-text-outline', warmup: 'fitness-outline', game: 'tennisball-outline' };
+const RING_SIZE = 280;
+const RING_CENTER = RING_SIZE / 2;
+const RING_RADIUS = 118;
+const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
 
 function AdminTimer() {
   const { autoTimerTrigger, timerResetTrigger } = useTournament();
@@ -53,7 +63,6 @@ function AdminTimer() {
   // the same countdown — the "speed" multiplier is compressed into the
   // target time itself, so no server-side speed concept is needed (see
   // tasks/plan). Best-effort: a failed push never blocks the local timer.
-  const PHASE_LABELS = { prep: 'Vorbereitung', warmup: 'Einspielen', game: 'Spielzeit' };
   const pushTimer = (p, seconds, durchgang) => {
     const label = PHASE_LABELS[p] + (durchgang ? ` — Durchgang ${durchgang}` : '');
     const compressed = Math.round(seconds / speedRef.current);
@@ -251,12 +260,8 @@ function AdminTimer() {
 
   const entranceStyle = useEntranceAnimation();
 
-  const RING_SIZE = 280;
-  const RING_CENTER = RING_SIZE / 2;
-  const RING_RADIUS = 118;
-  const TRACK_RADIUS = 118;
-  const CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
-  const dashOffset = CIRCUMFERENCE * (1 - progress);
+  const TRACK_RADIUS = RING_RADIUS;
+  const dashOffset = RING_CIRCUMFERENCE * (1 - progress);
 
   return (
     <Animated.View style={[{ flex: 1 }, entranceStyle]}>
@@ -267,7 +272,7 @@ function AdminTimer() {
       {phase !== 'idle' && (
         <View style={[s.phaseBanner, { borderColor: phaseColor + '40', backgroundColor: phaseColor + '12' }]}>
           <Ionicons
-            name={phase === 'prep' ? 'document-text-outline' : phase === 'warmup' ? 'fitness-outline' : 'tennisball-outline'}
+            name={PHASE_ICONS[phase] ?? 'tennisball-outline'}
             size={13}
             color={phaseColor}
           />
@@ -305,7 +310,7 @@ function AdminTimer() {
             strokeWidth={7}
             fill="none"
             strokeLinecap="round"
-            strokeDasharray={`${CIRCUMFERENCE} ${CIRCUMFERENCE}`}
+            strokeDasharray={`${RING_CIRCUMFERENCE} ${RING_CIRCUMFERENCE}`}
             strokeDashoffset={dashOffset}
             transform={`rotate(-90 ${RING_CENTER} ${RING_CENTER})`}
             opacity={phase === 'idle' ? 0.25 : 1}
@@ -529,19 +534,12 @@ function ViewerTimer() {
     : timer.phase === 'warmup' ? colors.success
     : colors.gold;
 
-  const phaseLabel = timer.phase === 'prep' ? 'VORBEREITUNG'
-    : timer.phase === 'warmup' ? 'EINSPIELEN'
-    : timer.phase === 'game' ? 'SPIELZEIT'
-    : 'LÄUFT';
+  const phaseLabel = PHASE_LABELS_UPPER[timer.phase] ?? 'LÄUFT';
 
   const total = timer.totalSeconds ?? null;
   const progress = active && total ? Math.min(1, Math.max(0, secondsLeft / total)) : 1;
 
-  const RING_SIZE = 280;
-  const RING_CENTER = RING_SIZE / 2;
-  const RING_RADIUS = 118;
-  const CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
-  const dashOffset = CIRCUMFERENCE * (1 - progress);
+  const dashOffset = RING_CIRCUMFERENCE * (1 - progress);
 
   // Idle: the wordmark, not a dead "00:00" (zeros read as broken).
   if (!active) {
@@ -572,7 +570,7 @@ function ViewerTimer() {
         {/* Phase banner — identical vocabulary to AdminTimer */}
         <View style={[s.phaseBanner, { borderColor: phaseColor + '40', backgroundColor: phaseColor + '12' }]}>
           <Ionicons
-            name={timer.phase === 'prep' ? 'document-text-outline' : timer.phase === 'warmup' ? 'fitness-outline' : 'tennisball-outline'}
+            name={PHASE_ICONS[timer.phase] ?? 'tennisball-outline'}
             size={13}
             color={phaseColor}
           />
@@ -602,7 +600,7 @@ function ViewerTimer() {
               strokeWidth={7}
               fill="none"
               strokeLinecap="round"
-              strokeDasharray={`${CIRCUMFERENCE} ${CIRCUMFERENCE}`}
+              strokeDasharray={`${RING_CIRCUMFERENCE} ${RING_CIRCUMFERENCE}`}
               strokeDashoffset={dashOffset}
               transform={`rotate(-90 ${RING_CENTER} ${RING_CENTER})`}
             />

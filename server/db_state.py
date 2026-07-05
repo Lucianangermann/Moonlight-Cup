@@ -59,14 +59,18 @@ def load_state(db: sqlite3.Connection) -> TournamentState:
         "current_durchgang, sitting_out FROM rounds ORDER BY round_number"
     ).fetchall()
 
+    # One query for ALL matches instead of one per round — this function runs
+    # on every /api/tournament poll, so the N+1 multiplies across every phone.
+    match_rows = db.execute(
+        "SELECT id, round_id, durchgang, field, team_a, team_b, match_type, "
+        "score_a, score_b, done FROM matches ORDER BY round_id, durchgang, field"
+    ).fetchall()
+    matches_by_round: dict[int, list[Match]] = {}
+    for m in match_rows:
+        matches_by_round.setdefault(m["round_id"], []).append(_match_from_row(m))
+
     rounds: list[Round] = []
     for rr in round_rows:
-        match_rows = db.execute(
-            "SELECT id, durchgang, field, team_a, team_b, match_type, "
-            "score_a, score_b, done FROM matches WHERE round_id = ? "
-            "ORDER BY durchgang, field",
-            (rr["id"],),
-        ).fetchall()
         rounds.append(Round(
             id=rr["id"],
             round_number=rr["round_number"],
@@ -74,7 +78,7 @@ def load_state(db: sqlite3.Connection) -> TournamentState:
             is_final_runde=bool(rr["is_final_runde"]),
             current_durchgang=rr["current_durchgang"],
             sitting_out=json.loads(rr["sitting_out"]),
-            matches=[_match_from_row(m) for m in match_rows],
+            matches=matches_by_round.get(rr["id"], []),
         ))
 
     adj_rows = db.execute(
@@ -306,6 +310,12 @@ def set_stat_adjustment(db: sqlite3.Connection, pid: str, games: int, wins: int,
         (pid, games, wins, diff),
     )
     db.commit()
+
+
+def participants_full(db: sqlite3.Connection, max_participants: int) -> bool:
+    """Single source for the capacity check used by /anmeldung and the API."""
+    n = db.execute("SELECT COUNT(*) FROM participants").fetchone()[0]
+    return n >= max_participants
 
 
 # --- Anmeldungen --------------------------------------------------------------

@@ -47,5 +47,13 @@ def assets(path):
 
     webapp_dir = current_app.config["WEBAPP_DIR"]
     if (webapp_dir / path).is_file():
-        return send_from_directory(webapp_dir, path)
+        resp = send_from_directory(webapp_dir, path)
+        # Expo puts a content hash in every bundle/asset filename, so these
+        # are immutable: a new deploy references new URLs. Long cache lets
+        # returning phones (and the Cloudflare edge) skip ~9 MB of
+        # re-validation round-trips through the tunnel. index.html itself
+        # never lands here (served by _serve_index) and stays revalidated.
+        if path.startswith(("_expo/", "assets/")):
+            resp.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+        return resp
     return _serve_index()

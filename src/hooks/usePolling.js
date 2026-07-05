@@ -11,14 +11,21 @@ export function usePolling(fn, intervalMs) {
 
   useEffect(() => {
     let alive = true;
+    let inFlight = false;
     let timer;
 
     const tick = async () => {
-      if (!alive) return;
+      // Guard against a second interleaved loop: if a fetch is mid-flight
+      // when the tab regains visibility, onVisibility would otherwise start
+      // a parallel tick chain that doubles the poll rate permanently.
+      if (!alive || inFlight) return;
+      inFlight = true;
       try {
         await fnRef.current();
       } catch {
         // A single failed poll shouldn't stop the loop — next tick retries.
+      } finally {
+        inFlight = false;
       }
       if (alive) timer = setTimeout(tick, intervalMs);
     };

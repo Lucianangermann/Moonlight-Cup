@@ -1,9 +1,10 @@
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Modal, Share, Animated } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Modal, Animated } from 'react-native';
 import AnimatedPressable from '../components/AnimatedPressable';
 import { useState, useEffect, useRef } from 'react';
 import { useEntranceAnimation } from '../hooks/useEntranceAnimation';
 import { Ionicons } from '@expo/vector-icons';
-import Svg, { Circle, Line, Path, Ellipse } from 'react-native-svg';
+import Svg, { Line, Path, Ellipse } from 'react-native-svg';
+import { formatNameWithLeague } from '../utils/names';
 
 function BadmintonRacketIcon({ size = 40, color = '#F0C040' }) {
   return (
@@ -60,23 +61,21 @@ export default function RundeScreen() {
   const [printMenuOpen, setPrintMenuOpen] = useState(false);
   const [printPreview, setPrintPreview] = useState(null); // round object to preview
   const [previewDg, setPreviewDg] = useState(null);      // null = beide, 1 = nur D1, 2 = nur D2
-  const prevRoundRef = useRef(0);
+  // undefined = "have not seen a snapshot yet" — see the auto-print effect.
+  const prevRoundRef = useRef(undefined);
   const round = getCurrentRoundData();
   const displayRound = viewingRoundId ? rounds.find((r) => r.id === viewingRoundId) : round;
   const isSchnellrunde = round?.isSchnellrunde ?? false;
   const durchgang = round?.currentDurchgang ?? 1;
 
-  const getName = (id) => {
-    const p = participants.find((x) => x.id === id);
-    if (!p) return '?';
-    const parts = p.name.split(','); const first = parts.length > 1 ? `${parts[1].trim()} ${parts[0].trim()}` : p.name.trim();
-    return p.league ? `${first} [${p.league}]` : first;
-  };
+  const getName = (id) => formatNameWithLeague(participants.find((x) => x.id === id));
   const getTeam = (ids) => ids.map(getName).join(' & ');
 
   // Wenn eine vergangene Runde angeschaut wird: alle Matches zeigen (beide DGs)
+  // Copy before sorting — .sort() mutates, and this array lives in the
+  // shared snapshot other screens read.
   const visibleMatches = viewingRoundId
-    ? (displayRound?.matches ?? []).sort((a, b) => (a.durchgang ?? 1) - (b.durchgang ?? 1) || (a.feld ?? 0) - (b.feld ?? 0))
+    ? [...(displayRound?.matches ?? [])].sort((a, b) => (a.durchgang ?? 1) - (b.durchgang ?? 1) || (a.feld ?? 0) - (b.feld ?? 0))
     : (round?.matches?.filter((m) => m.durchgang === durchgang) ?? []).sort((a, b) => (a.feld ?? 0) - (b.feld ?? 0));
   const pendingCount = visibleMatches.filter((m) => !m.done).length;
   const doneCount = visibleMatches.filter((m) => m.done).length;
@@ -150,10 +149,14 @@ export default function RundeScreen() {
   };
 
   // Wenn eine neue Runde startet: Timer starten + automatisch drucken.
-  // currentRound is the server-assigned round id (monotonically increasing,
-  // even across a tournament reset) — compare by inequality rather than the
-  // old ">" check so a reset (currentRound -> null) is handled cleanly too.
+  // The FIRST observed value only seeds the ref: on a page reload mid-
+  // tournament the existing round must not re-trigger printing and a timer
+  // restart. Only a transition seen while mounted counts as "round started".
   useEffect(() => {
+    if (prevRoundRef.current === undefined) {
+      prevRoundRef.current = currentRound;
+      return;
+    }
     if (currentRound == null) {
       prevRoundRef.current = null;
       return;
@@ -242,20 +245,6 @@ export default function RundeScreen() {
       setPreviewDg(null);
       setPrintPreview(null);
     }
-  };
-
-  const doShare = async (r) => {
-    const fmt = (list, lbl) => list.length === 0 ? '' :
-      `\n── ${lbl} ──\n` + list.map((m, i) =>
-        `${i + 1}. [${TYPE_LABELS[m.type]}]  ${m.teamA.map(getName).join(' & ')}  vs  ${m.teamB.map(getName).join(' & ')}`
-      ).join('\n');
-    const text = `☽ MOONLIGHT CUP — Runde ${r.roundNumber}\n` +
-      (r.isSchnellrunde ? 'Schnellrunde' : 'Normale Runde') + '\n' +
-      '─'.repeat(38) +
-      fmt(r.matches.filter(m => m.durchgang === 1), 'DURCHGANG 1') +
-      fmt(r.matches.filter(m => m.durchgang === 2), 'DURCHGANG 2') +
-      (r.sittingOut?.length > 0 ? `\n\nFreilos: ${r.sittingOut.map(getName).join(', ')}` : '');
-    try { await Share.share({ message: text }); } catch (_) {}
   };
 
   const printSelectedRound = (r) => {
@@ -779,26 +768,6 @@ export default function RundeScreen() {
           <Text style={s.emptyHint}>Tippe unten auf "Neue Runde starten" um die Auslosung zu beginnen.</Text>
         </View>
       )}
-
-      <Modal visible={showConfirm} transparent animationType="fade">
-        <View style={s.modalOverlay}>
-          <View style={s.modalCard}>
-            <Text style={s.modalTitle}>Neue Runde starten?</Text>
-            <Text style={s.modalBody}>
-              Runde {rounds.length + 1} wird jetzt ausgelost.{'\n'}Diese Aktion kann nicht rückgängig gemacht werden.
-            </Text>
-            <View style={s.modalButtons}>
-              <AnimatedPressable style={s.modalBtnCancel} onPress={() => setShowConfirm(false)} activeOpacity={0.8}>
-                <Text style={s.modalBtnCancelText}>Abbrechen</Text>
-              </AnimatedPressable>
-              <AnimatedPressable style={s.modalBtnConfirm} onPress={handleConfirmStart} activeOpacity={0.8}>
-                <Ionicons name="play" size={13} color={colors.bg} style={{ marginRight: 5 }} />
-                <Text style={s.modalBtnConfirmText}>Starten</Text>
-              </AnimatedPressable>
-            </View>
-          </View>
-        </View>
-      </Modal>
 
       {/* ── Druckvorschau Modal ── */}
       <Modal visible={!!printPreview} animationType="slide" transparent={false}>

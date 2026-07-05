@@ -12,8 +12,9 @@ carries the meal answers the participant row doesn't need.
 """
 from flask import Blueprint, render_template, redirect, url_for, flash
 
+from blueprints.api import _invalidate_cache
 from database import get_db
-from db_state import confirm_anmeldung, create_anmeldung
+from db_state import confirm_anmeldung, create_anmeldung, participants_full
 from forms.public_forms import AnmeldungForm
 from mailer import is_configured as mail_configured, send_registration_receipt
 from tournament_logic import MAX_PARTICIPANTS
@@ -41,8 +42,7 @@ def anmeldung():
             flash("Mit dieser E-Mail-Adresse ist bereits jemand angemeldet.", "error")
             return render_template("anmeldung.html", form=form)
 
-        n_participants = db.execute("SELECT COUNT(*) FROM participants").fetchone()[0]
-        waitlisted = n_participants >= MAX_PARTICIPANTS
+        waitlisted = participants_full(db, MAX_PARTICIPANTS)
 
         breakfast = form.breakfast.data == "ja"
         anmeldung_id = create_anmeldung(
@@ -59,6 +59,7 @@ def anmeldung():
         )
         if not waitlisted:
             confirm_anmeldung(db, anmeldung_id, gender=form.gender.data, league=form.league.data)
+            _invalidate_cache()  # new participant must show up on the next poll
 
         send_registration_receipt(
             name=form.name.data.strip(),

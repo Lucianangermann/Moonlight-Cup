@@ -15,9 +15,15 @@ Group=pi
 WorkingDirectory=/home/pi/Moonlight-Cup/server
 
 # Gunicorn binds to localhost only — Cloudflare Tunnel forwards public traffic.
-# 2 workers is enough for a Pi 5 hosting one tournament at a time.
+# gthread instead of sync workers: enables HTTP keep-alive toward cloudflared
+# (the phones poll every 5s — sync workers would open a fresh TCP connection
+# per request) and gives 2x4 concurrent requests so one slow request (e.g.
+# the registration form's DNS MX lookup) can't stall half the server.
 ExecStart=/home/pi/Moonlight-Cup/server/venv/bin/gunicorn \
           --workers 2 \
+          --worker-class gthread \
+          --threads 4 \
+          --keep-alive 5 \
           --bind 127.0.0.1:5000 \
           --access-logfile - \
           --error-logfile - \

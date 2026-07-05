@@ -34,9 +34,12 @@ def _connect(db_path: str) -> sqlite3.Connection:
     conn = sqlite3.connect(db_path, detect_types=sqlite3.PARSE_DECLTYPES)
     conn.row_factory = sqlite3.Row
     # WAL: lets readers and a single writer co-exist without blocking — important
-    # for the 30s timer poll while admin is editing.
+    # for the phones' 5s polling while the admin is entering results.
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA foreign_keys=ON")
+    # Without a busy timeout a reader/writer collision raises
+    # "database is locked" immediately -> 500 mid-tournament.
+    conn.execute("PRAGMA busy_timeout=5000")
     return conn
 
 

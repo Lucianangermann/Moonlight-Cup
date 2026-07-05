@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity, StyleSheet, Animated,
+  View, Text, ScrollView, StyleSheet,
   Modal, TextInput, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -11,6 +11,7 @@ import { useAuth } from '../store/auth';
 import AnimatedPressable from '../components/AnimatedPressable';
 import LiveBadge from '../components/LiveBadge';
 import EmptyState from '../components/EmptyState';
+import { formatNameWithLeague } from '../utils/names';
 
 // Match-type colors identify a category, so none of them may be gold —
 // gold is reserved for authority (winner, active selection, live state).
@@ -36,12 +37,7 @@ export default function ErgebnisseScreen() {
   const [errorA, setErrorA] = useState('');
   const [errorB, setErrorB] = useState('');
 
-  const getName = (id) => {
-    const p = participants.find((x) => x.id === id);
-    if (!p) return '?';
-    const parts = p.name.split(','); const first = parts.length > 1 ? `${parts[1].trim()} ${parts[0].trim()}` : p.name.trim();
-    return p.league ? `${first} [${p.league}]` : first;
-  };
+  const getName = (id) => formatNameWithLeague(participants.find((x) => x.id === id));
   const getTeam = (ids) => ids.map(getName).join(' & ');
 
   const allMatches = rounds.flatMap((r) =>

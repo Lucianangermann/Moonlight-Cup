@@ -12,18 +12,27 @@ export class ApiError extends Error {
   }
 }
 
-async function request(path, { method = 'GET', body } = {}) {
+async function rawRequest(path, { method = 'GET', body } = {}) {
   const res = await fetch(`${BASE_URL}${path}`, {
     method,
     credentials: 'include',
     headers: body !== undefined ? { 'Content-Type': 'application/json' } : undefined,
     body: body !== undefined ? JSON.stringify(body) : undefined,
+    // On gym Wi-Fi a request can black-hole for minutes (AP roam, phone
+    // sleep); without a timeout that freezes the whole poll loop. 8s turns
+    // a hang into a normal retry on the next tick.
+    signal: AbortSignal.timeout(8000),
   });
 
   if (!res.ok) {
     const errBody = await res.json().catch(() => null);
     throw new ApiError(res.status, errBody);
   }
+  return res;
+}
+
+async function request(path, opts) {
+  const res = await rawRequest(path, opts);
   if (res.status === 204) return null;
   return res.json();
 }
@@ -31,6 +40,9 @@ async function request(path, { method = 'GET', body } = {}) {
 export const api = {
   // Reads
   getTournament: () => request('/api/tournament'),
+  // Raw text variant: the store compares response bodies to skip re-renders
+  // for unchanged data, so it wants the string, not a fresh object graph.
+  getTournamentRaw: () => rawRequest('/api/tournament').then((r) => r.text()),
   getTimer: () => request('/api/timer'),
   getSession: () => request('/api/session'),
   getAnmeldungen: () => request('/api/anmeldungen'),
@@ -61,7 +73,6 @@ export const api = {
   // Matches
   saveResult: (matchId, scoreA, scoreB) =>
     request(`/api/matches/${matchId}/result`, { method: 'POST', body: { scoreA, scoreB } }),
-  clearResult: (matchId) => request(`/api/matches/${matchId}/result`, { method: 'DELETE' }),
   swapMatchPlayers: (m1id, team1, idx1, m2id, team2, idx2) =>
     request('/api/matches/swap', {
       method: 'POST',

@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Animated, TextInput } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Animated, TextInput } from 'react-native';
 import { useState, useEffect } from 'react';
 import { useEntranceAnimation } from '../hooks/useEntranceAnimation';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,6 +9,7 @@ import { useAuth } from '../store/auth';
 import AnimatedPressable from '../components/AnimatedPressable';
 import LiveBadge from '../components/LiveBadge';
 import EmptyState from '../components/EmptyState';
+import { formatDisplayName } from '../utils/names';
 
 const MEDAL_ICONS = ['trophy', 'medal', 'ribbon'];
 
@@ -69,7 +70,7 @@ const buildPrintContent = (standings, pausedIds = new Set()) => {
     const gc = GROUP_COLORS[groupKeys[groupIdx]];
     const grp = GROUPS[groupIdx];
     const medal = i < 3 ? `<span style="font-size:11px">${medalSymbols[i]}</span>` : `<b style="color:#555">${i + 1}</b>`;
-    const parts = p.name.split(','); const name = parts.length > 1 ? `${parts[1].trim()} ${parts[0].trim()}` : p.name.trim();
+    const name = formatDisplayName(p.name);
     const league = p.league ? ` <span style="font-size:8px;color:#888;font-weight:700">[${p.league}]</span>` : '';
     const pausedMark = pausedIds.has(p.id) ? ' <span style="font-size:7px;color:#e67e22;font-weight:700;letter-spacing:0.5px">(PAUSIERT)</span>' : '';
     const bg = i % 2 === 0 ? '#fafafa' : '#fff';
@@ -137,8 +138,7 @@ export default function RanglisteScreen() {
   const searchActive = searchQuery.trim().length > 0;
   const searchResults = searchActive
     ? standings.filter((p) => {
-        const parts = p.name.split(',');
-        const display = parts.length > 1 ? `${parts[1].trim()} ${parts[0].trim()}` : p.name.trim();
+        const display = formatDisplayName(p.name);
         return display.toLowerCase().includes(searchQuery.toLowerCase()) ||
                p.name.toLowerCase().includes(searchQuery.toLowerCase());
       })
@@ -233,8 +233,7 @@ export default function RanglisteScreen() {
                     const group = GROUPS[groupIdx];
                     const groupOffset = groupIdx === 0 ? 0 : groupIdx === 1 ? FIXED_GROUP_SIZE : FIXED_GROUP_SIZE * 2;
                     const groupRank = overallIdx - groupOffset + 1;
-                    const parts = p.name.split(',');
-                    const firstName = parts.length > 1 ? `${parts[1].trim()} ${parts[0].trim()}` : p.name.trim();
+                    const firstName = formatDisplayName(p.name);
                     const isPaused = pausedIds.has(p.id);
                     const isSelected = selected === p.id;
                     return (
@@ -301,8 +300,7 @@ export default function RanglisteScreen() {
                         const medalBg    = group.medalBgs[i];
                         const isSelected = selected === p.id;
                         const isPaused = pausedIds.has(p.id);
-                        const parts = p.name.split(',');
-                        const firstName = parts.length > 1 ? `${parts[1].trim()} ${parts[0].trim()}` : p.name.trim();
+                        const firstName = formatDisplayName(p.name);
 
                         return (
                           <AnimatedPressable
@@ -413,7 +411,7 @@ export default function RanglisteScreen() {
                 <View style={s.detailTop}>
                   <View style={{ flex: 1 }}>
                     <Text style={[s.detailName, { color: selectedGroup.color }]}>
-                      {(() => { const p = selectedPlayer.name.split(','); return p.length > 1 ? `${p[1].trim()} ${p[0].trim()}` : selectedPlayer.name.trim(); })()}
+                      {formatDisplayName(selectedPlayer.name)}
                     </Text>
                     <Text style={s.detailMeta}>
                       {selectedGroup.fullLabel} · Platz {selectedGroupRank} · Gesamt #{selectedOverallIdx + 1}

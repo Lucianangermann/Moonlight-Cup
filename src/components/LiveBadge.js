@@ -8,7 +8,7 @@ import { useTournament } from '../store/tournament';
 // rule); dimmed "STAND HH:MM" when the last successful sync is stale, so a
 // viewer on flaky gym Wi-Fi is never lied to by a decorative badge.
 export default function LiveBadge() {
-  const { loaded, lastSync, online } = useTournament();
+  const { loaded, staleSince, online } = useTournament();
   if (!loaded) return null;
 
   if (online) {
@@ -20,8 +20,8 @@ export default function LiveBadge() {
     );
   }
 
-  const time = lastSync
-    ? new Date(lastSync).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
+  const time = staleSince
+    ? new Date(staleSince).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
     : '—';
   return (
     <View style={[s.badge, s.badgeStale]}>

@@ -13,9 +13,14 @@ removed) local-only tournament.js store.
 """
 from __future__ import annotations
 
+import hashlib
+import json
 import secrets
+import sqlite3
+import threading
+import time
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, Response, jsonify, request
 
 from blueprints.auth import login_required
 from database import get_db
@@ -23,8 +28,8 @@ from db_state import (
     add_participant, advance_durchgang, all_matches_done,
     clear_match_result, confirm_anmeldung, current_durchgang_done,
     delete_anmeldung, delete_round, delete_timer, deactivate_timer,
-    get_active_timer, list_anmeldungen, load_state, persist_round,
-    remove_participant, reset_tournament, save_match_result,
+    get_active_timer, list_anmeldungen, load_state, participants_full,
+    persist_round, remove_participant, reset_tournament, save_match_result,
     set_paused, set_stat_adjustment, set_timer, swap_match_players,
     update_participant,
 )
@@ -33,6 +38,57 @@ from tournament_logic import (
 )
 
 bp = Blueprint("api", __name__, url_prefix="/api")
+
+
+# --- Poll-endpoint micro-cache --------------------------------------------------
+#
+# /api/tournament and /api/timer are polled every 5s by every phone in the
+# gym (60 phones ≈ 24 req/s), yet the data only changes when the admin acts.
+# Each poll response is cached per worker for a short TTL and served with an
+# ETag, so identical polls become 304s (no body, no recompute). Admin
+# mutations call _invalidate_cache() so the admin's own follow-up refresh
+# sees the write immediately in this worker; the other gunicorn worker
+# serves at most CACHE_TTL seconds of stale data to viewers.
+
+CACHE_TTL = 1.0
+_cache_lock = threading.Lock()
+_cache: dict[str, tuple[float, str, str]] = {}  # name -> (expires, body, etag)
+
+
+def _invalidate_cache() -> None:
+    with _cache_lock:
+        _cache.clear()
+
+
+@bp.after_request
+def _bust_cache_on_mutation(resp):
+    # Any successful non-GET on this blueprint may have changed tournament
+    # or timer state — one hook instead of remembering it in 17 routes.
+    if request.method not in ("GET", "HEAD", "OPTIONS") and resp.status_code < 400:
+        _invalidate_cache()
+    return resp
+
+
+def _cached_json_response(name: str, build) -> Response:
+    now = time.monotonic()
+    with _cache_lock:
+        hit = _cache.get(name)
+        if hit and hit[0] > now:
+            _, body, etag = hit
+        else:
+            body = json.dumps(build(), separators=(",", ":"))
+            etag = '"' + hashlib.md5(body.encode()).hexdigest() + '"'
+            _cache[name] = (now + CACHE_TTL, body, etag)
+
+    if request.headers.get("If-None-Match") == etag:
+        resp = Response(status=304)
+    else:
+        resp = Response(body, mimetype="application/json")
+    resp.headers["ETag"] = etag
+    # no-cache = "revalidate with the ETag", NOT "don't cache" — exactly
+    # the conditional-request behavior the polling clients rely on.
+    resp.headers["Cache-Control"] = "no-cache"
+    return resp
 
 
 # --- Serialization -------------------------------------------------------------
@@ -82,13 +138,11 @@ def _serialize_anmeldung(row) -> dict:
 
 # --- Tournament (public reads) -------------------------------------------------
 
-@bp.route("/tournament", methods=["GET"])
-def tournament():
-    db = get_db()
-    state = load_state(db)
+def _build_tournament_payload() -> dict:
+    state = load_state(get_db())
     standings = get_standings(state)
     current = state.rounds[-1] if state.rounds else None
-    return jsonify({
+    return {
         "participants": [_serialize_participant(p) for p in state.participants],
         "pausedParticipants": [_serialize_participant(p) for p in state.paused],
         "rounds": [_serialize_round(r) for r in state.rounds],
@@ -98,24 +152,33 @@ def tournament():
             pid: {"games": adj.games, "wins": adj.wins, "diff": adj.diff}
             for pid, adj in state.stat_adjustments.items()
         },
-    })
+    }
 
 
-@bp.route("/timer", methods=["GET"])
-def timer():
+@bp.route("/tournament", methods=["GET"])
+def tournament():
+    return _cached_json_response("tournament", _build_tournament_payload)
+
+
+def _build_timer_payload() -> dict:
     row = get_active_timer(get_db())
     if row is None:
-        return jsonify({
+        return {
             "label": None, "targetTime": None, "isActive": False,
             "phase": None, "totalSeconds": None,
-        })
-    return jsonify({
+        }
+    return {
         "label": row["label"],
         "targetTime": row["target_time"],  # ISO-8601 UTC, parsed client-side
         "isActive": bool(row["is_active"]),
         "phase": row["phase"],             # 'prep'|'warmup'|'game' — drives ring color
         "totalSeconds": row["total_seconds"],  # full phase duration for the progress arc
-    })
+    }
+
+
+@bp.route("/timer", methods=["GET"])
+def timer():
+    return _cached_json_response("timer", _build_timer_payload)
 
 
 # --- Anmeldungen (admin) --------------------------------------------------------
@@ -135,13 +198,16 @@ def anmeldung_confirm(anmeldung_id):
     if gender not in ("M", "F") or not league:
         return jsonify({"error": "gender ('M'/'F') and league are required"}), 400
     db = get_db()
-    n_participants = db.execute("SELECT COUNT(*) FROM participants").fetchone()[0]
-    if n_participants >= MAX_PARTICIPANTS:
+    if participants_full(db, MAX_PARTICIPANTS):
         return jsonify({"error": f"Teilnehmerliste ist voll ({MAX_PARTICIPANTS} Plätze)."}), 409
     try:
         pid = confirm_anmeldung(db, anmeldung_id, gender=gender, league=league)
     except ValueError as e:
         return jsonify({"error": str(e)}), 404
+    except sqlite3.IntegrityError:
+        # Double-tap on the confirm button: the participant id a<id> already
+        # exists. 409 instead of a 500.
+        return jsonify({"error": "Diese Anmeldung wurde bereits bestätigt."}), 409
     return jsonify({"pid": pid})
 
 
@@ -174,6 +240,14 @@ def participant_add():
 @login_required
 def participant_update(pid):
     data = request.get_json(silent=True) or {}
+    # Validate before the UPDATE — invalid values would otherwise hit the
+    # table's CHECK constraints and surface as a 500.
+    if "gender" in data and data["gender"] not in ("M", "F"):
+        return jsonify({"error": "gender must be 'M' or 'F'"}), 400
+    if "league" in data and not data["league"]:
+        return jsonify({"error": "league must not be empty"}), 400
+    if "name" in data and not str(data["name"]).strip():
+        return jsonify({"error": "name must not be empty"}), 400
     update_participant(get_db(), pid, **data)
     return jsonify({})
 
@@ -303,12 +377,13 @@ def matches_swap():
 @login_required
 def standings_adjustment(pid):
     data = request.get_json(silent=True) or {}
-    set_stat_adjustment(
-        get_db(), pid,
-        games=int(data.get("games") or 0),
-        wins=int(data.get("wins") or 0),
-        diff=int(data.get("diff") or 0),
-    )
+    try:
+        games = int(data.get("games") or 0)
+        wins = int(data.get("wins") or 0)
+        diff = int(data.get("diff") or 0)
+    except (TypeError, ValueError):
+        return jsonify({"error": "games, wins and diff must be integers"}), 400
+    set_stat_adjustment(get_db(), pid, games=games, wins=wins, diff=diff)
     return jsonify({})
 
 
@@ -323,10 +398,14 @@ def timer_set():
         return jsonify({"error": "label and targetTime (ISO-8601 UTC) are required"}), 400
     phase = data.get("phase")
     total_seconds = data.get("totalSeconds")
+    try:
+        total_seconds = int(total_seconds) if total_seconds else None
+    except (TypeError, ValueError):
+        return jsonify({"error": "totalSeconds must be an integer"}), 400
     set_timer(
         get_db(), label=label.strip(), target_time_iso=target_time,
         phase=phase if phase in ("prep", "warmup", "game") else None,
-        total_seconds=int(total_seconds) if total_seconds else None,
+        total_seconds=total_seconds,
     )
     return jsonify({})
 
