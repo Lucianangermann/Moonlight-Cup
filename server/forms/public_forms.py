@@ -29,7 +29,10 @@ class AnmeldungForm(FlaskForm):
     email = StringField(
         "E-Mail",
         validators=[DataRequired(message="E-Mail ist erforderlich."),
-                    Email(message="Ungültige E-Mail-Adresse."),
+                    # check_deliverability does a DNS MX lookup on submit, so
+                    # typo domains (gmx.dee) are caught at registration time.
+                    Email(message="Ungültige E-Mail-Adresse.",
+                          check_deliverability=True),
                     Length(max=120)],
     )
     age = IntegerField(
@@ -43,8 +46,9 @@ class AnmeldungForm(FlaskForm):
         validators=[DataRequired(message="Bitte Geschlecht auswählen.")],
     )
     verein = StringField(
-        "Verein (optional)",
-        validators=[Optional(), Length(max=120)],
+        "Verein",
+        validators=[DataRequired(message="Verein ist erforderlich."),
+                    Length(max=120)],
     )
     league = SelectField(
         "Liga",

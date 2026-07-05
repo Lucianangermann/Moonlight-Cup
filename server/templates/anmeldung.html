@@ -49,7 +49,7 @@
 
     <div class="form-row">
       <label for="verein">{{ form.verein.label.text }}</label>
-      {{ form.verein(id="verein", placeholder="z.B. TSV Musterhausen", autocomplete="organization") }}
+      {{ form.verein(id="verein", placeholder="z.B. TSV Musterhausen", autocomplete="organization", required=True) }}
       {% for err in form.verein.errors %}<span class="field-error">{{ err }}</span>{% endfor %}
     </div>
 
