@@ -7,9 +7,11 @@
   <meta name="description" content="Moonlight Cup — Badminton Turniermanager">
   <title>{% block title %}Moonlight Cup{% endblock %}</title>
 
+  <!-- Same faces as the app (Barlow Condensed for headings, Barlow for body)
+       so /anmeldung reads as the same product, not a leftover microsite. -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;600&display=swap" rel="stylesheet">
 
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
   {% block head_extra %}{% endblock %}
@@ -29,6 +31,7 @@
       <span class="brand-name">Moonlight Cup</span>
     </a>
     <nav class="nav">
+      <a href="/">Live-Turnier</a>
       <a href="{{ url_for('anmeldung.anmeldung') }}" {% if request.endpoint == 'anmeldung.anmeldung' %}class="active"{% endif %}>Anmeldung</a>
     </nav>
   </header>
