@@ -196,12 +196,15 @@ const s = StyleSheet.create({
     fontSize: 13,
   },
   lockButton: {
+    // Vertically centered on the screens' header row (paddingTop 58 +
+    // ~36pt title line → row center at ~76), sized to match the header
+    // badges so it reads as part of that row, not a floating stray.
     position: 'absolute',
-    top: 54,
+    top: 61,
     right: 18,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
     backgroundColor: colors.panel,
     borderWidth: 1,
     borderColor: colors.border,
