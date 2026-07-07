@@ -34,6 +34,39 @@
   --radius-sm:     12px;
 }
 
+/* Self-hosted — same 4 TTFs the app bundles via @expo-google-fonts, copied
+   into server/static/fonts/. Avoids loading fonts.googleapis.com /
+   fonts.gstatic.com, which would otherwise send every visitor's IP to
+   Google on page load with no consent prompt. */
+@font-face {
+  font-family: 'Barlow Condensed';
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+  src: url('/static/fonts/BarlowCondensed_600SemiBold.ttf') format('truetype');
+}
+@font-face {
+  font-family: 'Barlow Condensed';
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+  src: url('/static/fonts/BarlowCondensed_700Bold.ttf') format('truetype');
+}
+@font-face {
+  font-family: 'Barlow';
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  src: url('/static/fonts/Barlow_400Regular.ttf') format('truetype');
+}
+@font-face {
+  font-family: 'Barlow';
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+  src: url('/static/fonts/Barlow_600SemiBold.ttf') format('truetype');
+}
+
 * { box-sizing: border-box; }
 
 html, body {
@@ -239,6 +272,20 @@ h3 { font-size: 18px; }
 }
 .card-gold { border-color: var(--border-gold); }
 
+.privacy-text h2 {
+  color: var(--gold);
+  font-size: 15px;
+  letter-spacing: 0.5px;
+  margin: 22px 0 6px;
+}
+.privacy-text h2:first-child { margin-top: 0; }
+.privacy-text p {
+  color: var(--silver);
+  font-size: 14px;
+  line-height: 1.6;
+  margin: 0;
+}
+
 .card-mark {
   display: block;
   text-align: center;
@@ -394,6 +441,30 @@ h3 { font-size: 18px; }
 }
 .choice input:focus-visible + span {
   box-shadow: 0 0 0 3px var(--gold-glow);
+}
+
+/* Consent checkbox — plain native checkbox + label, not a pill (this is a
+   single yes/no legal acknowledgement, not a data field with options). */
+.consent-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.consent-row input[type="checkbox"] {
+  margin-top: 3px;
+  width: 18px;
+  height: 18px;
+  accent-color: var(--gold);
+  flex-shrink: 0;
+}
+.consent-row label {
+  color: var(--silver);
+  font-size: 14px;
+  line-height: 1.5;
+  text-transform: none;
+  letter-spacing: normal;
+  font-family: 'Barlow', sans-serif;
+  font-weight: 400;
 }
 
 /* =========================================================================

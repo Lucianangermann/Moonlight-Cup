@@ -2,10 +2,10 @@
 Registration receipt mails.
 
 Provider-agnostic SMTP (STARTTLS) configured entirely via .env — designed
-for iCloud Mail (smtp.mail.me.com + app-specific password, the bergerhq.de
-custom-domain setup) but any STARTTLS SMTP works. If MAIL_HOST is unset the
-feature is off and send_registration_receipt() is a silent no-op, so the
-registration flow never depends on mail being configured.
+for iCloud Mail (smtp.mail.me.com + app-specific password, via a custom
+e-mail domain on lucianangermann.com) but any STARTTLS SMTP works. If
+MAIL_HOST is unset the feature is off and send_registration_receipt() is a
+silent no-op, so the registration flow never depends on mail being configured.
 
 Sending happens on a daemon thread: the submitter gets their redirect
 immediately, and an SMTP hiccup can never fail a registration.

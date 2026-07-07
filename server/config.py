@@ -55,6 +55,11 @@ class Config:
     MAIL_PASSWORD = os.environ.get("MAIL_PASSWORD", "")
     MAIL_FROM = os.environ.get("MAIL_FROM", "")
 
+    # --- Privacy contact (shown on /datenschutz for Art. 15/17 requests) ---
+    # Falls back to MAIL_FROM (the receipt sender) if unset, since that's
+    # already a real, monitored address once mail is configured.
+    PRIVACY_CONTACT_EMAIL = os.environ.get("PRIVACY_CONTACT_EMAIL", "")
+
     # --- Web app (Expo web export of the RN app, served at "/") ---
     # Populated by `npx expo export --platform web` + rsync to the Pi — see
     # server/README.md's deploy runbook. Gitignored; absent until first deploy.

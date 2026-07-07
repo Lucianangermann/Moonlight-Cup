@@ -4,7 +4,8 @@ import { useState, useEffect, useRef } from 'react';
 import { useEntranceAnimation } from '../hooks/useEntranceAnimation';
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Line, Path, Ellipse } from 'react-native-svg';
-import { formatNameWithLeague } from '../utils/names';
+import { formatDisplayName, formatNameWithLeague } from '../utils/names';
+import { escapeHtml } from '../utils/html';
 
 function BadmintonRacketIcon({ size = 40, color = '#F0C040' }) {
   return (
@@ -70,6 +71,12 @@ export default function RundeScreen() {
 
   const getName = (id) => formatNameWithLeague(participants.find((x) => x.id === id));
   const getTeam = (ids) => ids.map(getName).join(' & ');
+  // HTML-escaped variants for the print builders only (buildPageContent,
+  // buildSiegerHtml) — getName/getTeam feed <Text> components elsewhere,
+  // which must NOT be escaped (RN Text doesn't parse HTML; escaping there
+  // would show literal "&amp;" etc. instead of the real character).
+  const getNameHtml = (id) => escapeHtml(getName(id));
+  const getTeamHtml = (ids) => ids.map(getNameHtml).join(' &amp; ');
 
   // Wenn eine vergangene Runde angeschaut wird: alle Matches zeigen (beide DGs)
   // Copy before sorting — .sort() mutates, and this array lives in the
@@ -117,9 +124,8 @@ export default function RundeScreen() {
       const players = groupSlices[gi];
       if (!players.length) return '';
       const rows = players.slice(0, 3).map((p, i) => {
-        const parts = p.name.split(',');
-        const name = parts.length > 1 ? `${parts[1].trim()} ${parts[0].trim()}` : p.name.trim();
-        const league = p.league ? ` <span style="font-size:10px;color:#888">[${p.league}]</span>` : '';
+        const name = escapeHtml(formatDisplayName(p.name));
+        const league = p.league ? ` <span style="font-size:10px;color:#888">[${escapeHtml(p.league)}]</span>` : '';
         return `<tr style="background:${i === 0 ? g.light : i % 2 === 0 ? '#fafafa' : '#fff'}">
           <td style="padding:10px 8px;text-align:center;font-size:18px">${medals[i]}</td>
           <td style="padding:10px 12px;font-size:15px;font-weight:${i === 0 ? '800' : '600'}">${name}${league}</td>
@@ -177,14 +183,14 @@ export default function RundeScreen() {
     const matches = [...r.matches.filter((m) => m.durchgang === dg)]
       .sort((a, b) => (a.feld ?? 0) - (b.feld ?? 0));
     const sitOut = dg === 2 && r.sittingOut?.length > 0
-      ? `<p style="margin-top:14px;font-size:12px;color:#888"><b>Freilos:</b> ${r.sittingOut.map(getName).join(', ')}</p>` : '';
+      ? `<p style="margin-top:14px;font-size:12px;color:#888"><b>Freilos:</b> ${r.sittingOut.map(getNameHtml).join(', ')}</p>` : '';
     const rows = matches.map((m, i) => `
       <tr style="background:${i % 2 === 0 ? '#f5f5f5' : '#fff'}">
         <td style="padding:6px 8px;font-size:11px;font-weight:800;color:#1a1a2e;white-space:nowrap;text-align:center">${m.feld != null ? `Feld ${m.feld}` : ''}</td>
         <td style="padding:6px 10px;font-size:10px;color:#555;font-weight:700;white-space:nowrap">${TYPE_LABELS[m.type] ?? m.type}</td>
-        <td style="padding:6px 10px;font-size:13px;font-weight:700;text-align:right">${m.teamA.map(getName).join(' &amp; ')}</td>
+        <td style="padding:6px 10px;font-size:13px;font-weight:700;text-align:right">${getTeamHtml(m.teamA)}</td>
         <td style="padding:6px 6px;text-align:center;color:#222;font-size:15px;font-weight:800">:</td>
-        <td style="padding:6px 10px;font-size:13px;font-weight:700">${m.teamB.map(getName).join(' &amp; ')}</td>
+        <td style="padding:6px 10px;font-size:13px;font-weight:700">${getTeamHtml(m.teamB)}</td>
       </tr>`).join('');
     return `
       <div style="overflow:hidden;margin-bottom:5px">

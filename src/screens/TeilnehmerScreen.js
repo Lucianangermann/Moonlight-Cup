@@ -17,8 +17,14 @@ export default function TeilnehmerScreen() {
     addParticipant, removeParticipant,
     updateParticipant, pauseParticipant, resumeParticipant,
     statAdjustments, setStatAdjustment,
-    getStandings,
+    getStandings, purgeAllParticipantData,
   } = useTournament();
+
+  const [confirmPurge, setConfirmPurge] = useState(false);
+  const handlePurge = () => {
+    purgeAllParticipantData().catch(() => {});
+    setConfirmPurge(false);
+  };
 
   const [search, setSearch] = useState('');
   const [showAdd, setShowAdd] = useState(false);
@@ -333,6 +339,17 @@ export default function TeilnehmerScreen() {
         )}
 
         <Text style={s.hint}>Antippen zum Bearbeiten</Text>
+
+        {(participants.length > 0 || pausedParticipants.length > 0) && (
+          <AnimatedPressable
+            onPress={() => setConfirmPurge(true)}
+            activeOpacity={0.7}
+            style={s.purgeLink}
+          >
+            <Text style={s.removeLinkText}>Teilnehmerdaten nach Saisonende löschen</Text>
+          </AnimatedPressable>
+        )}
+
         <View style={{ height: 100 }} />
       </ScrollView>
 
@@ -630,6 +647,36 @@ export default function TeilnehmerScreen() {
             </AnimatedPressable>
           </View>
         </KeyboardAvoidingView>
+      </Modal>
+
+      {/* Datenschutz: alle Teilnehmerdaten unwiderruflich löschen */}
+      <Modal visible={confirmPurge} transparent animationType="fade">
+        <View style={s.purgeOverlay}>
+          <View style={[s.confirmPanel, { width: '100%', maxWidth: 360 }]}>
+            <Text style={s.confirmText}>
+              <Text style={{ fontFamily: fonts.bodySemi }}>Alle Teilnehmerdaten</Text>
+              {' '}(Name, E-Mail, Alter, Verein, Essensangaben) sowie alle Runden und
+              Ergebnisse werden unwiderruflich gelöscht. Für den Start einer neuen Saison.
+            </Text>
+            <View style={s.confirmRow}>
+              <AnimatedPressable
+                style={[s.confirmBtn, s.confirmBtnCancel]}
+                onPress={() => setConfirmPurge(false)}
+                activeOpacity={0.7}
+              >
+                <Text style={s.confirmBtnCancelText}>Abbrechen</Text>
+              </AnimatedPressable>
+              <AnimatedPressable
+                style={[s.confirmBtn, s.confirmBtnDelete]}
+                onPress={handlePurge}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="trash-outline" size={14} color={colors.white} />
+                <Text style={s.confirmBtnDeleteText}>Endgültig löschen</Text>
+              </AnimatedPressable>
+            </View>
+          </View>
+        </View>
       </Modal>
     </View>
   );
@@ -1063,6 +1110,18 @@ const s = StyleSheet.create({
   removeLink: {
     alignItems: 'center',
     paddingVertical: 10,
+  },
+  purgeLink: {
+    alignItems: 'center',
+    paddingVertical: 6,
+    marginTop: 4,
+  },
+  purgeOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.75)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
   },
   removeLinkText: {
     color: colors.error + 'AA',

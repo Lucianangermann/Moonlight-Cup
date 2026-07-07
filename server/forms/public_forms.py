@@ -2,7 +2,7 @@
 import re
 
 from flask_wtf import FlaskForm
-from wtforms import IntegerField, RadioField, SelectField, StringField
+from wtforms import BooleanField, IntegerField, RadioField, SelectField, StringField
 from wtforms.validators import (
     DataRequired, Email, Length, NumberRange, Optional, ValidationError,
 )
@@ -69,6 +69,10 @@ class AnmeldungForm(FlaskForm):
         "Frühstücksart",
         choices=[("vegetarisch", "Vegetarisch"), ("weisswurscht", "Weißwurscht")],
         validators=[Optional()],
+    )
+    consent = BooleanField(
+        "Ich habe die Datenschutzhinweise gelesen und bin einverstanden.",
+        validators=[DataRequired(message="Bitte den Datenschutzhinweisen zustimmen.")],
     )
 
     def validate(self, extra_validators=None):

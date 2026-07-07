@@ -8,11 +8,10 @@
   <title>{% block title %}Moonlight Cup{% endblock %}</title>
 
   <!-- Same faces as the app (Barlow Condensed for headings, Barlow for body)
-       so /anmeldung reads as the same product, not a leftover microsite. -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;600&display=swap" rel="stylesheet">
-
+       so /anmeldung reads as the same product, not a leftover microsite —
+       self-hosted (server/static/fonts/, @font-face in style.css) instead
+       of loaded from fonts.googleapis.com, so a visitor's IP never reaches
+       Google just to render this page. -->
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css', v=css_version) }}">
   {% block head_extra %}{% endblock %}
 </head>
@@ -52,6 +51,8 @@
 
   <footer class="footer">
     <span>☾ Moonlight Cup · Badminton Turniermanager</span>
+    <span> · </span>
+    <a href="{{ url_for('anmeldung.datenschutz') }}">Datenschutz</a>
   </footer>
 
   {% block scripts %}{% endblock %}

@@ -10,6 +10,7 @@ import AnimatedPressable from '../components/AnimatedPressable';
 import LiveBadge from '../components/LiveBadge';
 import EmptyState from '../components/EmptyState';
 import { formatDisplayName } from '../utils/names';
+import { escapeHtml } from '../utils/html';
 
 const MEDAL_ICONS = ['trophy', 'medal', 'ribbon'];
 
@@ -70,8 +71,8 @@ const buildPrintContent = (standings, pausedIds = new Set()) => {
     const gc = GROUP_COLORS[groupKeys[groupIdx]];
     const grp = GROUPS[groupIdx];
     const medal = i < 3 ? `<span style="font-size:11px">${medalSymbols[i]}</span>` : `<b style="color:#555">${i + 1}</b>`;
-    const name = formatDisplayName(p.name);
-    const league = p.league ? ` <span style="font-size:8px;color:#888;font-weight:700">[${p.league}]</span>` : '';
+    const name = escapeHtml(formatDisplayName(p.name));
+    const league = p.league ? ` <span style="font-size:8px;color:#888;font-weight:700">[${escapeHtml(p.league)}]</span>` : '';
     const pausedMark = pausedIds.has(p.id) ? ' <span style="font-size:7px;color:#e67e22;font-weight:700;letter-spacing:0.5px">(PAUSIERT)</span>' : '';
     const bg = i % 2 === 0 ? '#fafafa' : '#fff';
     const isGroupStart = i === 0 || i === FIXED_GROUP_SIZE || i === FIXED_GROUP_SIZE * 2;

@@ -34,16 +34,15 @@ def _client_ip() -> str:
     return request.headers.get("CF-Connecting-IP") or get_remote_address()
 
 
-# CSP: allow same-origin assets + Google Fonts (Barlow/Barlow Condensed on
-# the anmeldung page) + the Spotify Web API/Accounts hosts (Timer screen's
-# optional playback control, src/services/spotify.js). 'unsafe-inline' for
-# styles is unfortunate but Google Fonts CSS uses inline directives;
-# alternative is to vendor the fonts (TODO if hardening required).
+# CSP: same-origin assets only (fonts are self-hosted from static/fonts/,
+# see templates/base.html) + the Spotify Web API/Accounts hosts (Timer
+# screen's optional playback control, src/services/spotify.js).
+# 'unsafe-inline' for styles covers the templates' inline style="" attributes.
 CSP = {
     "default-src": "'self'",
     "script-src": "'self'",
-    "style-src": ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-    "font-src": ["'self'", "https://fonts.gstatic.com"],
+    "style-src": ["'self'", "'unsafe-inline'"],
+    "font-src": ["'self'"],
     "img-src": ["'self'", "data:"],
     "connect-src": ["'self'", "https://accounts.spotify.com", "https://api.spotify.com"],
     "frame-ancestors": "'none'",
@@ -78,6 +77,11 @@ def create_app() -> Flask:
         content_security_policy_nonce_in=["script-src"],
         referrer_policy="strict-origin-when-cross-origin",
         frame_options="DENY",
+        # Talisman defaults this to "Lax" and — since it's applied after
+        # config.py sets SESSION_COOKIE_SAMESITE — silently overrides it.
+        # Pass it explicitly so the actual cookie matches what auth.py's
+        # CSRF-exemption rationale assumes.
+        session_cookie_samesite="Strict",
     )
 
     limiter = Limiter(

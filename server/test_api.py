@@ -91,7 +91,8 @@ def test_tournament_contract():
         "standings", "statAdjustments",
     }
     p = data["participants"][0]
-    assert set(p.keys()) == {"id", "name", "gender", "league", "email", "verein"}
+    assert set(p.keys()) == {"id", "name", "gender", "league", "verein"}
+    assert "email" not in p, "public /api/tournament must never expose participant e-mail"
     rnd = data["rounds"][0]
     assert set(rnd.keys()) == {
         "id", "roundNumber", "isSchnellrunde", "isFinalRunde",
@@ -155,6 +156,20 @@ def test_etag_304():
     print("✓ ETag/304 + invalidation on mutation")
 
 
+def test_consent_required_and_privacy_page():
+    assert client.get("/datenschutz").status_code == 200
+    base = {
+        "name": "Kein, Konsens", "email": "kein.konsens@gmail.com", "age": "30",
+        "gender": "M", "verein": "TSV", "league": "FZ",
+        "midnight_meal": "nein", "breakfast": "nein",
+    }
+    r = client.post("/anmeldung", data={**base, "csrf_token": csrf_token()}, follow_redirects=True)
+    assert "Datenschutzhinweisen zustimmen" in r.get_data(as_text=True)
+    data = client.get("/api/tournament").get_json()
+    assert not any(p["name"] == "Kein, Konsens" for p in data["participants"])
+    print("✓ registration without consent is rejected, /datenschutz renders")
+
+
 def test_waitlist_cutover():
     client.post("/api/tournament/reset")
     data = client.get("/api/tournament").get_json()
@@ -167,7 +182,7 @@ def test_waitlist_cutover():
         "csrf_token": csrf_token(),
         "name": "Warte, Willi", "email": "willi@gmail.com", "age": "30",
         "gender": "M", "verein": "TSV", "league": "FZ",
-        "midnight_meal": "nein", "breakfast": "nein",
+        "midnight_meal": "nein", "breakfast": "nein", "consent": "y",
     }, follow_redirects=True)
     assert "Warteliste" in r.get_data(as_text=True)
     data = client.get("/api/tournament").get_json()
@@ -195,6 +210,7 @@ if __name__ == "__main__":
         test_round_guards_and_results,
         test_timer_roundtrip,
         test_etag_304,
+        test_consent_required_and_privacy_page,
         test_waitlist_cutover,
     ]
     failed = 0

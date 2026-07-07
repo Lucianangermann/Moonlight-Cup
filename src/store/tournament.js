@@ -135,6 +135,13 @@ export function TournamentProvider({ children }) {
         await api.deleteTimer().catch(() => {}); // best-effort — shared timer isn't tournament-critical
         setTimerResetTrigger(Date.now());
       }),
+      // Post-season deletion of all participant/registration PII (name,
+      // e-mail, age, verein, meal preferences) — distinct from
+      // resetTournament, which keeps the roster. See db_state.py.
+      purgeAllParticipantData: withRefresh(async () => {
+        await api.purgeAllParticipantData();
+        setTimerResetTrigger(Date.now());
+      }),
     };
   }, [snapshot, loaded, online, staleSince, autoTimerTrigger, timerResetTrigger, refresh, triggerAutoTimer]);
 

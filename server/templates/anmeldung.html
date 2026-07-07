@@ -96,6 +96,15 @@
       {% for err in form.breakfast_type.errors %}<span class="field-error">{{ err }}</span>{% endfor %}
     </div>
 
+    <div class="form-row consent-row">
+      {{ form.consent(id="consent") }}
+      <label for="consent">
+        Ich habe die <a href="{{ url_for('anmeldung.datenschutz') }}" target="_blank" rel="noopener">Datenschutzhinweise</a>
+        gelesen und bin einverstanden.
+      </label>
+    </div>
+    {% for err in form.consent.errors %}<span class="field-error">{{ err }}</span>{% endfor %}
+
     <button type="submit" class="btn-primary">Anmelden</button>
   </form>
 </div>

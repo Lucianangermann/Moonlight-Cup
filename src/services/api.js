@@ -69,6 +69,7 @@ export const api = {
   advanceDurchgang: (roundId) => request(`/api/rounds/${roundId}/advance-durchgang`, { method: 'POST' }),
   deleteRound: (roundId) => request(`/api/rounds/${roundId}`, { method: 'DELETE' }),
   resetTournament: () => request('/api/tournament/reset', { method: 'POST' }),
+  purgeAllParticipantData: () => request('/api/gdpr/purge', { method: 'POST' }),
 
   // Matches
   saveResult: (matchId, scoreA, scoreB) =>

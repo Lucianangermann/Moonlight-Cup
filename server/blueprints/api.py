@@ -29,7 +29,8 @@ from db_state import (
     clear_match_result, confirm_anmeldung, current_durchgang_done,
     delete_anmeldung, delete_round, delete_timer, deactivate_timer,
     get_active_timer, list_anmeldungen, load_state, participants_full,
-    persist_round, remove_participant, reset_tournament, save_match_result,
+    persist_round, purge_all_participant_data, remove_participant,
+    reset_tournament, save_match_result,
     set_paused, set_stat_adjustment, set_timer, swap_match_players,
     update_participant,
 )
@@ -94,9 +95,13 @@ def _cached_json_response(name: str, build) -> Response:
 # --- Serialization -------------------------------------------------------------
 
 def _serialize_participant(p) -> dict:
+    # No "email" here: /api/tournament is public (polled by every viewer's
+    # phone, no login_required) and nothing in the app reads participant
+    # e-mail from it — TeilnehmerScreen's pending-Anmeldungen list gets
+    # e-mail from the separate admin-only GET /api/anmeldungen instead.
     return {
         "id": p.id, "name": p.name, "gender": p.gender, "league": p.league,
-        "email": p.email, "verein": p.verein,
+        "verein": p.verein,
     }
 
 
@@ -329,6 +334,15 @@ def rounds_delete(round_id):
 @login_required
 def tournament_reset():
     reset_tournament(get_db())
+    return jsonify({})
+
+
+@bp.route("/gdpr/purge", methods=["POST"])
+@login_required
+def gdpr_purge():
+    """Post-season deletion of all participant/registration PII — see
+    db_state.purge_all_participant_data for exactly what's removed."""
+    purge_all_participant_data(get_db())
     return jsonify({})
 
 

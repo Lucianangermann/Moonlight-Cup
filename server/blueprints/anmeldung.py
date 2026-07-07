@@ -13,6 +13,7 @@ carries the meal answers the participant row doesn't need.
 from flask import Blueprint, render_template, redirect, url_for, flash
 
 from blueprints.api import _invalidate_cache
+from config import Config
 from database import get_db
 from db_state import confirm_anmeldung, create_anmeldung, participants_full
 from forms.public_forms import AnmeldungForm
@@ -20,6 +21,12 @@ from mailer import is_configured as mail_configured, send_registration_receipt
 from tournament_logic import MAX_PARTICIPANTS
 
 bp = Blueprint("anmeldung", __name__)
+
+
+@bp.route("/datenschutz")
+def datenschutz():
+    contact = Config.PRIVACY_CONTACT_EMAIL or Config.MAIL_FROM.split("<")[-1].rstrip(">").strip()
+    return render_template("datenschutz.html", contact=contact)
 
 
 @bp.route("/anmeldung", methods=["GET", "POST"])

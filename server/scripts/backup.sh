@@ -7,6 +7,7 @@
 # boot disk doesn't take the only copies with it. Keeps 72 hourly snapshots
 # (3 days) per target.
 set -u
+umask 077  # backups contain full participant PII — never world/group readable
 
 DB=/home/pi/Moonlight-Cup/server/moonlight_cup.db
 LOCAL_DIR=/home/pi/backups

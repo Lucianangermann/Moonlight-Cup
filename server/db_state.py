@@ -312,6 +312,24 @@ def set_stat_adjustment(db: sqlite3.Connection, pid: str, games: int, wins: int,
     db.commit()
 
 
+def purge_all_participant_data(db: sqlite3.Connection) -> None:
+    """
+    Post-season cleanup: permanently deletes every participant/registration
+    record — participants, anmeldungen (incl. age/meal-preference PII),
+    stat_adjustments and rounds/matches (both cascade from their FKs), and
+    the timer. Distinct from reset_tournament(), which only clears the
+    current tournament's rounds/pauses and keeps the roster intact for a
+    same-season restart. Irreversible — the admin UI gates this behind a
+    two-step confirm (see src/screens/TeilnehmerScreen.js).
+    """
+    db.execute("DELETE FROM rounds")            # cascades matches
+    db.execute("DELETE FROM stat_adjustments")  # also cascades from participants below
+    db.execute("DELETE FROM participants")
+    db.execute("DELETE FROM anmeldungen")
+    db.execute("DELETE FROM timer")
+    db.commit()
+
+
 def participants_full(db: sqlite3.Connection, max_participants: int) -> bool:
     """Single source for the capacity check used by /anmeldung and the API."""
     n = db.execute("SELECT COUNT(*) FROM participants").fetchone()[0]
