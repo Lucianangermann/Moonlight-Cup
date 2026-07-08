@@ -23,15 +23,19 @@ from tournament_logic import MAX_PARTICIPANTS
 bp = Blueprint("anmeldung", __name__)
 
 
+def _privacy_contact() -> str:
+    return Config.PRIVACY_CONTACT_EMAIL or Config.MAIL_FROM.split("<")[-1].rstrip(">").strip()
+
+
 @bp.route("/datenschutz")
 def datenschutz():
-    contact = Config.PRIVACY_CONTACT_EMAIL or Config.MAIL_FROM.split("<")[-1].rstrip(">").strip()
-    return render_template("datenschutz.html", contact=contact)
+    return render_template("datenschutz.html", contact=_privacy_contact())
 
 
 @bp.route("/anmeldung", methods=["GET", "POST"])
 def anmeldung():
     form = AnmeldungForm()
+    contact = _privacy_contact()
 
     if form.validate_on_submit():
         db = get_db()
@@ -47,7 +51,7 @@ def anmeldung():
             ).fetchone()
         if already:
             flash("Mit dieser E-Mail-Adresse ist bereits jemand angemeldet.", "error")
-            return render_template("anmeldung.html", form=form)
+            return render_template("anmeldung.html", form=form, contact=contact)
 
         waitlisted = participants_full(db, MAX_PARTICIPANTS)
 
@@ -90,4 +94,4 @@ def anmeldung():
         flash(msg, "success")
         return redirect(url_for("anmeldung.anmeldung"))
 
-    return render_template("anmeldung.html", form=form)
+    return render_template("anmeldung.html", form=form, contact=contact)

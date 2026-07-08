@@ -96,10 +96,18 @@
       {% for err in form.breakfast_type.errors %}<span class="field-error">{{ err }}</span>{% endfor %}
     </div>
 
+    <details class="privacy-disclosure">
+      <summary>Datenschutzhinweise anzeigen</summary>
+      <div class="privacy-text privacy-text-compact">
+        {% include "_datenschutz_content.html" %}
+      </div>
+    </details>
+
     <div class="form-row consent-row">
       {{ form.consent(id="consent") }}
       <label for="consent">
-        Ich habe die <a href="{{ url_for('anmeldung.datenschutz') }}" target="_blank" rel="noopener">Datenschutzhinweise</a>
+        Ich habe die oben stehenden Datenschutzhinweise
+        (<a href="{{ url_for('anmeldung.datenschutz') }}" target="_blank" rel="noopener">als eigene Seite öffnen</a>)
         gelesen und bin einverstanden.
       </label>
     </div>

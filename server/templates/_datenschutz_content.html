@@ -1,0 +1,51 @@
+<!-- Shared privacy-notice body — included both on the standalone /datenschutz
+     page and inline (expandable) on the registration form, so the two never
+     drift apart. -->
+<h2>Was wird erfasst?</h2>
+<p>
+  Bei der Anmeldung: Name, E-Mail-Adresse, Alter, Geschlecht, Verein, Liga
+  sowie deine Angaben zu Mitternachtsessen und Frühstück. Diese Daten
+  werden in einer Datenbank auf dem Server des Veranstalters gespeichert.
+</p>
+
+<h2>Wozu?</h2>
+<p>
+  Um das Turnier zu organisieren: Auslosung der Spielpaarungen (Geschlecht,
+  Liga), Zuordnung zur Teilnehmerliste, Essensplanung und um dir eine
+  Anmeldebestätigung per E-Mail zu schicken.
+</p>
+
+<h2>Was ist öffentlich sichtbar?</h2>
+<p>
+  Name, Verein und Liga erscheinen in der öffentlichen Turnier-Ansicht
+  (Ergebnisse, Rangliste, Spielplan) — das ist bei einem Turnier so
+  gewollt. <strong>Deine E-Mail-Adresse, dein Alter und deine
+  Essensangaben sind nicht öffentlich einsehbar</strong> und nur für den
+  Veranstalter (Admin-Zugang) sichtbar.
+</p>
+
+<h2>Wer verarbeitet die Daten sonst noch?</h2>
+<p>
+  Die Website läuft hinter Cloudflare (Hosting/Zustellung der Seite —
+  sieht technisch den Datenverkehr). Die Bestätigungsmail wird über einen
+  E-Mail-Anbieter des Veranstalters (iCloud Mail) verschickt und enthält
+  deine Anmeldeangaben im Mailtext. Beide sind reine Dienstleister des
+  Veranstalters, keine eigenständige Nutzung deiner Daten.
+</p>
+
+<h2>Wie lange werden die Daten aufbewahrt?</h2>
+<p>
+  Bis der Veranstalter sie nach Ende der Turniersaison löscht. Ein
+  entsprechender Löschvorgang ist Teil der Turnierverwaltung.
+</p>
+
+<h2>Deine Rechte</h2>
+<p>
+  Du kannst jederzeit erfragen, welche Daten zu dir gespeichert sind, und
+  deren Löschung verlangen. Kontakt:
+  {% if contact %}
+    <a href="mailto:{{ contact }}">{{ contact }}</a>
+  {% else %}
+    an den Turnierveranstalter.
+  {% endif %}
+</p>

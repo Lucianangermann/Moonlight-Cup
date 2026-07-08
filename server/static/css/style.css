@@ -286,6 +286,46 @@ h3 { font-size: 18px; }
   margin: 0;
 }
 
+/* Inline disclosure on the registration form — lets people actually read
+   the privacy notice before ticking the consent box, without leaving the
+   page (native <details>, no JS needed). */
+.privacy-disclosure {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--panel-light);
+  margin-bottom: 16px;
+}
+.privacy-disclosure summary {
+  cursor: pointer;
+  list-style: none;
+  padding: 12px 16px;
+  color: var(--gold);
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.privacy-disclosure summary::-webkit-details-marker { display: none; }
+.privacy-disclosure summary::after {
+  content: '▾';
+  font-size: 12px;
+  color: var(--text-muted);
+  transition: transform 0.2s var(--ease-out);
+}
+.privacy-disclosure[open] summary::after { transform: rotate(180deg); }
+.privacy-disclosure[open] summary { border-bottom: 1px solid var(--border); }
+.privacy-text-compact {
+  padding: 4px 16px 16px;
+  max-height: 280px;
+  overflow-y: auto;
+}
+.privacy-text-compact h2 { font-size: 13px; }
+.privacy-text-compact p { font-size: 13px; }
+
 .card-mark {
   display: block;
   text-align: center;
