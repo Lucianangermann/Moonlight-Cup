@@ -24,13 +24,35 @@
   Veranstalter (Admin-Zugang) sichtbar.
 </p>
 
+<h2>Auf welcher Rechtsgrundlage?</h2>
+<p>
+  Deine Anmeldedaten verarbeiten wir auf Grundlage deiner Einwilligung
+  (Art. 6 Abs. 1 lit. a DSGVO, die Checkbox bei der Anmeldung). Rein
+  technische Verarbeitung zum sicheren Betrieb der Seite (z.B. Schutz vor
+  Missbrauch über Cloudflare) stützt sich auf unser berechtigtes Interesse
+  an einem funktionierenden, sicheren Angebot (Art. 6 Abs. 1 lit. f DSGVO).
+</p>
+
 <h2>Wer verarbeitet die Daten sonst noch?</h2>
 <p>
   Die Website läuft hinter Cloudflare (Hosting/Zustellung der Seite —
   sieht technisch den Datenverkehr). Die Bestätigungsmail wird über einen
   E-Mail-Anbieter des Veranstalters (iCloud Mail) verschickt und enthält
   deine Anmeldeangaben im Mailtext. Beide sind reine Dienstleister des
-  Veranstalters, keine eigenständige Nutzung deiner Daten.
+  Veranstalters, keine eigenständige Nutzung deiner Daten. Beide
+  Unternehmen (Cloudflare, Apple) sitzen in den USA — die Übermittlung
+  dorthin stützt sich auf das EU-US Data Privacy Framework, unter dem
+  beide zertifiziert sind.
+</p>
+
+<h2>Fotos & Videos vom Turnierabend</h2>
+<p>
+  Am Turnierabend werden Fotos/Videos gemacht, die z.B. auf Social Media
+  oder der Ergebnisseite gezeigt werden können. Aufnahmen von Sportlern in
+  Aktion bei einer öffentlichen Veranstaltung sind nach § 23 KunstUrhG
+  regelmäßig ohne gesonderte Einwilligung zulässig. Falls du auf keinem
+  veröffentlichten Bild zu sehen sein möchtest, sag uns vor oder während
+  der Veranstaltung kurz Bescheid.
 </p>
 
 <h2>Wie lange werden die Daten aufbewahrt?</h2>
@@ -41,11 +63,17 @@
 
 <h2>Deine Rechte</h2>
 <p>
-  Du kannst jederzeit erfragen, welche Daten zu dir gespeichert sind, und
-  deren Löschung verlangen. Kontakt:
+  Du hast das Recht auf Auskunft (Art. 15 DSGVO), Berichtigung (Art. 16),
+  Löschung (Art. 17), Einschränkung der Verarbeitung (Art. 18),
+  Datenübertragbarkeit (Art. 20) und Widerspruch (Art. 21) — sowie
+  jederzeit das Recht, deine Einwilligung mit Wirkung für die Zukunft zu
+  widerrufen. Kontakt dafür:
   {% if contact %}
     <a href="mailto:{{ contact }}">{{ contact }}</a>
   {% else %}
-    an den Turnierveranstalter.
+    an den Turnierveranstalter (siehe <a href="{{ url_for('anmeldung.impressum') }}">Impressum</a>).
   {% endif %}
+  Außerdem kannst du dich jederzeit bei einer Datenschutz-Aufsichtsbehörde
+  beschweren, z.B. dem
+  <a href="https://www.lda.bayern.de" target="_blank" rel="noopener">Bayerischen Landesamt für Datenschutzaufsicht</a>.
 </p>

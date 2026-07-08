@@ -158,6 +158,7 @@ def test_etag_304():
 
 def test_consent_required_and_privacy_page():
     assert client.get("/datenschutz").status_code == 200
+    assert client.get("/impressum").status_code == 200
     base = {
         "name": "Kein, Konsens", "email": "kein.konsens@gmail.com", "age": "30",
         "gender": "M", "verein": "TSV", "league": "FZ",

@@ -32,6 +32,11 @@ def datenschutz():
     return render_template("datenschutz.html", contact=_privacy_contact())
 
 
+@bp.route("/impressum")
+def impressum():
+    return render_template("impressum.html")
+
+
 @bp.route("/anmeldung", methods=["GET", "POST"])
 def anmeldung():
     form = AnmeldungForm()
