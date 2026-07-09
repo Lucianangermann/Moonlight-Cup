@@ -32,8 +32,45 @@
     <nav class="nav">
       <a href="/">Live-Turnier</a>
       <a href="{{ url_for('anmeldung.anmeldung') }}" {% if request.endpoint == 'anmeldung.anmeldung' %}class="active"{% endif %}>Anmeldung</a>
+      {% if session.is_admin %}
+        <a href="{{ url_for('anmeldung.dashboard') }}" {% if request.endpoint == 'anmeldung.dashboard' %}class="active"{% endif %}>Dashboard</a>
+      {% endif %}
     </nav>
+    <button
+      type="button"
+      id="lock-btn"
+      class="lock-btn {{ 'lock-btn-open' if session.is_admin }}"
+      data-is-admin="{{ 'true' if session.is_admin else 'false' }}"
+      aria-label="{{ 'Abmelden' if session.is_admin else 'Admin-Login' }}"
+    >
+      {% if session.is_admin %}
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 7.75-1.5"/></svg>
+      {% else %}
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+      {% endif %}
+    </button>
   </header>
+
+  <div id="auth-modal-backdrop" class="modal-backdrop" hidden>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="auth-modal-title">
+      <div class="modal-header">
+        <span id="auth-modal-title">Admin-Login</span>
+        <button type="button" id="auth-modal-close" class="modal-close" aria-label="Schließen">✕</button>
+      </div>
+      <div class="form">
+        <div class="form-row">
+          <label for="auth-username">Benutzername</label>
+          <input type="text" id="auth-username" autocomplete="username" autocapitalize="none">
+        </div>
+        <div class="form-row">
+          <label for="auth-password">Passwort</label>
+          <input type="password" id="auth-password" autocomplete="current-password">
+        </div>
+        <span id="auth-error" class="field-error" style="display:none;"></span>
+        <button type="button" id="auth-submit" class="btn-primary">Anmelden</button>
+      </div>
+    </div>
+  </div>
 
   {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
@@ -56,6 +93,84 @@
     <span> · </span>
     <a href="{{ url_for('anmeldung.impressum') }}">Impressum</a>
   </footer>
+
+  <script nonce="{{ csp_nonce() }}">
+    // Header lock icon + login modal — present on every page (kept outside
+    // the overridable scripts block further down, since child templates
+    // replace that block entirely). Auth state itself is rendered
+    // server-side from the session cookie (session.is_admin above); this
+    // script only handles the login/logout interaction, then reloads so
+    // the server-rendered header/nav reflect the new state.
+    (function () {
+      var lockBtn = document.getElementById('lock-btn');
+      var backdrop = document.getElementById('auth-modal-backdrop');
+      var closeBtn = document.getElementById('auth-modal-close');
+      var submitBtn = document.getElementById('auth-submit');
+      var usernameInput = document.getElementById('auth-username');
+      var passwordInput = document.getElementById('auth-password');
+      var errorEl = document.getElementById('auth-error');
+      if (!lockBtn) return;
+
+      function showError(msg) {
+        errorEl.textContent = msg;
+        errorEl.style.display = '';
+      }
+      function openModal() {
+        errorEl.style.display = 'none';
+        usernameInput.value = '';
+        passwordInput.value = '';
+        backdrop.hidden = false;
+        usernameInput.focus();
+      }
+      function closeModal() { backdrop.hidden = true; }
+
+      async function submitLogin() {
+        if (!usernameInput.value.trim() || !passwordInput.value) {
+          showError('Benutzername und Passwort erforderlich.');
+          return;
+        }
+        submitBtn.disabled = true;
+        try {
+          var res = await fetch('/api/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify({ username: usernameInput.value.trim(), password: passwordInput.value }),
+          });
+          var data = await res.json().catch(function () { return {}; });
+          if (!res.ok) {
+            showError(data.error || 'Anmeldung fehlgeschlagen.');
+            submitBtn.disabled = false;
+            return;
+          }
+          window.location.href = '/dashboard';
+        } catch (e) {
+          showError('Verbindung fehlgeschlagen.');
+          submitBtn.disabled = false;
+        }
+      }
+
+      async function logout() {
+        if (!window.confirm('Wirklich abmelden?')) return;
+        try {
+          await fetch('/api/logout', { method: 'POST', credentials: 'same-origin' });
+        } catch (e) { /* best-effort — reload picks up whatever the session actually is */ }
+        window.location.reload();
+      }
+
+      lockBtn.addEventListener('click', function () {
+        if (lockBtn.getAttribute('data-is-admin') === 'true') { logout(); }
+        else { openModal(); }
+      });
+      closeBtn.addEventListener('click', closeModal);
+      backdrop.addEventListener('click', function (e) { if (e.target === backdrop) closeModal(); });
+      submitBtn.addEventListener('click', submitLogin);
+      passwordInput.addEventListener('keydown', function (e) { if (e.key === 'Enter') submitLogin(); });
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && !backdrop.hidden) closeModal();
+      });
+    })();
+  </script>
 
   {% block scripts %}{% endblock %}
 </body>

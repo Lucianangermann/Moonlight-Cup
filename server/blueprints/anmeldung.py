@@ -10,17 +10,35 @@ the admin promotes waitlisted players from the app's Teilnehmer tab when
 a spot frees up. The anmeldungen row doubles as the audit trail and
 carries the meal answers the participant row doesn't need.
 """
-from flask import Blueprint, render_template, redirect, url_for, flash
+from functools import wraps
+
+from flask import Blueprint, render_template, redirect, url_for, flash, session, make_response
 
 from blueprints.api import _invalidate_cache
 from config import Config
 from database import get_db
-from db_state import confirm_anmeldung, create_anmeldung, participants_full
+from db_state import confirm_anmeldung, create_anmeldung, list_anmeldungen, participants_full
 from forms.public_forms import AnmeldungForm
 from mailer import is_configured as mail_configured, send_registration_receipt
-from tournament_logic import MAX_PARTICIPANTS
+from tournament_logic import LEAGUES, MAX_PARTICIPANTS
 
 bp = Blueprint("anmeldung", __name__)
+
+_LEAGUE_LABELS = dict(LEAGUES)
+_GENDER_LABELS = {"M": "Herr", "F": "Dame"}
+_STATUS_LABELS = {"pending": "Warteliste", "confirmed": "Bestätigt", "rejected": "Abgelehnt"}
+
+
+def _admin_required(view):
+    """Page-route guard (redirect, not the JSON 401 blueprints.auth.login_required
+    uses) — this dashboard is server-rendered HTML, not an API endpoint."""
+    @wraps(view)
+    def wrapper(*args, **kwargs):
+        if not session.get("is_admin"):
+            flash("Bitte zuerst einloggen.", "error")
+            return redirect(url_for("anmeldung.anmeldung"))
+        return view(*args, **kwargs)
+    return wrapper
 
 
 def _privacy_contact() -> str:
@@ -35,6 +53,52 @@ def datenschutz():
 @bp.route("/impressum")
 def impressum():
     return render_template("impressum.html")
+
+
+def _format_created_at(raw: str) -> str:
+    # Stored as "YYYY-MM-DD HH:MM:SS" (sqlite datetime('now'), UTC).
+    try:
+        date_part, time_part = raw.split(" ")
+        return f"{date_part[8:10]}.{date_part[5:7]}.{date_part[2:4]} {time_part[:5]}"
+    except (ValueError, IndexError):
+        return raw
+
+
+@bp.route("/dashboard")
+@_admin_required
+def dashboard():
+    db = get_db()
+    rows = list_anmeldungen(db)  # every status — the whole registration history
+    entries = []
+    for r in rows:
+        breakfast_line = "Nein"
+        if r["breakfast"]:
+            art = "Weißwurscht" if r["breakfast_type"] == "weisswurscht" else "Vegetarisch"
+            breakfast_line = f"Ja ({art})"
+        entries.append({
+            "name": r["name"],
+            "email": r["email"],
+            "age": r["age"],
+            "gender": _GENDER_LABELS.get(r["gender"], r["gender"] or "—"),
+            "verein": r["verein"] or "—",
+            "league": _LEAGUE_LABELS.get(r["league"], r["league"] or "—"),
+            "midnightMeal": "Ja" if r["midnight_meal"] else "Nein",
+            "breakfast": breakfast_line,
+            "status": r["status"],
+            "statusLabel": _STATUS_LABELS.get(r["status"], r["status"]),
+            "createdAt": _format_created_at(r["created_at"]),
+            "search": " ".join(filter(None, [r["name"], r["email"], r["verein"]])).lower(),
+        })
+    counts = {
+        "total": len(entries),
+        "confirmed": sum(1 for e in entries if e["status"] == "confirmed"),
+        "pending": sum(1 for e in entries if e["status"] == "pending"),
+        "rejected": sum(1 for e in entries if e["status"] == "rejected"),
+    }
+    resp = make_response(render_template("dashboard.html", entries=entries, counts=counts))
+    # PII-heavy page — never let a shared/public browser cache it.
+    resp.headers["Cache-Control"] = "no-store"
+    return resp
 
 
 @bp.route("/anmeldung", methods=["GET", "POST"])

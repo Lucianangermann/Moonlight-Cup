@@ -413,16 +413,19 @@ In Cron für tägliches Backup:
 |--------------------------------|-------|-----------------------------------------------------|
 | `/`, alle sonstigen Pfade      | —     | Expo-Web-App (SPA, `server/webapp/`) — Ergebnisse/Rangliste/Timer für alle, Runde/Teilnehmer nur für eingeloggten Admin |
 | `/anmeldung`                   | —     | Öffentliches Anmeldeformular (Jinja)                |
+| `/datenschutz`, `/impressum`   | —     | Datenschutzhinweise, Impressum (Jinja)               |
+| `/dashboard`                   | Admin | Alle Anmeldungen einsehen/durchsuchen, inkl. Frühstück/Mitternachtsessen (Jinja, `no-store`) |
 | `/api/tournament`              | —     | Teilnehmer, Runden, Rangliste (JSON, gepollt)        |
 | `/api/timer`                   | —     | Aktueller Timer-Status (JSON, gepollt)               |
 | `/api/session`                 | —     | Prüft ob eine Admin-Session aktiv ist                |
-| `/api/login`, `/api/logout`    | —     | Admin-Login/-Logout (rate-limited)                   |
+| `/api/login`, `/api/logout`    | —     | Admin-Login/-Logout (rate-limited) — auch vom Lock-Icon auf `/anmeldung`, `/datenschutz` etc. genutzt |
 | `/api/anmeldungen*`            | Admin | Anmeldungen einsehen/bestätigen/ablehnen             |
 | `/api/participants*`           | Admin | Teilnehmer anlegen/bearbeiten/entfernen/pausieren    |
 | `/api/rounds*`, `/api/matches*`| Admin | Runde starten/Finale/Ergebnis erfassen/Spieler tauschen |
 | `/api/standings/<id>/adjustment`| Admin| Stat-Adjustments                                    |
 | `/api/timer` (POST/DELETE)     | Admin | Timer setzen/deaktivieren/löschen                    |
 | `/api/tournament/reset`        | Admin | Turnier zurücksetzen                                |
+| `/api/gdpr/purge`              | Admin | Alle Teilnehmer-/Anmeldedaten löschen (Saisonende)   |
 
 ## Sicherheitsentscheidungen
 

@@ -171,6 +171,36 @@ def test_consent_required_and_privacy_page():
     print("✓ registration without consent is rejected, /datenschutz renders")
 
 
+def test_dashboard_requires_admin_and_shows_meal_answers():
+    # Every test after test_tournament_contract relies on staying logged in
+    # (none of them re-login) — restore that ambient state on every exit
+    # path, including the early no-session check below.
+    logout()
+    try:
+        r = client.get("/dashboard", follow_redirects=False)
+        assert r.status_code == 302 and "/anmeldung" in r.headers["Location"]
+
+        base = {
+            "name": "Dash, Board", "email": "dash.board@gmail.com", "age": "42",
+            "gender": "F", "verein": "Dashclub", "league": "FZ",
+            "midnight_meal": "ja", "breakfast": "ja", "breakfast_type": "weisswurscht",
+            "consent": "y",
+        }
+        client.post("/anmeldung", data={**base, "csrf_token": csrf_token()}, follow_redirects=True)
+
+        login()
+        r = client.get("/dashboard")
+        assert r.status_code == 200
+        assert r.headers["Cache-Control"] == "no-store"
+        html = r.get_data(as_text=True)
+        assert "Dash, Board" in html
+        assert "dash.board@gmail.com" in html
+        assert "Weißwurscht" in html  # breakfast_type answer surfaced, not just yes/no
+    finally:
+        login()
+    print("✓ /dashboard: 302 without session, shows meal answers once logged in")
+
+
 def test_waitlist_cutover():
     client.post("/api/tournament/reset")
     data = client.get("/api/tournament").get_json()
@@ -212,6 +242,7 @@ if __name__ == "__main__":
         test_timer_roundtrip,
         test_etag_304,
         test_consent_required_and_privacy_page,
+        test_dashboard_requires_admin_and_shows_meal_answers,
         test_waitlist_cutover,
     ]
     failed = 0

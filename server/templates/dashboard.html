@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}Dashboard · Moonlight Cup{% endblock %}
+
+{% block content %}
+<div class="card card-gold dashboard-card">
+  <span class="card-mark" aria-hidden="true">☽</span>
+  <h1 class="text-center">Dashboard</h1>
+  <p class="text-muted text-center mb-3">
+    {{ counts.total }} Anmeldung{{ "en" if counts.total != 1 }} ·
+    {{ counts.confirmed }} bestätigt · {{ counts.pending }} Warteliste
+    {%- if counts.rejected %} · {{ counts.rejected }} abgelehnt{% endif %}
+  </p>
+
+  <input
+    type="search"
+    id="dash-search"
+    class="dash-search"
+    placeholder="Suche nach Name, E-Mail oder Verein…"
+    autocomplete="off"
+  >
+
+  {% if entries %}
+  <div class="table-scroll">
+    <table class="dash-table" id="dash-table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>E-Mail</th>
+          <th>Alter</th>
+          <th>Geschlecht</th>
+          <th>Verein</th>
+          <th>Liga</th>
+          <th>Mitternachtsessen</th>
+          <th>Frühstück</th>
+          <th>Status</th>
+          <th>Angemeldet</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for e in entries %}
+        <tr data-search="{{ e.search }}">
+          <td>{{ e.name }}</td>
+          <td>{{ e.email }}</td>
+          <td>{{ e.age if e.age is not none else "—" }}</td>
+          <td>{{ e.gender }}</td>
+          <td>{{ e.verein }}</td>
+          <td>{{ e.league }}</td>
+          <td>{{ e.midnightMeal }}</td>
+          <td>{{ e.breakfast }}</td>
+          <td><span class="status-badge status-{{ e.status }}">{{ e.statusLabel }}</span></td>
+          <td>{{ e.createdAt }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p id="dash-no-results" class="text-muted text-center" style="display:none; padding: 24px 0 0;">
+    Keine Treffer.
+  </p>
+  {% else %}
+  <p class="text-muted text-center" style="padding: 24px 0;">Noch keine Anmeldungen.</p>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script nonce="{{ csp_nonce() }}">
+  (function () {
+    var input = document.getElementById('dash-search');
+    var rows = document.querySelectorAll('#dash-table tbody tr');
+    var noResults = document.getElementById('dash-no-results');
+    if (!input) return;
+    input.addEventListener('input', function () {
+      var q = input.value.trim().toLowerCase();
+      var visible = 0;
+      rows.forEach(function (row) {
+        var match = !q || row.getAttribute('data-search').indexOf(q) !== -1;
+        row.style.display = match ? '' : 'none';
+        if (match) visible++;
+      });
+      if (noResults) noResults.style.display = visible === 0 ? '' : 'none';
+    });
+  })();
+</script>
+{% endblock %}
