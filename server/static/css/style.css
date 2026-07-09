@@ -677,7 +677,19 @@ h3 { font-size: 18px; }
   overflow-x: auto;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border);
+  /* Thin, theme-matched scrollbar instead of the OS default (macOS's
+     "always show scrollbars" setting renders a thick light-gray bar
+     that clashes with the dark panel and visually blocks the last row). */
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
 }
+.table-scroll::-webkit-scrollbar { height: 7px; }
+.table-scroll::-webkit-scrollbar-track { background: transparent; }
+.table-scroll::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 999px;
+}
+.table-scroll::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
 /* Hint that there's more to scroll to on the right — only rendered once
    JS confirms the table actually overflows (.has-overflow), otherwise a
    table that fits its container would have its rightmost real content
