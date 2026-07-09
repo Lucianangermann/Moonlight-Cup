@@ -77,6 +77,16 @@
       {% for err in form.midnight_meal.errors %}<span class="field-error">{{ err }}</span>{% endfor %}
     </div>
 
+    <div class="form-row" id="midnight-meal-type-row" hidden>
+      <label>{{ form.midnight_meal_type.label.text }}</label>
+      <div class="choice-row">
+        {% for sub in form.midnight_meal_type %}
+          <label class="choice">{{ sub }}<span>{{ sub.label.text }}</span></label>
+        {% endfor %}
+      </div>
+      {% for err in form.midnight_meal_type.errors %}<span class="field-error">{{ err }}</span>{% endfor %}
+    </div>
+
     <div class="form-row">
       <label>{{ form.breakfast.label.text }}</label>
       <div class="choice-row">
@@ -126,17 +136,20 @@
 
 {% block scripts %}
 <script nonce="{{ csp_nonce() }}">
-  // Frühstücksart nur zeigen, wenn Frühstück = Ja (progressive disclosure).
-  (function () {
-    var row = document.getElementById('breakfast-type-row');
-    var radios = document.querySelectorAll('input[name="breakfast"]');
+  // Art-Auswahl nur zeigen, wenn die zugehörige Ja/Nein-Frage = Ja ist
+  // (progressive disclosure) — gilt für Mitternachtsessen und Frühstück gleich.
+  function wireMealTypeDisclosure(radioName, rowId) {
+    var row = document.getElementById(rowId);
+    var radios = document.querySelectorAll('input[name="' + radioName + '"]');
     function update() {
-      var yes = document.querySelector('input[name="breakfast"]:checked');
+      var yes = document.querySelector('input[name="' + radioName + '"]:checked');
       row.hidden = !(yes && yes.value === 'ja');
     }
     radios.forEach(function (r) { r.addEventListener('change', update); });
     update(); // initial state (e.g. after a validation round-trip)
-  })();
+  }
+  wireMealTypeDisclosure('midnight_meal', 'midnight-meal-type-row');
+  wireMealTypeDisclosure('breakfast', 'breakfast-type-row');
 
   // Sofortige Rückmeldung bei Unter-18-Eingabe, statt erst nach dem Absenden
   // (der Server prüft das ohnehin nochmal — reines UX-Feedback hier).

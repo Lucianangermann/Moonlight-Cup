@@ -60,6 +60,11 @@ class AnmeldungForm(FlaskForm):
         choices=[("ja", "Ja"), ("nein", "Nein")],
         validators=[DataRequired(message="Bitte auswählen.")],
     )
+    midnight_meal_type = RadioField(
+        "Mitternachtsessen-Art",
+        choices=[("vegetarisch", "Vegetarisch"), ("nicht_vegetarisch", "Nicht vegetarisch")],
+        validators=[Optional()],
+    )
     breakfast = RadioField(
         "Frühstück",
         choices=[("ja", "Ja"), ("nein", "Nein")],
@@ -79,7 +84,10 @@ class AnmeldungForm(FlaskForm):
         # Conditional requirement at form level: an inline field validator
         # never runs here because Optional() stops the chain on empty input.
         ok = super().validate(extra_validators)
+        if self.midnight_meal.data == "ja" and not self.midnight_meal_type.data:
+            self.midnight_meal_type.errors.append("Bitte Vegetarisch oder Nicht vegetarisch auswählen.")
+            ok = False
         if self.breakfast.data == "ja" and not self.breakfast_type.data:
             self.breakfast_type.errors.append("Bitte Vegetarisch oder Weißwurscht auswählen.")
-            return False
+            ok = False
         return ok

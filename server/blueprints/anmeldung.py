@@ -71,6 +71,10 @@ def dashboard():
     rows = list_anmeldungen(db)  # every status — the whole registration history
     entries = []
     for r in rows:
+        midnight_meal_line = "Nein"
+        if r["midnight_meal"]:
+            art = "Vegetarisch" if r["midnight_meal_type"] == "vegetarisch" else "Nicht vegetarisch"
+            midnight_meal_line = f"Ja ({art})"
         breakfast_line = "Nein"
         if r["breakfast"]:
             art = "Weißwurscht" if r["breakfast_type"] == "weisswurscht" else "Vegetarisch"
@@ -82,7 +86,7 @@ def dashboard():
             "gender": _GENDER_LABELS.get(r["gender"], r["gender"] or "—"),
             "verein": r["verein"] or "—",
             "league": _LEAGUE_LABELS.get(r["league"], r["league"] or "—"),
-            "midnightMeal": "Ja" if r["midnight_meal"] else "Nein",
+            "midnightMeal": midnight_meal_line,
             "breakfast": breakfast_line,
             "status": r["status"],
             "statusLabel": _STATUS_LABELS.get(r["status"], r["status"]),
@@ -124,6 +128,7 @@ def anmeldung():
 
         waitlisted = participants_full(db, MAX_PARTICIPANTS)
 
+        midnight_meal = form.midnight_meal.data == "ja"
         breakfast = form.breakfast.data == "ja"
         anmeldung_id = create_anmeldung(
             db,
@@ -133,7 +138,8 @@ def anmeldung():
             age=form.age.data,
             gender=form.gender.data,
             league=form.league.data,
-            midnight_meal=form.midnight_meal.data == "ja",
+            midnight_meal=midnight_meal,
+            midnight_meal_type=form.midnight_meal_type.data if midnight_meal else None,
             breakfast=breakfast,
             breakfast_type=form.breakfast_type.data if breakfast else None,
         )
@@ -147,7 +153,8 @@ def anmeldung():
             age=form.age.data,
             verein=form.verein.data.strip(),
             league=form.league.data,
-            midnight_meal=form.midnight_meal.data == "ja",
+            midnight_meal=midnight_meal,
+            midnight_meal_type=form.midnight_meal_type.data if midnight_meal else None,
             breakfast=breakfast,
             breakfast_type=form.breakfast_type.data if breakfast else None,
             waitlisted=waitlisted,

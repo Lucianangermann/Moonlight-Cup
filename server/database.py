@@ -129,7 +129,8 @@ CREATE TABLE IF NOT EXISTS anmeldungen (
     age            INTEGER,
     gender         TEXT CHECK (gender IN ('M','F')),
     league         TEXT,
-    midnight_meal  INTEGER,                          -- 1 ja / 0 nein
+    midnight_meal      INTEGER,                      -- 1 ja / 0 nein
+    midnight_meal_type TEXT CHECK (midnight_meal_type IN ('vegetarisch','nicht_vegetarisch')),
     breakfast      INTEGER,                          -- 1 ja / 0 nein
     breakfast_type TEXT CHECK (breakfast_type IN ('vegetarisch','weisswurscht')),
     status         TEXT NOT NULL DEFAULT 'pending'   -- 'pending'|'confirmed'|'rejected'
@@ -169,6 +170,7 @@ MIGRATIONS = [
     ("anmeldungen", "gender", "TEXT"),
     ("anmeldungen", "league", "TEXT"),
     ("anmeldungen", "midnight_meal", "INTEGER"),
+    ("anmeldungen", "midnight_meal_type", "TEXT"),
     ("anmeldungen", "breakfast", "INTEGER"),
     ("anmeldungen", "breakfast_type", "TEXT"),
 ]

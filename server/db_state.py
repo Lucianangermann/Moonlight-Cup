@@ -344,15 +344,18 @@ def create_anmeldung(
     age: Optional[int] = None, gender: Optional[str] = None,
     league: Optional[str] = None,
     midnight_meal: Optional[bool] = None,
+    midnight_meal_type: Optional[str] = None,
     breakfast: Optional[bool] = None,
     breakfast_type: Optional[str] = None,
 ) -> int:
     cur = db.execute(
         "INSERT INTO anmeldungen (name, email, verein, age, gender, league, "
-        "midnight_meal, breakfast, breakfast_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        "midnight_meal, midnight_meal_type, breakfast, breakfast_type) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         (
             name, email, verein, age, gender, league,
             None if midnight_meal is None else int(midnight_meal),
+            midnight_meal_type,
             None if breakfast is None else int(breakfast),
             breakfast_type,
         ),

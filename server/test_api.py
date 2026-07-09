@@ -196,7 +196,8 @@ def test_dashboard_requires_admin_and_shows_meal_answers():
         base = {
             "name": "Dash, Board", "email": "dash.board@gmail.com", "age": "42",
             "gender": "F", "verein": "Dashclub", "league": "FZ",
-            "midnight_meal": "ja", "breakfast": "ja", "breakfast_type": "weisswurscht",
+            "midnight_meal": "ja", "midnight_meal_type": "nicht_vegetarisch",
+            "breakfast": "ja", "breakfast_type": "weisswurscht",
             "consent": "y",
         }
         client.post("/anmeldung", data={**base, "csrf_token": csrf_token()}, follow_redirects=True)
@@ -208,6 +209,7 @@ def test_dashboard_requires_admin_and_shows_meal_answers():
         html = r.get_data(as_text=True)
         assert "Dash, Board" in html
         assert "dash.board@gmail.com" in html
+        assert "Nicht vegetarisch" in html  # midnight_meal_type answer surfaced
         assert "Weißwurscht" in html  # breakfast_type answer surfaced, not just yes/no
     finally:
         login()

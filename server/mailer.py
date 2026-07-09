@@ -41,7 +41,7 @@ def _esc(value) -> str:
 
 
 def _build_html(*, display_name: str, name: str, age: int, verein: str, league_label: str,
-                 midnight_meal: bool, breakfast_line: str, waitlisted: bool,
+                 midnight_meal_line: str, breakfast_line: str, waitlisted: bool,
                  status_text: str, closing: str) -> str:
     """Inline-styled, table-based HTML for broad email-client support (no
     external fonts/images/CSS — keeps the spam score low and renders
@@ -57,7 +57,7 @@ def _build_html(*, display_name: str, name: str, age: int, verein: str, league_l
         </tr>""" for label, value in [
         ("Name", _esc(name)), ("Alter", _esc(age)), ("Verein", _esc(verein)),
         ("Liga", _esc(league_label)),
-        ("Mitternachtsessen", "Ja" if midnight_meal else "Nein"),
+        ("Mitternachtsessen", _esc(midnight_meal_line)),
         ("Frühstück", _esc(breakfast_line)),
     ])
     return f"""\
@@ -116,7 +116,7 @@ def _build_html(*, display_name: str, name: str, age: int, verein: str, league_l
 
 
 def build_receipt(*, name: str, email: str, age: int, verein: str, league: str,
-                  midnight_meal: bool, breakfast: bool,
+                  midnight_meal: bool, midnight_meal_type: str | None, breakfast: bool,
                   breakfast_type: str | None, waitlisted: bool = False) -> EmailMessage:
     """Pure message assembly — unit-testable without an SMTP server. Builds
     a multipart/alternative message (plain text + HTML) so clients that
@@ -124,6 +124,11 @@ def build_receipt(*, name: str, email: str, age: int, verein: str, league: str,
     parts = name.split(",")
     display_name = f"{parts[1].strip()} {parts[0].strip()}" if len(parts) > 1 else name.strip()
     league_label = _LEAGUE_LABELS.get(league, league)
+
+    midnight_meal_line = "Nein"
+    if midnight_meal:
+        art = "Vegetarisch" if midnight_meal_type == "vegetarisch" else "Nicht vegetarisch"
+        midnight_meal_line = f"Ja ({art})"
 
     breakfast_line = "Nein"
     if breakfast:
@@ -159,7 +164,7 @@ Deine Angaben:
   Alter:             {age}
   Verein:            {verein}
   Liga:              {league_label}
-  Mitternachtsessen: {"Ja" if midnight_meal else "Nein"}
+  Mitternachtsessen: {midnight_meal_line}
   Frühstück:         {breakfast_line}
 
 Am Turnierabend läuft alles live — Spielplan, Ergebnisse und Rangliste:
@@ -173,7 +178,7 @@ https://moonlightcup.lucianangermann.com
     msg.add_alternative(
         _build_html(
             display_name=display_name, name=name, age=age, verein=verein,
-            league_label=league_label, midnight_meal=midnight_meal,
+            league_label=league_label, midnight_meal_line=midnight_meal_line,
             breakfast_line=breakfast_line, waitlisted=waitlisted,
             status_text=status_text, closing=closing,
         ),
