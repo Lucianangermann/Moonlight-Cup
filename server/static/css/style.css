@@ -550,6 +550,9 @@ h3 { font-size: 18px; }
   justify-content: center;
   padding: 24px;
 }
+/* display:flex above would defeat the hidden attribute's UA display:none —
+   same fix as .form-row[hidden] in the registration form below. */
+.modal-backdrop[hidden] { display: none; }
 .modal-card {
   width: 100%;
   max-width: 360px;
