@@ -586,16 +586,79 @@ h3 { font-size: 18px; }
 
 /* =========================================================================
    ADMIN DASHBOARD
+   ---------------------------------------------------------------------
+   This is an operational tool (register: product), not the registration
+   page's marketing-card register — no hero glyph, no centered giant
+   title. Compact functional header, full-width panel so a 10-column
+   table has room to breathe, gold reserved for the panel border (this
+   is admin-only, i.e. "authority") per PRODUCT.md.
    ========================================================================= */
-.dashboard-card { max-width: 100%; width: 100%; margin: 32px auto; }
-@media (min-width: 700px) {
-  .dashboard-card { max-width: 960px; }
+.dashboard-card { max-width: 100%; width: 100%; margin: 32px auto; padding: 24px; }
+
+.dash-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+  margin-bottom: 20px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+}
+.dash-eyebrow {
+  display: block;
+  color: var(--gold);
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.dash-title {
+  margin: 0;
+  font-size: 26px;
+}
+.dash-stats {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
+.stat-pill {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: var(--panel-light);
+  border: 1px solid var(--border);
+  color: var(--silver);
+  font-family: 'Barlow', sans-serif;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.stat-pill b { color: var(--white); font-size: 13px; }
+.stat-pill-confirmed { border-color: #0B3A2E; }
+.stat-pill-confirmed b { color: var(--success); }
+.stat-pill-pending { border-color: #3A2E0A; }
+.stat-pill-pending b { color: var(--gold); }
+.stat-pill-rejected { border-color: #3A1420; }
+.stat-pill-rejected b { color: var(--error); }
+
+.dash-search-wrap { position: relative; margin-bottom: 20px; }
+.dash-search-wrap svg {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  pointer-events: none;
+}
 .dash-search {
   width: 100%;
-  margin-bottom: 20px;
-  padding: 12px 16px;
+  padding: 12px 16px 12px 40px;
   background: var(--panel-light);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
@@ -609,7 +672,26 @@ h3 { font-size: 18px; }
   box-shadow: 0 0 0 3px var(--gold-glow);
 }
 
-.table-scroll { overflow-x: auto; border-radius: var(--radius-sm); border: 1px solid var(--border); }
+.table-scroll {
+  position: relative;
+  overflow-x: auto;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+/* Hint that there's more to scroll to on the right — only rendered once
+   JS confirms the table actually overflows (.has-overflow), otherwise a
+   table that fits its container would have its rightmost real content
+   clipped by the fade for no reason. */
+.table-scroll.has-overflow::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 28px;
+  background: linear-gradient(to right, transparent, var(--panel) 85%);
+  pointer-events: none;
+}
 
 .dash-table {
   width: 100%;
@@ -619,23 +701,40 @@ h3 { font-size: 18px; }
 }
 .dash-table th {
   text-align: left;
-  padding: 10px 14px;
+  padding: 11px 14px;
   background: var(--panel-light);
   color: var(--text-muted);
   font-family: 'Barlow Condensed', sans-serif;
   font-weight: 700;
-  font-size: 11px;
-  letter-spacing: 1px;
+  font-size: 10.5px;
+  letter-spacing: 0.75px;
   text-transform: uppercase;
   position: sticky;
   top: 0;
+  z-index: 1;
 }
 .dash-table td {
-  padding: 10px 14px;
+  padding: 11px 14px;
   color: var(--silver);
   border-top: 1px solid var(--border);
 }
-.dash-table tbody tr:hover { background: var(--panel-light); }
+.dash-table td.dash-col-age { text-align: right; font-variant-numeric: tabular-nums; }
+.dash-table td.dash-col-name { color: var(--white); font-weight: 600; }
+.dash-table tbody tr:nth-child(even) td { background: rgba(26, 37, 64, 0.35); }
+.dash-table tbody tr:hover td { background: var(--panel-light); }
+
+/* First column stays put during horizontal scroll so a row's identity
+   never scrolls out of view on narrow screens with 10 columns. */
+.dash-table th:first-child, .dash-table td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background: var(--panel);
+  box-shadow: 1px 0 0 var(--border);
+}
+.dash-table th:first-child { z-index: 3; background: var(--panel-light); }
+.dash-table tbody tr:nth-child(even) td:first-child { background: #16203a; }
+.dash-table tbody tr:hover td:first-child { background: var(--panel-light); }
 
 .status-badge {
   display: inline-block;
@@ -644,6 +743,7 @@ h3 { font-size: 18px; }
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.5px;
+  white-space: nowrap;
 }
 .status-confirmed { background: #0B3A2E; color: var(--success); }
 .status-pending    { background: #3A2E0A; color: var(--gold); }

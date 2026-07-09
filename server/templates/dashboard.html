@@ -3,21 +3,31 @@
 
 {% block content %}
 <div class="card card-gold dashboard-card">
-  <span class="card-mark" aria-hidden="true">☽</span>
-  <h1 class="text-center">Dashboard</h1>
-  <p class="text-muted text-center mb-3">
-    {{ counts.total }} Anmeldung{{ "en" if counts.total != 1 }} ·
-    {{ counts.confirmed }} bestätigt · {{ counts.pending }} Warteliste
-    {%- if counts.rejected %} · {{ counts.rejected }} abgelehnt{% endif %}
-  </p>
+  <div class="dash-header">
+    <div>
+      <span class="dash-eyebrow">Admin</span>
+      <h1 class="dash-title">Dashboard</h1>
+    </div>
+    <div class="dash-stats">
+      <span class="stat-pill"><b>{{ counts.total }}</b> Anmeldung{{ "en" if counts.total != 1 }}</span>
+      <span class="stat-pill stat-pill-confirmed"><b>{{ counts.confirmed }}</b> Bestätigt</span>
+      <span class="stat-pill stat-pill-pending"><b>{{ counts.pending }}</b> Warteliste</span>
+      {% if counts.rejected %}
+      <span class="stat-pill stat-pill-rejected"><b>{{ counts.rejected }}</b> Abgelehnt</span>
+      {% endif %}
+    </div>
+  </div>
 
-  <input
-    type="search"
-    id="dash-search"
-    class="dash-search"
-    placeholder="Suche nach Name, E-Mail oder Verein…"
-    autocomplete="off"
-  >
+  <div class="dash-search-wrap">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+    <input
+      type="search"
+      id="dash-search"
+      class="dash-search"
+      placeholder="Suche nach Name, E-Mail oder Verein…"
+      autocomplete="off"
+    >
+  </div>
 
   {% if entries %}
   <div class="table-scroll">
@@ -39,9 +49,9 @@
       <tbody>
         {% for e in entries %}
         <tr data-search="{{ e.search }}">
-          <td>{{ e.name }}</td>
+          <td class="dash-col-name">{{ e.name }}</td>
           <td>{{ e.email }}</td>
-          <td>{{ e.age if e.age is not none else "—" }}</td>
+          <td class="dash-col-age">{{ e.age if e.age is not none else "—" }}</td>
           <td>{{ e.gender }}</td>
           <td>{{ e.verein }}</td>
           <td>{{ e.league }}</td>
@@ -80,6 +90,20 @@
       });
       if (noResults) noResults.style.display = visible === 0 ? '' : 'none';
     });
+  })();
+
+  // Only show the right-edge scroll fade when the table actually overflows
+  // its container — otherwise it would clip real content in the last
+  // column on wide screens / with few entries.
+  (function () {
+    var scroller = document.querySelector('.table-scroll');
+    var table = document.getElementById('dash-table');
+    if (!scroller || !table) return;
+    function update() {
+      scroller.classList.toggle('has-overflow', table.scrollWidth > scroller.clientWidth + 1);
+    }
+    update();
+    window.addEventListener('resize', update);
   })();
 </script>
 {% endblock %}
