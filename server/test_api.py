@@ -8,6 +8,7 @@ run with `python test_api.py`.
 """
 from __future__ import annotations
 
+import json
 import os
 import re
 import tempfile
@@ -216,6 +217,59 @@ def test_dashboard_requires_admin_and_shows_meal_answers():
     print("✓ /dashboard: 302 without session, shows meal answers once logged in")
 
 
+def _dashboard_raw_entry(name):
+    html = client.get("/dashboard").get_data(as_text=True)
+    raw = json.loads(re.search(r'id="dash-raw-data">(.*?)</script>', html, re.S).group(1))
+    return next(r for r in raw if r["name"] == name)
+
+
+def test_dashboard_edit_syncs_participant_and_delete_removes_both():
+    login()
+    base = {
+        "name": "Edit, Erika", "email": "edit.erika@gmail.com", "age": "22",
+        "gender": "F", "verein": "Editclub", "league": "FZ",
+        "midnight_meal": "ja", "midnight_meal_type": "vegetarisch",
+        "breakfast": "nein", "consent": "y",
+    }
+    client.post("/anmeldung", data={**base, "csrf_token": csrf_token()}, follow_redirects=True)
+
+    entry = _dashboard_raw_entry("Edit, Erika")
+    aid = entry["id"]
+    data = client.get("/api/tournament").get_json()
+    participant = next(p for p in data["participants"] if p["name"] == "Edit, Erika")
+    pid = participant["id"]
+
+    # Invalid gender is rejected before touching the DB.
+    assert client.patch(f"/api/anmeldungen/{aid}", json={"gender": "X"}).status_code == 400
+
+    # Edit: rename, change verein, flip Frühstück to Ja. name/verein must
+    # sync onto the already-confirmed participant; age/meal prefs are
+    # anmeldung-only and show up on the dashboard, not the public API.
+    r = client.patch(f"/api/anmeldungen/{aid}", json={
+        "name": "Edit, Erika-Neu", "email": "edit.erika@gmail.com", "age": 23,
+        "gender": "F", "verein": "Neuer Verein", "league": "FZ",
+        "midnight_meal": True, "midnight_meal_type": "vegetarisch",
+        "breakfast": True, "breakfast_type": "weisswurscht",
+    })
+    assert r.status_code == 200
+
+    data = client.get("/api/tournament").get_json()
+    p = next(p for p in data["participants"] if p["id"] == pid)
+    assert p["name"] == "Edit, Erika-Neu" and p["verein"] == "Neuer Verein"
+
+    html = client.get("/dashboard").get_data(as_text=True)
+    assert "Edit, Erika-Neu" in html and "Weißwurscht" in html
+
+    # Delete: removes the anmeldung AND the linked participant entirely —
+    # not just the audit row.
+    assert client.delete(f"/api/anmeldungen/{aid}").status_code == 204
+    data = client.get("/api/tournament").get_json()
+    assert not any(p["id"] == pid for p in data["participants"])
+    html = client.get("/dashboard").get_data(as_text=True)
+    assert "Edit, Erika-Neu" not in html
+    print("✓ dashboard edit syncs name/verein onto the participant; delete removes both")
+
+
 def test_waitlist_cutover():
     client.post("/api/tournament/reset")
     data = client.get("/api/tournament").get_json()
@@ -259,6 +313,7 @@ if __name__ == "__main__":
         test_consent_required_and_privacy_page,
         test_minimum_age_enforced,
         test_dashboard_requires_admin_and_shows_meal_answers,
+        test_dashboard_edit_syncs_participant_and_delete_removes_both,
         test_waitlist_cutover,
     ]
     failed = 0

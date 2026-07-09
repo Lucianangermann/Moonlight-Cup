@@ -359,6 +359,34 @@ h3 { font-size: 18px; }
 .btn-primary:hover { filter: brightness(1.08); }
 .btn-primary:active { transform: scale(0.98); }
 
+.btn-secondary, .btn-danger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 13px 20px;
+  border-radius: 14px;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: filter 160ms var(--ease-out), transform 160ms var(--ease-out);
+}
+.btn-secondary {
+  background: var(--panel-light);
+  border: 1px solid var(--border-strong);
+  color: var(--silver);
+}
+.btn-secondary:hover { border-color: var(--text-muted); }
+.btn-danger {
+  background: var(--error);
+  border: none;
+  color: var(--white);
+}
+.btn-danger:hover { filter: brightness(1.1); }
+.btn-secondary:active, .btn-danger:active { transform: scale(0.98); }
+
 /* =========================================================================
    FORMS
    ========================================================================= */
@@ -760,6 +788,24 @@ h3 { font-size: 18px; }
 .status-confirmed { background: #0B3A2E; color: var(--success); }
 .status-pending    { background: #3A2E0A; color: var(--gold); }
 .status-rejected   { background: #3A1420; color: var(--error); }
+
+.row-actions { display: flex; gap: 6px; }
+.row-action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--panel-light);
+  color: var(--text-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: color 160ms var(--ease-out), border-color 160ms var(--ease-out);
+}
+.row-action-btn:hover { color: var(--silver); border-color: var(--border-strong); }
+.row-action-btn-danger:hover { color: var(--error); border-color: #3A1420; }
 
 /* =========================================================================
    UTILITIES

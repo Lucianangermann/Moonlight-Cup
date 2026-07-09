@@ -396,7 +396,49 @@ def confirm_anmeldung(
     return pid
 
 
+def update_anmeldung(db: sqlite3.Connection, anmeldung_id: int, **fields) -> None:
+    """
+    Edits the anmeldung (registration) record — used by the admin dashboard.
+    If this anmeldung was confirmed (see confirm_anmeldung's deterministic
+    "a{id}" pid), also syncs name/email/verein onto the linked participant
+    so the live tournament view stays consistent. gender/league are
+    deliberately NOT pushed onto an existing participant: confirm_anmeldung
+    takes those as separate admin-chosen values at confirm time (the admin
+    may have corrected a misreported league), so silently overwriting them
+    here on an unrelated edit would be a surprising, unintended side effect.
+    Changing a live participant's gender/league stays the RN app's job.
+    """
+    allowed = {
+        "name", "email", "verein", "age", "gender", "league",
+        "midnight_meal", "midnight_meal_type", "breakfast", "breakfast_type",
+    }
+    sets = [f"{k} = ?" for k in fields if k in allowed]
+    if not sets:
+        return
+    values = [fields[k] for k in fields if k in allowed]
+    db.execute(f"UPDATE anmeldungen SET {', '.join(sets)} WHERE id = ?", (*values, anmeldung_id))
+
+    participant_fields = {k: fields[k] for k in ("name", "email", "verein") if k in fields}
+    if participant_fields:
+        sets = [f"{k} = ?" for k in participant_fields]
+        values = list(participant_fields.values())
+        db.execute(
+            f"UPDATE participants SET {', '.join(sets)} WHERE id = ?",
+            (*values, f"a{anmeldung_id}"),
+        )
+    db.commit()
+
+
 def delete_anmeldung(db: sqlite3.Connection, anmeldung_id: int) -> None:
+    """
+    Deletes the anmeldung. If it was confirmed into a participant, that
+    participant (and their stat adjustments) is removed too — this is a
+    full removal, not just clearing the audit row. A no-op for pending/
+    rejected anmeldungen, which never had a linked participant.
+    """
+    pid = f"a{anmeldung_id}"
+    db.execute("DELETE FROM participants WHERE id = ?", (pid,))
+    db.execute("DELETE FROM stat_adjustments WHERE participant_id = ?", (pid,))
     db.execute("DELETE FROM anmeldungen WHERE id = ?", (anmeldung_id,))
     db.commit()
 

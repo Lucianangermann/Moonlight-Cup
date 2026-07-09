@@ -80,6 +80,7 @@ def dashboard():
             art = "Weißwurscht" if r["breakfast_type"] == "weisswurscht" else "Vegetarisch"
             breakfast_line = f"Ja ({art})"
         entries.append({
+            "id": r["id"],
             "name": r["name"],
             "email": r["email"],
             "age": r["age"],
@@ -92,6 +93,20 @@ def dashboard():
             "statusLabel": _STATUS_LABELS.get(r["status"], r["status"]),
             "createdAt": _format_created_at(r["created_at"]),
             "search": " ".join(filter(None, [r["name"], r["email"], r["verein"]])).lower(),
+            # Raw values (not the display strings above) for the edit modal.
+            "raw": {
+                "id": r["id"],
+                "name": r["name"],
+                "email": r["email"],
+                "age": r["age"],
+                "gender": r["gender"],
+                "verein": r["verein"] or "",
+                "league": r["league"],
+                "midnightMeal": bool(r["midnight_meal"]),
+                "midnightMealType": r["midnight_meal_type"],
+                "breakfast": bool(r["breakfast"]),
+                "breakfastType": r["breakfast_type"],
+            },
         })
     counts = {
         "total": len(entries),
@@ -99,7 +114,9 @@ def dashboard():
         "pending": sum(1 for e in entries if e["status"] == "pending"),
         "rejected": sum(1 for e in entries if e["status"] == "rejected"),
     }
-    resp = make_response(render_template("dashboard.html", entries=entries, counts=counts))
+    resp = make_response(render_template(
+        "dashboard.html", entries=entries, counts=counts, leagues=LEAGUES,
+    ))
     # PII-heavy page — never let a shared/public browser cache it.
     resp.headers["Cache-Control"] = "no-store"
     return resp

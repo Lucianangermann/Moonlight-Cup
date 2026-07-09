@@ -32,7 +32,7 @@ from db_state import (
     persist_round, purge_all_participant_data, remove_participant,
     reset_tournament, save_match_result,
     set_paused, set_stat_adjustment, set_timer, swap_match_players,
-    update_participant,
+    update_anmeldung, update_participant,
 )
 from tournament_logic import (
     MAX_PARTICIPANTS, build_final_runde, build_new_round, get_standings,
@@ -214,6 +214,32 @@ def anmeldung_confirm(anmeldung_id):
         # exists. 409 instead of a 500.
         return jsonify({"error": "Diese Anmeldung wurde bereits bestätigt."}), 409
     return jsonify({"pid": pid})
+
+
+@bp.route("/anmeldungen/<int:anmeldung_id>", methods=["PATCH"])
+@login_required
+def anmeldung_update(anmeldung_id):
+    """Edits a registration record — used by the admin dashboard's edit
+    form. See db_state.update_anmeldung for what syncs onto a linked
+    participant vs. what stays anmeldung-only."""
+    data = request.get_json(silent=True) or {}
+    if "name" in data and not str(data["name"]).strip():
+        return jsonify({"error": "name must not be empty"}), 400
+    if "email" in data and not str(data["email"]).strip():
+        return jsonify({"error": "email must not be empty"}), 400
+    if "gender" in data and data["gender"] not in ("M", "F"):
+        return jsonify({"error": "gender must be 'M' or 'F'"}), 400
+    if "midnight_meal_type" in data and data["midnight_meal_type"] not in ("vegetarisch", "nicht_vegetarisch", None):
+        return jsonify({"error": "midnight_meal_type must be 'vegetarisch', 'nicht_vegetarisch' or null"}), 400
+    if "breakfast_type" in data and data["breakfast_type"] not in ("vegetarisch", "weisswurscht", None):
+        return jsonify({"error": "breakfast_type must be 'vegetarisch', 'weisswurscht' or null"}), 400
+    if "age" in data and data["age"] is not None:
+        try:
+            data["age"] = int(data["age"])
+        except (TypeError, ValueError):
+            return jsonify({"error": "age must be a number"}), 400
+    update_anmeldung(get_db(), anmeldung_id, **data)
+    return jsonify({})
 
 
 @bp.route("/anmeldungen/<int:anmeldung_id>", methods=["DELETE"])

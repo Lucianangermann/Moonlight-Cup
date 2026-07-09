@@ -44,11 +44,12 @@
           <th>Frühstück</th>
           <th>Status</th>
           <th>Angemeldet</th>
+          <th>Aktionen</th>
         </tr>
       </thead>
       <tbody>
         {% for e in entries %}
-        <tr data-search="{{ e.search }}">
+        <tr data-search="{{ e.search }}" data-id="{{ e.id }}">
           <td class="dash-col-name">{{ e.name }}</td>
           <td>{{ e.email }}</td>
           <td class="dash-col-age">{{ e.age if e.age is not none else "—" }}</td>
@@ -59,6 +60,16 @@
           <td>{{ e.breakfast }}</td>
           <td><span class="status-badge status-{{ e.status }}">{{ e.statusLabel }}</span></td>
           <td>{{ e.createdAt }}</td>
+          <td>
+            <div class="row-actions">
+              <button type="button" class="row-action-btn" data-action="edit" title="Bearbeiten" aria-label="Bearbeiten">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+              </button>
+              <button type="button" class="row-action-btn row-action-btn-danger" data-action="delete" title="Löschen" aria-label="Löschen">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+              </button>
+            </div>
+          </td>
         </tr>
         {% endfor %}
       </tbody>
@@ -70,6 +81,102 @@
   {% else %}
   <p class="text-muted text-center" style="padding: 24px 0;">Noch keine Anmeldungen.</p>
   {% endif %}
+</div>
+
+<script type="application/json" id="dash-raw-data">{{ entries | map(attribute="raw") | list | tojson }}</script>
+
+<!-- Edit modal -->
+<div id="edit-modal-backdrop" class="modal-backdrop" hidden>
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="edit-modal-title">
+    <div class="modal-header">
+      <span id="edit-modal-title">Anmeldung bearbeiten</span>
+      <button type="button" id="edit-modal-close" class="modal-close" aria-label="Schließen">✕</button>
+    </div>
+    <div class="form">
+      <div class="form-row">
+        <label for="edit-name">Name (Nachname, Vorname)</label>
+        <input type="text" id="edit-name">
+      </div>
+      <div class="form-row">
+        <label for="edit-email">E-Mail</label>
+        <input type="email" id="edit-email">
+      </div>
+      <div class="form-split">
+        <div class="form-row">
+          <label for="edit-age">Alter</label>
+          <input type="number" id="edit-age" min="18" max="99" inputmode="numeric">
+        </div>
+        <div class="form-row">
+          <label for="edit-gender">Geschlecht</label>
+          <select id="edit-gender">
+            <option value="M">Herr</option>
+            <option value="F">Dame</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <label for="edit-verein">Verein</label>
+        <input type="text" id="edit-verein">
+      </div>
+      <div class="form-row">
+        <label for="edit-league">Liga</label>
+        <select id="edit-league">
+          {% for key, label in leagues %}
+          <option value="{{ key }}">{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-split">
+        <div class="form-row">
+          <label for="edit-midnight-meal">Mitternachtsessen</label>
+          <select id="edit-midnight-meal">
+            <option value="ja">Ja</option>
+            <option value="nein">Nein</option>
+          </select>
+        </div>
+        <div class="form-row" id="edit-midnight-meal-type-row">
+          <label for="edit-midnight-meal-type">Art</label>
+          <select id="edit-midnight-meal-type">
+            <option value="vegetarisch">Vegetarisch</option>
+            <option value="nicht_vegetarisch">Nicht vegetarisch</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-split">
+        <div class="form-row">
+          <label for="edit-breakfast">Frühstück</label>
+          <select id="edit-breakfast">
+            <option value="ja">Ja</option>
+            <option value="nein">Nein</option>
+          </select>
+        </div>
+        <div class="form-row" id="edit-breakfast-type-row">
+          <label for="edit-breakfast-type">Art</label>
+          <select id="edit-breakfast-type">
+            <option value="vegetarisch">Vegetarisch</option>
+            <option value="weisswurscht">Weißwurscht</option>
+          </select>
+        </div>
+      </div>
+      <span id="edit-error" class="field-error" style="display:none;"></span>
+      <button type="button" id="edit-submit" class="btn-primary">Speichern</button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete confirm -->
+<div id="delete-modal-backdrop" class="modal-backdrop" hidden>
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="delete-modal-title">
+    <div class="modal-header">
+      <span id="delete-modal-title">Wirklich löschen?</span>
+      <button type="button" id="delete-modal-close" class="modal-close" aria-label="Schließen">✕</button>
+    </div>
+    <p class="text-muted" id="delete-modal-text" style="margin: 0 0 20px; font-size: 14px; line-height: 1.5;"></p>
+    <div style="display:flex; gap:10px;">
+      <button type="button" id="delete-cancel" class="btn-secondary" style="flex:1;">Abbrechen</button>
+      <button type="button" id="delete-confirm" class="btn-danger" style="flex:1;">Löschen</button>
+    </div>
+  </div>
 </div>
 {% endblock %}
 
@@ -104,6 +211,155 @@
     }
     update();
     window.addEventListener('resize', update);
+  })();
+
+  // Edit + delete — both PATCH/DELETE the same /api/anmeldungen/<id> the
+  // RN app already uses (see db_state.update_anmeldung / delete_anmeldung
+  // for what happens to a linked participant).
+  (function () {
+    var rawDataEl = document.getElementById('dash-raw-data');
+    if (!rawDataEl) return;
+    var byId = {};
+    JSON.parse(rawDataEl.textContent).forEach(function (r) { byId[r.id] = r; });
+
+    var editBackdrop = document.getElementById('edit-modal-backdrop');
+    var editError = document.getElementById('edit-error');
+    var editSubmit = document.getElementById('edit-submit');
+    var editClose = document.getElementById('edit-modal-close');
+    var fields = {
+      name: document.getElementById('edit-name'),
+      email: document.getElementById('edit-email'),
+      age: document.getElementById('edit-age'),
+      gender: document.getElementById('edit-gender'),
+      verein: document.getElementById('edit-verein'),
+      league: document.getElementById('edit-league'),
+      midnightMeal: document.getElementById('edit-midnight-meal'),
+      midnightMealType: document.getElementById('edit-midnight-meal-type'),
+      breakfast: document.getElementById('edit-breakfast'),
+      breakfastType: document.getElementById('edit-breakfast-type'),
+    };
+    var midnightMealTypeRow = document.getElementById('edit-midnight-meal-type-row');
+    var breakfastTypeRow = document.getElementById('edit-breakfast-type-row');
+    var editingId = null;
+
+    function updateMealTypeRows() {
+      midnightMealTypeRow.hidden = fields.midnightMeal.value !== 'ja';
+      breakfastTypeRow.hidden = fields.breakfast.value !== 'ja';
+    }
+    fields.midnightMeal.addEventListener('change', updateMealTypeRows);
+    fields.breakfast.addEventListener('change', updateMealTypeRows);
+
+    function openEdit(id) {
+      var r = byId[id];
+      if (!r) return;
+      editingId = id;
+      editError.style.display = 'none';
+      fields.name.value = r.name || '';
+      fields.email.value = r.email || '';
+      fields.age.value = r.age != null ? r.age : '';
+      fields.gender.value = r.gender || 'M';
+      fields.verein.value = r.verein || '';
+      fields.league.value = r.league || '';
+      fields.midnightMeal.value = r.midnightMeal ? 'ja' : 'nein';
+      fields.midnightMealType.value = r.midnightMealType || 'vegetarisch';
+      fields.breakfast.value = r.breakfast ? 'ja' : 'nein';
+      fields.breakfastType.value = r.breakfastType || 'vegetarisch';
+      updateMealTypeRows();
+      editBackdrop.hidden = false;
+    }
+    function closeEdit() { editBackdrop.hidden = true; editingId = null; }
+
+    async function submitEdit() {
+      if (!fields.name.value.trim() || !fields.email.value.trim()) {
+        editError.textContent = 'Name und E-Mail dürfen nicht leer sein.';
+        editError.style.display = '';
+        return;
+      }
+      editSubmit.disabled = true;
+      var payload = {
+        name: fields.name.value.trim(),
+        email: fields.email.value.trim(),
+        age: fields.age.value === '' ? null : Number(fields.age.value),
+        gender: fields.gender.value,
+        verein: fields.verein.value.trim(),
+        league: fields.league.value,
+        midnight_meal: fields.midnightMeal.value === 'ja',
+        midnight_meal_type: fields.midnightMeal.value === 'ja' ? fields.midnightMealType.value : null,
+        breakfast: fields.breakfast.value === 'ja',
+        breakfast_type: fields.breakfast.value === 'ja' ? fields.breakfastType.value : null,
+      };
+      try {
+        var res = await fetch('/api/anmeldungen/' + editingId, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify(payload),
+        });
+        if (!res.ok) {
+          var data = await res.json().catch(function () { return {}; });
+          editError.textContent = data.error || 'Speichern fehlgeschlagen.';
+          editError.style.display = '';
+          editSubmit.disabled = false;
+          return;
+        }
+        window.location.reload();
+      } catch (e) {
+        editError.textContent = 'Verbindung fehlgeschlagen.';
+        editError.style.display = '';
+        editSubmit.disabled = false;
+      }
+    }
+
+    editSubmit.addEventListener('click', submitEdit);
+    editClose.addEventListener('click', closeEdit);
+    editBackdrop.addEventListener('click', function (e) { if (e.target === editBackdrop) closeEdit(); });
+
+    var deleteBackdrop = document.getElementById('delete-modal-backdrop');
+    var deleteText = document.getElementById('delete-modal-text');
+    var deleteCancel = document.getElementById('delete-cancel');
+    var deleteConfirmBtn = document.getElementById('delete-confirm');
+    var deleteModalClose = document.getElementById('delete-modal-close');
+    var deletingId = null;
+
+    function openDelete(id) {
+      var r = byId[id];
+      if (!r) return;
+      deletingId = id;
+      deleteText.textContent = r.name + ' wird endgültig entfernt' +
+        ' — inklusive Teilnehmerplatz, falls bereits bestätigt. Das kann nicht rückgängig gemacht werden.';
+      deleteBackdrop.hidden = false;
+    }
+    function closeDelete() { deleteBackdrop.hidden = true; deletingId = null; }
+
+    async function confirmDelete() {
+      deleteConfirmBtn.disabled = true;
+      try {
+        var res = await fetch('/api/anmeldungen/' + deletingId, { method: 'DELETE', credentials: 'same-origin' });
+        if (!res.ok) { deleteConfirmBtn.disabled = false; return; }
+        window.location.reload();
+      } catch (e) {
+        deleteConfirmBtn.disabled = false;
+      }
+    }
+
+    deleteCancel.addEventListener('click', closeDelete);
+    deleteModalClose.addEventListener('click', closeDelete);
+    deleteConfirmBtn.addEventListener('click', confirmDelete);
+    deleteBackdrop.addEventListener('click', function (e) { if (e.target === deleteBackdrop) closeDelete(); });
+
+    document.querySelectorAll('.row-action-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var id = btn.closest('tr').getAttribute('data-id');
+        if (btn.getAttribute('data-action') === 'edit') openEdit(id);
+        else openDelete(id);
+      });
+    });
+
+    document.addEventListener('keydown', function (e) {
+      if (e.key !== 'Escape') return;
+      if (!editBackdrop.hidden) closeEdit();
+      if (!deleteBackdrop.hidden) closeDelete();
+    });
   })();
 </script>
 {% endblock %}
