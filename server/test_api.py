@@ -171,6 +171,19 @@ def test_consent_required_and_privacy_page():
     print("✓ registration without consent is rejected, /datenschutz renders")
 
 
+def test_minimum_age_enforced():
+    base = {
+        "name": "Zu, Jung", "email": "zu.jung@gmail.com", "age": "17",
+        "gender": "M", "verein": "TSV", "league": "FZ",
+        "midnight_meal": "nein", "breakfast": "nein", "consent": "y",
+    }
+    r = client.post("/anmeldung", data={**base, "csrf_token": csrf_token()}, follow_redirects=True)
+    assert "mindestens 18 Jahre alt" in r.get_data(as_text=True)
+    data = client.get("/api/tournament").get_json()
+    assert not any(p["name"] == "Zu, Jung" for p in data["participants"])
+    print("✓ registration under 18 is rejected with a clear message")
+
+
 def test_dashboard_requires_admin_and_shows_meal_answers():
     # Every test after test_tournament_contract relies on staying logged in
     # (none of them re-login) — restore that ambient state on every exit
@@ -242,6 +255,7 @@ if __name__ == "__main__":
         test_timer_roundtrip,
         test_etag_304,
         test_consent_required_and_privacy_page,
+        test_minimum_age_enforced,
         test_dashboard_requires_admin_and_shows_meal_answers,
         test_waitlist_cutover,
     ]

@@ -34,7 +34,8 @@
     <div class="form-split">
       <div class="form-row">
         <label for="age">{{ form.age.label.text }}</label>
-        {{ form.age(id="age", type="number", min="6", max="99", placeholder="z.B. 27", inputmode="numeric") }}
+        {{ form.age(id="age", type="number", min="18", max="99", placeholder="z.B. 27", inputmode="numeric") }}
+        <span id="age-live-error" class="field-error" style="display:none;">Du musst mindestens 18 Jahre alt sein, um teilzunehmen.</span>
         {% for err in form.age.errors %}<span class="field-error">{{ err }}</span>{% endfor %}
       </div>
 
@@ -135,6 +136,21 @@
     }
     radios.forEach(function (r) { r.addEventListener('change', update); });
     update(); // initial state (e.g. after a validation round-trip)
+  })();
+
+  // Sofortige Rückmeldung bei Unter-18-Eingabe, statt erst nach dem Absenden
+  // (der Server prüft das ohnehin nochmal — reines UX-Feedback hier).
+  (function () {
+    var ageInput = document.getElementById('age');
+    var liveError = document.getElementById('age-live-error');
+    if (!ageInput || !liveError) return;
+    function update() {
+      var value = ageInput.value.trim();
+      var tooYoung = value !== '' && Number(value) < 18;
+      liveError.style.display = tooYoung ? '' : 'none';
+    }
+    ageInput.addEventListener('input', update);
+    update();
   })();
 </script>
 {% endblock %}

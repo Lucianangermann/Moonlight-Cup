@@ -38,7 +38,7 @@ class AnmeldungForm(FlaskForm):
     age = IntegerField(
         "Alter",
         validators=[DataRequired(message="Alter ist erforderlich."),
-                    NumberRange(min=6, max=99, message="Alter muss zwischen 6 und 99 liegen.")],
+                    NumberRange(min=18, max=99, message="Du musst mindestens 18 Jahre alt sein, um teilzunehmen.")],
     )
     gender = RadioField(
         "Geschlecht",
