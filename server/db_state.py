@@ -400,13 +400,13 @@ def update_anmeldung(db: sqlite3.Connection, anmeldung_id: int, **fields) -> Non
     """
     Edits the anmeldung (registration) record — used by the admin dashboard.
     If this anmeldung was confirmed (see confirm_anmeldung's deterministic
-    "a{id}" pid), also syncs name/email/verein onto the linked participant
-    so the live tournament view stays consistent. gender/league are
-    deliberately NOT pushed onto an existing participant: confirm_anmeldung
-    takes those as separate admin-chosen values at confirm time (the admin
-    may have corrected a misreported league), so silently overwriting them
-    here on an unrelated edit would be a surprising, unintended side effect.
-    Changing a live participant's gender/league stays the RN app's job.
+    "a{id}" pid), every field the participants table shares (name, email,
+    verein, gender, league) is synced onto the linked participant too, so
+    the dashboard is a full editing surface and the live tournament view
+    never diverges from it. gender/league changes affect future draws the
+    same way an edit in the RN app's Teilnehmer tab would — that is
+    intentional; there is exactly one admin, editing in one place must not
+    leave the other stale.
     """
     allowed = {
         "name", "email", "verein", "age", "gender", "league",
@@ -418,7 +418,9 @@ def update_anmeldung(db: sqlite3.Connection, anmeldung_id: int, **fields) -> Non
     values = [fields[k] for k in fields if k in allowed]
     db.execute(f"UPDATE anmeldungen SET {', '.join(sets)} WHERE id = ?", (*values, anmeldung_id))
 
-    participant_fields = {k: fields[k] for k in ("name", "email", "verein") if k in fields}
+    participant_fields = {
+        k: fields[k] for k in ("name", "email", "verein", "gender", "league") if k in fields
+    }
     if participant_fields:
         sets = [f"{k} = ?" for k in participant_fields]
         values = list(participant_fields.values())

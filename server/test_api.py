@@ -239,15 +239,17 @@ def test_dashboard_edit_syncs_participant_and_delete_removes_both():
     participant = next(p for p in data["participants"] if p["name"] == "Edit, Erika")
     pid = participant["id"]
 
-    # Invalid gender is rejected before touching the DB.
+    # Invalid gender/league are rejected before touching the DB.
     assert client.patch(f"/api/anmeldungen/{aid}", json={"gender": "X"}).status_code == 400
+    assert client.patch(f"/api/anmeldungen/{aid}", json={"league": "NOPE"}).status_code == 400
 
-    # Edit: rename, change verein, flip Frühstück to Ja. name/verein must
-    # sync onto the already-confirmed participant; age/meal prefs are
-    # anmeldung-only and show up on the dashboard, not the public API.
+    # Edit: rename, change verein AND league, flip Frühstück to Ja. All
+    # shared fields (name/verein/league/gender) must sync onto the
+    # already-confirmed participant; age/meal prefs are anmeldung-only
+    # and show up on the dashboard, not the public API.
     r = client.patch(f"/api/anmeldungen/{aid}", json={
         "name": "Edit, Erika-Neu", "email": "edit.erika@gmail.com", "age": 23,
-        "gender": "F", "verein": "Neuer Verein", "league": "FZ",
+        "gender": "F", "verein": "Neuer Verein", "league": "OL",
         "midnight_meal": True, "midnight_meal_type": "vegetarisch",
         "breakfast": True, "breakfast_type": "weisswurscht",
     })
@@ -256,6 +258,7 @@ def test_dashboard_edit_syncs_participant_and_delete_removes_both():
     data = client.get("/api/tournament").get_json()
     p = next(p for p in data["participants"] if p["id"] == pid)
     assert p["name"] == "Edit, Erika-Neu" and p["verein"] == "Neuer Verein"
+    assert p["league"] == "OL", "league edit must reach the live participant list"
 
     html = client.get("/dashboard").get_data(as_text=True)
     assert "Edit, Erika-Neu" in html and "Weißwurscht" in html
@@ -267,7 +270,7 @@ def test_dashboard_edit_syncs_participant_and_delete_removes_both():
     assert not any(p["id"] == pid for p in data["participants"])
     html = client.get("/dashboard").get_data(as_text=True)
     assert "Edit, Erika-Neu" not in html
-    print("✓ dashboard edit syncs name/verein onto the participant; delete removes both")
+    print("✓ dashboard edit syncs name/verein/league onto the participant; delete removes both")
 
 
 def test_waitlist_cutover():

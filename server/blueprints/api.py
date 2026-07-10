@@ -35,7 +35,7 @@ from db_state import (
     update_anmeldung, update_participant,
 )
 from tournament_logic import (
-    MAX_PARTICIPANTS, build_final_runde, build_new_round, get_standings,
+    LEAGUES, MAX_PARTICIPANTS, build_final_runde, build_new_round, get_standings,
 )
 
 bp = Blueprint("api", __name__, url_prefix="/api")
@@ -220,8 +220,8 @@ def anmeldung_confirm(anmeldung_id):
 @login_required
 def anmeldung_update(anmeldung_id):
     """Edits a registration record — used by the admin dashboard's edit
-    form. See db_state.update_anmeldung for what syncs onto a linked
-    participant vs. what stays anmeldung-only."""
+    form. Shared fields (incl. gender/league) sync onto a linked
+    participant, see db_state.update_anmeldung."""
     data = request.get_json(silent=True) or {}
     if "name" in data and not str(data["name"]).strip():
         return jsonify({"error": "name must not be empty"}), 400
@@ -229,6 +229,10 @@ def anmeldung_update(anmeldung_id):
         return jsonify({"error": "email must not be empty"}), 400
     if "gender" in data and data["gender"] not in ("M", "F"):
         return jsonify({"error": "gender must be 'M' or 'F'"}), 400
+    # league now syncs onto participants (NOT NULL there) — reject unknown
+    # keys instead of letting them flow into draws/standings displays.
+    if "league" in data and data["league"] not in {key for key, _ in LEAGUES}:
+        return jsonify({"error": "league must be a valid league key"}), 400
     if "midnight_meal_type" in data and data["midnight_meal_type"] not in ("vegetarisch", "nicht_vegetarisch", None):
         return jsonify({"error": "midnight_meal_type must be 'vegetarisch', 'nicht_vegetarisch' or null"}), 400
     if "breakfast_type" in data and data["breakfast_type"] not in ("vegetarisch", "weisswurscht", None):
