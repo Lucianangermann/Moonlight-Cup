@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Platform, useWindowDimensions } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { StatusBar } from 'expo-status-bar';
@@ -77,6 +77,40 @@ function AdminAccessButton() {
         </View>
       )}
     </>
+  );
+}
+
+// Cross-page nav, mirroring the Flask pages' topbar (Live-Turnier ·
+// Anmeldung · Dashboard) so the tournament SPA isn't a dead end. Web-only
+// (these are server-rendered routes) and hidden on narrow viewports: the
+// screens' header row already carries LIVE badge/progress pills there, and
+// phones at the event don't need the registration/dashboard pages.
+function TopNav() {
+  const { isAdmin } = useAuth();
+  const { width } = useWindowDimensions();
+
+  if (Platform.OS !== 'web' || width < 700) return null;
+
+  const links = [
+    { label: 'LIVE-TURNIER', href: null }, // current page
+    { label: 'ANMELDUNG', href: '/anmeldung' },
+    ...(isAdmin ? [{ label: 'DASHBOARD', href: '/dashboard' }] : []),
+  ];
+
+  return (
+    <View style={s.topNav}>
+      {links.map((l) => (
+        <AnimatedPressable
+          key={l.label}
+          activeOpacity={0.7}
+          disabled={!l.href}
+          onPress={() => { if (l.href) window.location.href = l.href; }}
+          style={[s.topNavItem, !l.href && s.topNavItemActive]}
+        >
+          <Text style={[s.topNavText, !l.href && s.topNavTextActive]}>{l.label}</Text>
+        </AnimatedPressable>
+      ))}
+    </View>
   );
 }
 
@@ -165,6 +199,7 @@ export default function App() {
         <View style={{ flex: 1, backgroundColor: colors.bg }}>
           <AtmosphericBackground />
           <AppNavigator />
+          <TopNav />
           <AdminAccessButton />
         </View>
       </TournamentProvider>
@@ -194,6 +229,38 @@ const s = StyleSheet.create({
   splashHint: {
     color: colors.textMuted,
     fontSize: 13,
+  },
+  topNav: {
+    // Sits in the screens' empty top margin (their content starts at
+    // paddingTop 58), ABOVE the header row — the header row itself is
+    // taken on the right by LIVE badge/progress pills, which this would
+    // otherwise overlap. Mirrors the Flask topbar's nav styling (Barlow
+    // Condensed, uppercase, gold underline on the active page).
+    position: 'absolute',
+    top: 16,
+    right: 18,
+    height: 28,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 20,
+    zIndex: 20,
+  },
+  topNavItem: {
+    paddingVertical: 4,
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
+  },
+  topNavItemActive: {
+    borderBottomColor: colors.gold,
+  },
+  topNavText: {
+    color: colors.textMuted,
+    fontSize: 13,
+    fontFamily: fonts.headingSemi,
+    letterSpacing: 1.5,
+  },
+  topNavTextActive: {
+    color: colors.gold,
   },
   lockButton: {
     // Vertically centered on the screens' header row (paddingTop 58 +
