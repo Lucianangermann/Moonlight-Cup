@@ -64,6 +64,10 @@ export default function RundeScreen() {
   const [previewDg, setPreviewDg] = useState(null);      // null = beide, 1 = nur D1, 2 = nur D2
   // undefined = "have not seen a snapshot yet" — see the auto-print effect.
   const prevRoundRef = useRef(undefined);
+  // Holds the print window opened synchronously in the confirm click, so the
+  // auto-print effect can write into it after the async round-start returns
+  // — see handleConfirmStart for why it can't just window.open() later.
+  const pendingPrintWindowRef = useRef(null);
   const round = getCurrentRoundData();
   const displayRound = viewingRoundId ? rounds.find((r) => r.id === viewingRoundId) : round;
   const isSchnellrunde = round?.isSchnellrunde ?? false;
@@ -151,7 +155,30 @@ export default function RundeScreen() {
   const handleConfirmStart = () => {
     setShowConfirm(false);
     setViewingRoundId(null);
-    startNewRound().catch(() => {});
+    // Open the print window NOW, synchronously inside this click handler:
+    // browsers only allow window.open() during a user gesture, and the
+    // auto-print effect below runs after startNewRound()'s network round-
+    // trip (gesture long expired → popup blocked). We grab the window here
+    // and fill it once the new round's data arrives. A tiny placeholder so
+    // the tab isn't blank while the server responds.
+    if (typeof window !== 'undefined') {
+      const w = window.open('', '_blank');
+      if (w) {
+        w.document.write(
+          '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Spielplan…</title></head>' +
+          '<body style="font-family:Arial,sans-serif;padding:40px;text-align:center;color:#666">' +
+          'Spielplan wird erstellt…</body></html>'
+        );
+      }
+      pendingPrintWindowRef.current = w || null;
+    }
+    startNewRound().catch(() => {
+      // Round-start failed — don't leave an orphaned blank tab open.
+      if (pendingPrintWindowRef.current) {
+        pendingPrintWindowRef.current.close();
+        pendingPrintWindowRef.current = null;
+      }
+    });
   };
 
   // Wenn eine neue Runde startet: Timer starten + automatisch drucken.
@@ -172,7 +199,11 @@ export default function RundeScreen() {
       const newRound = rounds.find((r) => r.id === currentRound);
       if (newRound) {
         triggerAutoTimer(1, newRound.roundNumber === 1);
-        doPrintBoth(newRound);
+        // Fill the window opened in handleConfirmStart (survives the popup
+        // blocker); fall back to a fresh window if this round start didn't
+        // come from the confirm button (shouldn't happen, but harmless).
+        doPrintBoth(newRound, pendingPrintWindowRef.current);
+        pendingPrintWindowRef.current = null;
       }
     }
   }, [currentRound, rounds]);
@@ -214,7 +245,10 @@ export default function RundeScreen() {
       ${sitOut}`;
   };
 
-  const printHtml = (innerHtml) => {
+  // targetWindow: a window opened earlier in a user gesture (auto-print
+  // after a round start). When absent — manual prints triggered directly
+  // by a button click — we open one here, which is still within a gesture.
+  const printHtml = (innerHtml, targetWindow) => {
     if (typeof window === 'undefined') return;
     const css =
       '*{box-sizing:border-box}' +
@@ -222,8 +256,10 @@ export default function RundeScreen() {
       '.pg{display:block;height:0;page-break-after:always;break-after:page}' +
       'thead{display:table-header-group}' +
       '@page{margin:10mm;size:A4 landscape}';
-    const w = window.open('', '_blank');
+    const w = targetWindow || window.open('', '_blank');
     if (!w) return;
+    // document.open() clears any placeholder written into a pre-opened window.
+    w.document.open();
     w.document.write(
       '<!DOCTYPE html><html><head><meta charset="utf-8"><style>' + css + '</style></head>' +
       '<body>' + innerHtml +
@@ -233,11 +269,12 @@ export default function RundeScreen() {
     w.document.close();
   };
 
-  const doPrintBoth = (r) => {
+  const doPrintBoth = (r, targetWindow) => {
     printHtml(
       buildPageContent(r, 1) +
       '<div class="pg"></div>' +
-      buildPageContent(r, 2)
+      buildPageContent(r, 2),
+      targetWindow
     );
     setPrintPreview(null);
     setPreviewDg(null);

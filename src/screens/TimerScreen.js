@@ -43,6 +43,12 @@ function AdminTimer() {
   const intervalRef = useRef(null);
   const phaseRef = useRef('idle');
   const speedRef = useRef(1);
+  // Absolute wall-clock deadline (ms) for the running phase. The display is
+  // derived from THIS, not a decrement counter, so a backgrounded/asleep tab
+  // (whose setInterval the browser throttles) snaps back to the correct time
+  // the moment it wakes — instead of drifting behind the shared server timer
+  // that every viewer phone reads. null when not counting down.
+  const deadlineRef = useRef(null);
 
   // Spotify
   const [spConnected, setSpConnected] = useState(false);
@@ -57,6 +63,19 @@ function AdminTimer() {
   const sp = (fn) => { if (isConnected()) fn(); };
 
   const setPhase = (p) => { phaseRef.current = p; setPhaseState(p); };
+
+  // Timer-seconds remaining, computed from the wall-clock deadline. speed is
+  // baked into the deadline (deadline = now + timerSeconds/speed*1000), so we
+  // scale the real-time remainder back up by speed to get timer-seconds.
+  const remainingFromDeadline = () =>
+    deadlineRef.current == null
+      ? 0
+      : Math.max(0, Math.ceil(((deadlineRef.current - Date.now()) / 1000) * speedRef.current));
+
+  // Arm a fresh countdown of `timerSeconds` at the current speed.
+  const armDeadline = (timerSeconds) => {
+    deadlineRef.current = Date.now() + (timerSeconds / speedRef.current) * 1000;
+  };
 
   // Broadcasts the current phase's real-world deadline to the shared
   // server timer (GET/POST /api/timer) so every other viewer's device sees
@@ -74,7 +93,17 @@ function AdminTimer() {
   const cycleSpeed = () => {
     const idx = SPEED_STEPS.indexOf(speed);
     const next = SPEED_STEPS[(idx + 1) % SPEED_STEPS.length];
-    speedRef.current = next;
+    // Re-anchor the running countdown to the new speed, keeping the remaining
+    // timer-seconds identical — then re-broadcast so viewers' server timer
+    // matches the faster/slower pace instead of running on the old target.
+    if (running && deadlineRef.current != null) {
+      const remaining = remainingFromDeadline();
+      speedRef.current = next;
+      deadlineRef.current = Date.now() + (remaining / next) * 1000;
+      pushTimer(phaseRef.current, remaining, timerDurchgang);
+    } else {
+      speedRef.current = next;
+    }
     setSpeed(next);
   };
 
@@ -95,11 +124,13 @@ function AdminTimer() {
       // Auslosung bereits gedruckt — direkt Einspielzeit starten
       setPhase('warmup');
       setSecondsLeft(warmup);
+      armDeadline(warmup);
       sp(spotifyPlay);
       pushTimer('warmup', warmup, autoTimerTrigger.durchgang);
     } else {
       setPhase('prep'); // 1 Min. Blätter anschauen, bevor Einspielen beginnt
       setSecondsLeft(PREP_SECONDS);
+      armDeadline(PREP_SECONDS);
       // Keine Musik während Vorbereitung
       pushTimer('prep', PREP_SECONDS, autoTimerTrigger.durchgang);
     }
@@ -110,6 +141,7 @@ function AdminTimer() {
   useEffect(() => {
     if (!timerResetTrigger) return;
     clearInterval(intervalRef.current);
+    deadlineRef.current = null;
     setRunning(false);
     setPhase('idle');
     setTimerDurchgang(null);
@@ -128,6 +160,7 @@ function AdminTimer() {
       Vibration.vibrate(200);
       setPhase('warmup');
       setSecondsLeft(warmupSeconds);
+      armDeadline(warmupSeconds);
       setPhaseComplete(null);
       setRunning(true);
       sp(spotifyPlay);
@@ -136,6 +169,7 @@ function AdminTimer() {
       sp(spotifyPause); // Musik aus = Signal: Spiel beginnt!
       setPhase('game');
       setSecondsLeft(DEFAULT_SECONDS);
+      armDeadline(DEFAULT_SECONDS);
       setWarned(false);
       setPhaseComplete(null);
       setRunning(true);
@@ -156,28 +190,30 @@ function AdminTimer() {
     }
   }, [secondsLeft]);
 
+  // Fire the current phase's completion (vibration + hand-off to the phase
+  // machine). Guarded so a wakeup that lands past the deadline only fires once.
+  const completeCurrentPhase = () => {
+    clearInterval(intervalRef.current);
+    deadlineRef.current = null;
+    setRunning(false);
+    const currentPhase = phaseRef.current;
+    if (currentPhase === 'prep') {
+      setPhaseComplete('prep');
+    } else if (currentPhase === 'warmup') {
+      Vibration.vibrate([0, 300, 100, 300, 100, 300]);
+      setPhaseComplete('warmup');
+    } else {
+      Vibration.vibrate([0, 400, 100, 400]);
+      setPhaseComplete('game');
+    }
+  };
+
   useEffect(() => {
     if (running) {
       intervalRef.current = setInterval(() => {
-        setSecondsLeft((s) => {
-          const next = s - speedRef.current;
-          if (next <= 0) {
-            clearInterval(intervalRef.current);
-            setRunning(false);
-            const currentPhase = phaseRef.current;
-            if (currentPhase === 'prep') {
-              setPhaseComplete('prep');
-            } else if (currentPhase === 'warmup') {
-              Vibration.vibrate([0, 300, 100, 300, 100, 300]);
-              setPhaseComplete('warmup');
-            } else {
-              Vibration.vibrate([0, 400, 100, 400]);
-              setPhaseComplete('game');
-            }
-            return 0;
-          }
-          return next;
-        });
+        const remaining = remainingFromDeadline();
+        setSecondsLeft(remaining);
+        if (remaining <= 0) completeCurrentPhase();
       }, 1000);
     } else {
       clearInterval(intervalRef.current);
@@ -185,8 +221,24 @@ function AdminTimer() {
     return () => clearInterval(intervalRef.current);
   }, [running]);
 
+  // A backgrounded tab's setInterval is throttled, so on refocus recompute
+  // immediately (and complete the phase if the deadline passed while away)
+  // instead of waiting up to a full second for the next tick.
+  useEffect(() => {
+    if (typeof document === 'undefined') return undefined;
+    const onVisible = () => {
+      if (document.hidden || !running || deadlineRef.current == null) return;
+      const remaining = remainingFromDeadline();
+      setSecondsLeft(remaining);
+      if (remaining <= 0) completeCurrentPhase();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [running]);
+
   const skipCurrent = () => {
     clearInterval(intervalRef.current);
+    deadlineRef.current = null;
     setRunning(false);
     if (phaseRef.current === 'prep') {
       setPhaseComplete('prep');
@@ -203,6 +255,8 @@ function AdminTimer() {
   };
 
   const reset = () => {
+    clearInterval(intervalRef.current);
+    deadlineRef.current = null;
     setRunning(false);
     sp(spotifyPause);
     setPhase('idle');
@@ -351,10 +405,16 @@ function AdminTimer() {
             if (wasIdle) setPhase('game');
             setRunning((r) => !r);
             if (wasIdle) {
+              armDeadline(DEFAULT_SECONDS);
+              setSecondsLeft(DEFAULT_SECONDS);
               pushTimer('game', DEFAULT_SECONDS, timerDurchgang);
             } else if (wasRunning) {
+              // Pausing — freeze the display, drop the deadline.
+              deadlineRef.current = null;
               api.deactivateTimer().catch(() => {});
             } else {
+              // Resuming — re-anchor the deadline to the frozen secondsLeft.
+              armDeadline(secondsLeft);
               pushTimer(phaseRef.current, secondsLeft, timerDurchgang);
             }
           }}
@@ -372,7 +432,7 @@ function AdminTimer() {
 
         <AnimatedPressable
           style={[s.ctrlBtn, s.ctrlBtnStop]}
-          onPress={() => { setRunning(false); sp(spotifyPause); setSecondsLeft(0); api.deactivateTimer().catch(() => {}); }}
+          onPress={() => { clearInterval(intervalRef.current); deadlineRef.current = null; setRunning(false); sp(spotifyPause); setSecondsLeft(0); api.deactivateTimer().catch(() => {}); }}
         >
           <Ionicons name="stop" size={20} color={colors.error} />
           <Text style={[s.ctrlLabel, { color: colors.error + 'BB' }]}>Stop</Text>

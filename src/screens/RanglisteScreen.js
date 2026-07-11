@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, StyleSheet, Animated, TextInput } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Animated, TextInput, useWindowDimensions } from 'react-native';
 import { useState, useEffect } from 'react';
 import { useEntranceAnimation } from '../hooks/useEntranceAnimation';
 import { Ionicons } from '@expo/vector-icons';
@@ -122,6 +122,10 @@ export default function RanglisteScreen() {
   const [confirming, setConfirming] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const standings = getStandings();
+  // On phones the three groups side-by-side squeeze names to "Ha…"; stack
+  // them full-width instead. Wide screens (projector/desktop) keep 3 columns.
+  const { width } = useWindowDimensions();
+  const stacked = width < 700;
 
   useEffect(() => { setPendingDelta(null); setConfirming(false); }, [selected]);
 
@@ -267,8 +271,8 @@ export default function RanglisteScreen() {
                 )}
               </View>
             ) : (
-              /* ── 3 Spalten nebeneinander ── */
-              <View style={s.columnsRow}>
+              /* ── Gruppen: 3 Spalten (breit) bzw. untereinander (Handy) ── */
+              <View style={[s.columnsRow, stacked && s.columnsStacked]}>
                 {groups.map((groupPlayers, gIdx) => {
                   if (groupPlayers.length === 0) return null;
                   const group = GROUPS[gIdx];
@@ -276,7 +280,7 @@ export default function RanglisteScreen() {
                   const overallEnd = overallStart + groupPlayers.length - 1;
 
                   return (
-                    <View key={group.key} style={s.column}>
+                    <View key={group.key} style={stacked ? s.columnStacked : s.column}>
                       {/* Spalten-Header */}
                       <View style={[s.colHeader, { backgroundColor: group.bgColor, borderColor: group.borderColor }]}>
                         <Ionicons name={group.icon} size={13} color={group.color} />
@@ -331,7 +335,7 @@ export default function RanglisteScreen() {
                             <View style={{ flex: 1, overflow: 'hidden' }}>
                               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
                                 <Text
-                                  style={[s.colName, isFirst && { color: group.color, fontSize: 13 }, isTop3 && !isFirst && { fontSize: 12 }]}
+                                  style={[s.colName, stacked && { fontSize: 14 }, isFirst && { color: group.color, fontSize: stacked ? 16 : 13 }, isTop3 && !isFirst && { fontSize: stacked ? 15 : 12 }]}
                                   numberOfLines={1}
                                 >
                                   {firstName}
@@ -344,11 +348,11 @@ export default function RanglisteScreen() {
                             </View>
 
                             {/* Stats-Spalte rechts */}
-                            <View style={s.colStatsBox}>
-                              <Text style={[s.colPts, { color: isTop3 ? medalColor : colors.silverDim }, isFirst && { fontSize: 15 }]}>
+                            <View style={[s.colStatsBox, stacked && s.colStatsBoxWide]}>
+                              <Text style={[s.colPts, { color: isTop3 ? medalColor : colors.silverDim }, stacked && { fontSize: 14 }, isFirst && { fontSize: 15 }]}>
                                 {p.games}Sp · {p.wins}S
                               </Text>
-                              <Text style={[s.colStats, { color: p.diff >= 0 ? colors.success + 'AA' : colors.error + 'AA' }]}>
+                              <Text style={[s.colStats, stacked && { fontSize: 11 }, { color: p.diff >= 0 ? colors.success + 'AA' : colors.error + 'AA' }]}>
                                 {p.diff > 0 ? '+' : ''}{p.diff}
                               </Text>
                             </View>
@@ -605,6 +609,20 @@ const s = StyleSheet.create({
   column: {
     flex: 1,
     minWidth: 0,
+  },
+  // Handy: Gruppen untereinander, jede volle Breite → Namen lesbar.
+  columnsStacked: {
+    flexDirection: 'column',
+    gap: 24,
+  },
+  // No `flex` here: on web `flex:0`/`flex:1` collapse the column to zero
+  // height in a column-flex parent. Default flex (content-sized) lets the
+  // 33 player rows give the column its real height.
+  columnStacked: {
+    width: '100%',
+  },
+  colStatsBoxWide: {
+    width: 92,
   },
   colHeader: {
     flexDirection: 'row',
