@@ -11,6 +11,7 @@ import LiveBadge from '../components/LiveBadge';
 import EmptyState from '../components/EmptyState';
 import { formatDisplayName } from '../utils/names';
 import { escapeHtml } from '../utils/html';
+import { printHtml } from '../utils/print';
 
 const MEDAL_ICONS = ['trophy', 'medal', 'ribbon'];
 
@@ -150,22 +151,14 @@ export default function RanglisteScreen() {
     : [];
 
   const doPrint = () => {
-    if (standings.length === 0 || typeof window === 'undefined') return;
-    const content = buildPrintContent(standings, pausedIds);
-    const css =
+    if (standings.length === 0) return;
+    printHtml(
+      buildPrintContent(standings, pausedIds),
       '*{box-sizing:border-box}' +
       'body{margin:0;padding:14px 20px;font-family:Arial,sans-serif;color:#222}' +
       'thead{display:table-header-group}' +
-      '@page{margin:10mm}';
-    const w = window.open('', '_blank');
-    if (!w) return;
-    w.document.write(
-      '<!DOCTYPE html><html><head><meta charset="utf-8"><style>' + css + '</style></head>' +
-      '<body>' + content +
-      '<script>setTimeout(function(){window.print();window.addEventListener("afterprint",function(){window.close()})},200);<\/script>' +
-      '</body></html>'
+      '@page{margin:10mm}'
     );
-    w.document.close();
   };
 
   const selectedPlayer = selected ? standings.find((p) => p.id === selected) : null;
