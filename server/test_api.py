@@ -120,6 +120,11 @@ def test_round_guards_and_results():
     for m in matches:
         r = client.post(f"/api/matches/{m['id']}/result", json={"scoreA": 21, "scoreB": 15})
         assert r.status_code == 200
+        # Mutations return the fresh tournament state so the client skips a
+        # second GET — the saved match must already be reflected in it.
+        rj = r.get_json()
+        assert "tournament" in rj
+        assert any(mm["id"] == m["id"] and mm["done"] for mm in rj["tournament"]["rounds"][0]["matches"])
     data = client.get("/api/tournament").get_json()
     assert all(m["done"] for m in data["rounds"][0]["matches"])
     assert data["standings"][0]["wins"] >= 1
@@ -299,7 +304,8 @@ def test_waitlist_cutover():
     aid = wl[0]["id"]
     assert client.post(f"/api/anmeldungen/{aid}/confirm", json={"gender": "M", "league": "FZ"}).status_code == 409
     pid = data["participants"][0]["id"]
-    assert client.delete(f"/api/participants/{pid}").status_code == 204
+    # Participant delete now returns 200 with the fresh state (was 204).
+    assert client.delete(f"/api/participants/{pid}").status_code == 200
     assert client.post(f"/api/anmeldungen/{aid}/confirm", json={"gender": "M", "league": "FZ"}).status_code == 200
     client.delete(f"/api/participants/{data['participants'][1]['id']}")
     assert client.post(f"/api/anmeldungen/{aid}/confirm", json={"gender": "M", "league": "FZ"}).status_code == 409

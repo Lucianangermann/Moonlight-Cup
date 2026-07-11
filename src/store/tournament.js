@@ -21,6 +21,24 @@ const EMPTY_SNAPSHOT = {
   standings: [], statAdjustments: {},
 };
 
+// Optimistic score entry: reflect the result on the match instantly, before
+// the server confirms. Standings aren't recomputed here (that's the server's
+// job) — they update ~200ms later when the mutation response's authoritative
+// state arrives. Higher score wins; equal = no winner (badminton has none,
+// but stay safe). Pure — returns a new snapshot.
+function applyOptimisticResult(snap, matchId, scoreA, scoreB) {
+  const winnerTeam = scoreA > scoreB ? 'A' : scoreB > scoreA ? 'B' : null;
+  return {
+    ...snap,
+    rounds: snap.rounds.map((r) => ({
+      ...r,
+      matches: r.matches.map((m) =>
+        m.id === matchId ? { ...m, scoreA, scoreB, done: true, winnerTeam } : m
+      ),
+    })),
+  };
+}
+
 export function TournamentProvider({ children }) {
   const [snapshot, setSnapshot] = useState(EMPTY_SNAPSHOT);
   // loaded flips once after the first successful poll (before that the app
@@ -95,13 +113,26 @@ export function TournamentProvider({ children }) {
       return dm.length > 0 && dm.every((m) => m.done);
     };
 
+    // Apply the state a mutation returns (under "tournament") directly — no
+    // second GET. Returns true when it did; false when the response carried
+    // no state (caller then falls back to a refresh()).
+    const applyReturnedState = (res) => {
+      if (res && res.tournament) {
+        lastTextRef.current = null;       // let the next poll re-baseline dedup
+        lastSyncRef.current = Date.now();
+        setSnapshot(res.tournament);
+        return true;
+      }
+      return false;
+    };
+
     // --- Mutations — the API 401s for non-admins; screens additionally hide
-    // the affordances to reach these in the first place. Each refetches once
-    // immediately so the admin's own device reflects the change instantly
-    // instead of waiting for the next 5s poll tick.
+    // the affordances to reach these. The mutation response carries the fresh
+    // state, so the admin's device reflects the change in one round-trip
+    // instead of mutate-then-GET.
     const withRefresh = (fn) => async (...args) => {
-      await fn(...args);
-      await refresh();
+      const res = await fn(...args);
+      if (!applyReturnedState(res)) await refresh();
     };
 
     return {
@@ -116,7 +147,25 @@ export function TournamentProvider({ children }) {
       setStatAdjustment: withRefresh((id, adj) => api.setStatAdjustment(id, adj)),
       autoTimerTrigger, triggerAutoTimer, timerResetTrigger,
       rounds, currentRound,
-      saveResult: withRefresh((matchId, scoreA, scoreB) => api.saveResult(matchId, scoreA, scoreB)),
+      // Optimistic: show the score the instant it's entered, then reconcile
+      // with the server's authoritative state (which also recomputes
+      // standings). On failure, refetch to snap back to the truth.
+      saveResult: async (matchId, scoreA, scoreB) => {
+        // Keep lastTextRef as-is: an in-flight 5s poll that returns the
+        // still-unchanged server text is then deduped away, so it can't
+        // clobber the optimistic view before our own response lands.
+        setSnapshot((snap) => applyOptimisticResult(snap, matchId, scoreA, scoreB));
+        try {
+          const res = await api.saveResult(matchId, scoreA, scoreB);
+          if (!applyReturnedState(res)) await refresh();
+        } catch (e) {
+          // Force a re-apply of server truth so the optimistic update reverts
+          // even if the response text matches the pre-optimistic baseline.
+          lastTextRef.current = null;
+          await refresh().catch(() => {});
+          throw e;
+        }
+      },
       startNewRound: withRefresh(() => api.startRound()),
       startFinalRunde: withRefresh(() => api.startFinalRunde()),
       getStandings, getCurrentRoundData, allMatchesDone,

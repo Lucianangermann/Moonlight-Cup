@@ -165,6 +165,17 @@ def tournament():
     return _cached_json_response("tournament", _build_tournament_payload)
 
 
+def _with_state(extra: dict | None = None, status: int = 200):
+    """Mutation response carrying the fresh tournament state under
+    "tournament", so the client applies it directly instead of firing a
+    second GET /api/tournament (halves the round-trip per admin action).
+    `extra` merges in route-specific fields (e.g. a new participant id)."""
+    body = {"tournament": _build_tournament_payload()}
+    if extra:
+        body.update(extra)
+    return jsonify(body), status
+
+
 def _build_timer_payload() -> dict:
     row = get_active_timer(get_db())
     if row is None:
@@ -268,7 +279,7 @@ def participant_add():
         email=(data.get("email") or "").strip() or None,
         verein=(data.get("verein") or "").strip() or None,
     )
-    return jsonify({"id": pid}), 201
+    return _with_state({"id": pid}, 201)
 
 
 @bp.route("/participants/<pid>", methods=["PATCH"])
@@ -284,28 +295,28 @@ def participant_update(pid):
     if "name" in data and not str(data["name"]).strip():
         return jsonify({"error": "name must not be empty"}), 400
     update_participant(get_db(), pid, **data)
-    return jsonify({})
+    return _with_state()
 
 
 @bp.route("/participants/<pid>", methods=["DELETE"])
 @login_required
 def participant_remove(pid):
     remove_participant(get_db(), pid)
-    return "", 204
+    return _with_state()
 
 
 @bp.route("/participants/<pid>/pause", methods=["POST"])
 @login_required
 def participant_pause(pid):
     set_paused(get_db(), pid, True)
-    return jsonify({})
+    return _with_state()
 
 
 @bp.route("/participants/<pid>/resume", methods=["POST"])
 @login_required
 def participant_resume(pid):
     set_paused(get_db(), pid, False)
-    return jsonify({})
+    return _with_state()
 
 
 # --- Rounds (admin) --------------------------------------------------------------
@@ -324,7 +335,7 @@ def rounds_start():
     # tournament_logic-internal placeholder ids (e.g. "r1m0") assigned before
     # persistence, not the real autoincrement match ids SQLite just assigned.
     fresh_round = load_state(db).rounds[-1]
-    return jsonify(_serialize_round(fresh_round)), 201
+    return _with_state({"round": _serialize_round(fresh_round)}, 201)
 
 
 @bp.route("/rounds/final", methods=["POST"])
@@ -340,7 +351,7 @@ def rounds_start_final():
     round_ = build_final_runde(state)
     persist_round(db, round_)
     fresh_round = load_state(db).rounds[-1]
-    return jsonify(_serialize_round(fresh_round)), 201
+    return _with_state({"round": _serialize_round(fresh_round)}, 201)
 
 
 @bp.route("/rounds/<int:round_id>/advance-durchgang", methods=["POST"])
@@ -350,21 +361,21 @@ def rounds_advance_durchgang(round_id):
     if not current_durchgang_done(db, round_id):
         return jsonify({"error": "Durchgang 1 ist noch nicht abgeschlossen."}), 409
     advance_durchgang(db, round_id)
-    return jsonify({})
+    return _with_state()
 
 
 @bp.route("/rounds/<int:round_id>", methods=["DELETE"])
 @login_required
 def rounds_delete(round_id):
     delete_round(get_db(), round_id)
-    return "", 204
+    return _with_state()
 
 
 @bp.route("/tournament/reset", methods=["POST"])
 @login_required
 def tournament_reset():
     reset_tournament(get_db())
-    return jsonify({})
+    return _with_state()
 
 
 @bp.route("/gdpr/purge", methods=["POST"])
@@ -373,7 +384,7 @@ def gdpr_purge():
     """Post-season deletion of all participant/registration PII — see
     db_state.purge_all_participant_data for exactly what's removed."""
     purge_all_participant_data(get_db())
-    return jsonify({})
+    return _with_state()
 
 
 # --- Matches (admin) ---------------------------------------------------------------
@@ -390,14 +401,14 @@ def match_save_result(match_id):
         save_match_result(get_db(), match_id, score_a, score_b)
     except ValueError as e:
         return jsonify({"error": str(e)}), 404
-    return jsonify({})
+    return _with_state()
 
 
 @bp.route("/matches/<int:match_id>/result", methods=["DELETE"])
 @login_required
 def match_clear_result(match_id):
     clear_match_result(get_db(), match_id)
-    return "", 204
+    return _with_state()
 
 
 @bp.route("/matches/swap", methods=["POST"])
@@ -412,7 +423,7 @@ def matches_swap():
         )
     except (KeyError, TypeError, ValueError) as e:
         return jsonify({"error": str(e)}), 400
-    return jsonify({})
+    return _with_state()
 
 
 # --- Standings (admin) ---------------------------------------------------------------
@@ -428,7 +439,7 @@ def standings_adjustment(pid):
     except (TypeError, ValueError):
         return jsonify({"error": "games, wins and diff must be integers"}), 400
     set_stat_adjustment(get_db(), pid, games=games, wins=wins, diff=diff)
-    return jsonify({})
+    return _with_state()
 
 
 # --- Timer (admin writes) ---------------------------------------------------------------
